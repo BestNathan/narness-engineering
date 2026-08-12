@@ -1,0 +1,8 @@
+{
+  "name": "narness-rust",
+  "description": "Rust harness engineering: constrain AI agents with cargo, clippy, hooks and invariant scripts instead of prompts",
+  "version": "0.1.0",
+  "author": { "name": "narness" },
+  "license": "MIT",
+  "keywords": ["rust", "harness", "hooks", "clippy", "engineering"]
+}
