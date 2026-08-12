@@ -90,6 +90,8 @@ narness-engineering/
     │   ├── constraint-ladder.md
     │   ├── decision-guide.md
     │   └── long-running-correctness.md
+    ├── reference/                         # 工具实践参考
+    │   └── rust-test-harness.md           # Rust 测试 harness（nextest + llvm-cov）
     └── superpowers/
         └── specs/                         # 设计文档（本文档）
 ```

@@ -11,6 +11,7 @@ Narness 是「研究 + 文档 + Claude Code 工具集」项目，阐述并落地
 ## 目录
 
 - `docs/theory/` — 理论研究文档
+- `docs/reference/` — 具体工具的 harness 工程化参考
 - `plugins/narness-rust/` — Rust harness 工程化插件（skill + hook + 脚本）
 - `.claude-plugin/marketplace.json` — marketplace 定义
 
@@ -29,3 +30,7 @@ claude plugin install narness-rust
 - [约束层级阶梯](docs/theory/constraint-ladder.md)
 - [决策准则](docs/theory/decision-guide.md)
 - [长程任务的正确性](docs/theory/long-running-correctness.md)
+
+## 参考文档
+
+- [Rust 测试 Harness 工程化](docs/reference/rust-test-harness.md)（nextest + llvm-cov + LLM 反馈）
