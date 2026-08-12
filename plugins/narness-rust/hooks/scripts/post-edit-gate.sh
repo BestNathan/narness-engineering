@@ -16,13 +16,16 @@ case "$file_path" in
 esac
 
 # 快速门禁 1: cargo fmt --check
-if ! cargo fmt --check 2>&1; then
+# 失败时把 cargo 的完整输出写到 stderr（而非 stdout），确保 hook 回传给 Claude。
+if ! fmt_out="$(cargo fmt --check 2>&1)"; then
+  printf '%s\n' "$fmt_out" >&2
   echo "⚠ Narness 快速门禁: cargo fmt --check 失败，请运行 cargo fmt 后重试" >&2
   exit 2
 fi
 
 # 快速门禁 2: cargo check（不跑全量 test，避免拖慢编辑循环）
-if ! cargo check 2>&1 | tail -n 30; then
+if ! check_out="$(cargo check 2>&1)"; then
+  printf '%s\n' "$check_out" | tail -n 30 >&2
   echo "⚠ Narness 快速门禁: cargo check 失败，请修复编译错误" >&2
   exit 2
 fi

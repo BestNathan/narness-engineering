@@ -7,8 +7,8 @@ set -uo pipefail
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
 
-# 改动过的非测试 .rs 源文件（排除 tests/、*_test.rs 等）
-changed="$(git diff --name-only HEAD -- '*.rs' 2>/dev/null | grep -vE '(^|/)(tests?|benches|examples)/|(_test|\.test)\.rs$' || true)"
+# 改动过的非测试 .rs 源文件（含已跟踪改动 + 未跟踪新文件；排除 tests/、*_test.rs 等）
+changed="$( { git diff --name-only HEAD -- '*.rs'; git ls-files --others --exclude-standard -- '*.rs'; } 2>/dev/null | sort -u | grep -vE '(^|/)(tests?|benches|examples)/|(_test|\.test)\.rs$' || true)"
 
 if [[ -z "$changed" ]]; then
   echo "✓ 没有改动非测试 .rs 源文件"
