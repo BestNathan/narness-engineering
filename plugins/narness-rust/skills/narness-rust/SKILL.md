@@ -19,7 +19,7 @@ description: "指导在 Rust 项目中实施 harness 工程化——用 cargo/cl
 | L1 项目约定 | CLAUDE.md | 弱 |
 | L2 Skill | 本 skill | 中弱 |
 | L3 Hook | PostToolUse 校验 | 中强 |
-| L4 脚本 | check.sh / verify-invariants.sh | 强 |
+| L4 脚本 | verify-*.sh / verify-invariants.sh | 强 |
 | L5 编译期 | clippy -D warnings、#![forbid] | 最强 |
 
 ## 何时调用本 skill
@@ -41,7 +41,10 @@ description: "指导在 Rust 项目中实施 harness 工程化——用 cargo/cl
 
 | 脚本 | 用途 |
 |---|---|
-| `scripts/check.sh [DIR]` | 完整门禁：fmt + clippy -D warnings + test |
+| `scripts/verify-fmt.sh [DIR]` | 格式检查：cargo fmt --check |
+| `scripts/verify-check.sh [DIR]` | 编译检查：cargo check |
+| `scripts/verify-clippy.sh [DIR]` | lint 检查：cargo clippy -D warnings |
+| `scripts/verify-test.sh [DIR]` | 测试：cargo test |
 | `scripts/verify-invariants.sh [DIR]` | 不变量：禁 unwrap/expect/panic!/unsafe 无注释 |
 | `scripts/verify-test-discipline.sh [DIR]` | 测试纪律：改 .rs 必有测试 |
 
@@ -49,7 +52,7 @@ description: "指导在 Rust 项目中实施 harness 工程化——用 cargo/cl
 
 - 先写测试，再写实现
 - 改动 src/ 下的 .rs 必须有对应测试文件
-- 提交前跑 `check.sh` 完整门禁
+- 提交前按需跑 verify-fmt.sh / verify-clippy.sh / verify-test.sh
 
 ## 常见反模式与对应硬约束
 
