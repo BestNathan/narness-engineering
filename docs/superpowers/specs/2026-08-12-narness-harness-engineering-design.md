@@ -77,8 +77,11 @@ narness-engineering/
 │       │   ├── hooks.json                 # hook 定义
 │       │   └── scripts/                   # hook 调用的脚本
 │       │       └── post-edit-gate.sh      # PostToolUse 触发的快速门禁
-│       └── scripts/                       # 独立校验脚本（agent 与 CI 共用）
-│           ├── check.sh                   # 完整门禁：fmt + clippy -D warnings + test
+│       └── scripts/                       # 独立校验脚本（agent 与 CI 共用，单一职责）
+│           ├── verify-fmt.sh              # 格式检查
+│           ├── verify-check.sh            # 编译检查
+│           ├── verify-clippy.sh           # lint 检查
+│           ├── verify-test.sh             # 测试
 │           ├── verify-invariants.sh       # 不变量检查
 │           └── verify-test-discipline.sh  # 测试纪律检查
 └── docs/
@@ -157,7 +160,7 @@ narness-engineering/
 1. **何时调用** — 当需要在 Rust 项目中建立约束、或发现 agent 反复违反同一类约束时
 2. **约束阶梯的 Rust 映射** — 把 L0–L5 映射到具体 Rust 手段（见 2.3 表）
 3. **把约束下沉的步骤** — 遇到「靠提示词约束失败」的场景时，如何逐级升级到 hook / 脚本 / 编译期
-4. **脚本使用指引** — 何时调用 `check.sh` / `verify-invariants.sh` / `verify-test-discipline.sh`，如何解读失败输出并修复
+4. **脚本使用指引** — 何时调用 `verify-fmt.sh` / `verify-check.sh` / `verify-clippy.sh` / `verify-test.sh` / `verify-invariants.sh` / `verify-test-discipline.sh`，如何解读失败输出并修复
 5. **测试纪律** — 先写测试、改动 .rs 必须有对应测试、如何满足门禁
 
 ### 5.3 Hooks
@@ -165,17 +168,20 @@ narness-engineering/
 `plugins/narness-rust/hooks/hooks.json` 定义 `PostToolUse` 钩子：当 agent 用 `Edit` / `Write` 修改 `.rs` 文件后，触发快速门禁脚本，失败信息回传给 agent 供其修复。
 
 - **事件**：`PostToolUse`
-- **matcher**：`Edit|Write`
-- **行为**：运行 `post-edit-gate.sh`（快速门禁：`cargo fmt --check` + `cargo check`，跳过耗时的全量 test），失败时把 stderr 注入对话
-- **设计考量**：hook 只跑**快速**门禁（避免每次编辑都跑全量 `cargo test` 造成卡顿）；**完整**门禁由 agent 主动调用 `scripts/check.sh` 或 CI 执行，实现「快速 hook + 完整脚本」分层
+- **matcher**：`Edit|Write|MultiEdit`
+- **行为**：`post-edit-gate.sh` 作为 hook 入口，判断改动是否为 `.rs`，是则调用 `verify-check.sh` 做编译检查（跳过耗时的全量 test），失败时把 stderr 注入对话
+- **设计考量**：hook 只跑**快速**门禁（避免每次编辑都跑全量 `cargo test` 造成卡顿）；其余校验（fmt / clippy / test）由 agent 主动调用对应的单一职责脚本或 CI 执行，实现「快速 hook + 可组合脚本」分层
 
 ### 5.4 独立脚本（scripts/）
 
-脚本是「代码约束」的实体，与 hook 解耦，可被 agent 手动调用、被 hook 调用、被 CI 复用。均参数化（接受项目根路径），首期作为「参考实现」存在，不绑定具体示例项目。
+脚本是「代码约束」的实体，与 hook 解耦，可被 agent 手动调用、被 hook 调用、被 CI 复用。均参数化（接受项目根路径），首期作为「参考实现」存在，不绑定具体示例项目。**每个脚本只做一件事（单一职责）**，可独立调用、独立验证、按需组合。
 
 | 脚本 | 职责 | 对应 harness 层 |
 |---|---|---|
-| `check.sh` | 完整门禁：`cargo fmt --check` → `cargo clippy --all-targets --all-features -- -D warnings` → `cargo test` | 编译/测试 ground truth |
+| `verify-fmt.sh` | `cargo fmt --check` | 编译/测试 ground truth |
+| `verify-check.sh` | `cargo check` | 编译/测试 ground truth |
+| `verify-clippy.sh` | `cargo clippy --all-targets --all-features -- -D warnings` | 编译/测试 ground truth |
+| `verify-test.sh` | `cargo test` | 编译/测试 ground truth |
 | `verify-invariants.sh` | 扫描 `src/` 下的 `.rs`，检查：裸 `unwrap()`/`expect()`、`panic!`、`unsafe` 缺 SAFETY 注释 | 代码规范/不变量 |
 | `verify-test-discipline.sh` | 检测最近改动的 `.rs` 是否有对应测试文件 | 测试纪律 |
 
@@ -195,7 +201,7 @@ narness-engineering/
 1. 仓库结构符合第 3 节目录，`git` 已初始化
 2. `marketplace.json` 与 `plugin.json` 字段完整、格式正确（对齐 Claude Code 插件规范）
 3. `narness-rust` skill 的 `SKILL.md` 存在，内容覆盖 5.2 大纲
-4. `hooks.json` 与三个脚本存在且可执行，脚本可被独立调用
+4. `hooks.json` 与六个单一职责脚本存在且可执行，脚本可被独立调用
 5. 四篇理论文档存在，核心命题（第 2.2 节）贯穿全文
 6. `README.md` 简述 Narness 理念与使用方式
 
