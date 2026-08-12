@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "narness",
+  "version": "0.1.0",
+  "description": "Narness harness engineering — constrain AI agents with code, hooks and scripts instead of prompts",
+  "owner": { "name": "narness" },
+  "plugins": [
+    {
+      "name": "narness-rust",
+      "description": "Rust harness engineering skills, hooks and validation scripts",
+      "version": "0.1.0",
+      "source": "./plugins/narness-rust",
+      "author": { "name": "narness" }
+    }
+  ]
+}
