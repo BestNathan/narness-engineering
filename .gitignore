@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Rust (后续脚本/示例项目使用)
+/target/
+**/*.rs.bk
+
+# 编辑器
+.idea/
+.vscode/
+*.swp
