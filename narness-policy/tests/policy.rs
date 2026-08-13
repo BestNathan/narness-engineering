@@ -27,3 +27,12 @@ fn policy_roundtrips_json() {
     let back: Policy = serde_json::from_str(&s).unwrap();
     assert_eq!(p, back);
 }
+
+#[test]
+fn defaults_fill_missing_fields() {
+    let back: Policy = serde_json::from_str(r#"{"id":"x","matcher":{"All":[]}}"#).unwrap();
+    assert_eq!(back.name, "");
+    assert_eq!(back.priority, 0);
+    assert_eq!(back.scope, Scope::Global);
+    assert!(back.rules.is_empty());
+}
