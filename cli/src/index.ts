@@ -1,6 +1,7 @@
+#!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
 import { findConfig, loadConfig } from "./config.js";
 import { runChecks } from "./engine.js";
 import { reportHuman, reportJson } from "./report.js";
@@ -27,13 +28,20 @@ function realContext(cwd: string): Context {
       }
     },
     readMcpServers() {
-      const p = resolve(cwd, ".mcp.json");
-      if (!existsSync(p)) return [];
-      try {
-        const data = JSON.parse(readFileSync(p, "utf8")) as { mcpServers?: Record<string, unknown> };
-        return Object.keys(data.mcpServers ?? {});
-      } catch {
-        return [];
+      let dir = cwd;
+      for (;;) {
+        const p = resolve(dir, ".mcp.json");
+        if (existsSync(p)) {
+          try {
+            const data = JSON.parse(readFileSync(p, "utf8")) as { mcpServers?: Record<string, unknown> };
+            return Object.keys(data.mcpServers ?? {});
+          } catch {
+            return [];
+          }
+        }
+        const parent = dirname(dir);
+        if (parent === dir) return [];
+        dir = parent;
       }
     },
   };
@@ -41,8 +49,14 @@ function realContext(cwd: string): Context {
 
 function parseArgs(argv: string[]) {
   const json = argv.includes("--json");
-  const configFlag = argv.find((a) => a.startsWith("--config="));
-  const configPath = configFlag ? configFlag.slice("--config=".length) : undefined;
+  let configPath: string | undefined;
+  const idx = argv.indexOf("--config");
+  if (idx >= 0 && idx + 1 < argv.length) {
+    configPath = argv[idx + 1];
+  } else {
+    const flag = argv.find((a) => a.startsWith("--config="));
+    if (flag) configPath = flag.slice("--config=".length);
+  }
   return { json, configPath };
 }
 
@@ -64,7 +78,13 @@ async function main() {
     process.exit(2);
   }
 
-  const results = await runChecks(config, realContext(cwd));
+  let results;
+  try {
+    results = await runChecks(config, realContext(cwd));
+  } catch (err) {
+    console.error(`配置错误: ${(err as Error).message}`);
+    process.exit(2);
+  }
   console.log(json ? reportJson(results) : reportHuman(results));
 
   const failed = results.some((r) => r.status !== "pass");

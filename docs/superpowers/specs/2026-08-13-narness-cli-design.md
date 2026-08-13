@@ -92,7 +92,7 @@ cli/
 ├── package.json           # name: narness, bin, dependencies (smol-toml, semver)
 ├── tsconfig.json
 ├── src/
-│   ├── index.ts           # CLI 入口：解析 --json / --config / --strict，调用引擎，设置 exit code
+│   ├── index.ts           # CLI 入口：解析 --json / --config，调用引擎，设置 exit code
 │   ├── config.ts          # 从 cwd 向上定位 .narness.toml，解析为类型化 Config
 │   ├── engine.ts          # 遍历 checks，按 type dispatch 到检查器，收集 CheckResult[]
 │   ├── checks/
@@ -126,7 +126,7 @@ interface CheckResult {
 
 ## 6. 数据流
 
-1. `npx narness [--json] [--config <path>] [--strict]` → 解析 CLI 参数
+1. `npx narness [--json] [--config <path>]` → 解析 CLI 参数
 2. `config.ts` 从 cwd 向上查找 `.narness.toml`（支持 `--config` 指定路径），解析为 `Config`
 3. `engine.ts` 遍历 checks：查 registry 得到检查器 → `await check.run(...)` → `CheckResult`
 4. 汇总 `CheckResult[]`

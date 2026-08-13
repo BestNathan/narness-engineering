@@ -51,4 +51,19 @@ describe("CLI 集成", () => {
     const r = runIn(empty);
     expect(r.code).toBe(2);
   });
+
+  it("--config 指定路径", () => {
+    const alt = mkdtempSync(join(tmpdir(), "narness-alt-"));
+    writeFileSync(join(alt, "custom.toml"), '[[checks]]\ntype = "exists"\nname = "git"\n');
+    const empty = mkdtempSync(join(tmpdir(), "narness-empty2-"));
+    const r = runIn(empty, ["--config", join(alt, "custom.toml")]);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("✔");
+  });
+
+  it("未知 type 则 exit 2", () => {
+    writeFileSync(join(dir, ".narness.toml"), '[[checks]]\ntype = "nope"\nname = "x"\n');
+    const r = runIn(dir);
+    expect(r.code).toBe(2);
+  });
 });

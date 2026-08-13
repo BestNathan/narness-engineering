@@ -25,11 +25,9 @@ describe("runChecks", () => {
     expect(results).toHaveLength(2);
     expect(results.every((r) => r.status === "pass")).toBe(true);
   });
-  it("未知 type 标记 error", async () => {
+  it("未知 type 抛错", async () => {
     const cfg: Config = { checks: [{ type: "nope", name: "x" }] };
-    const results = await runChecks(cfg, ctx());
-    expect(results[0].status).toBe("error");
-    expect(results[0].message).toContain("未知检查类型");
+    await expect(runChecks(cfg, ctx())).rejects.toThrow("未知检查类型");
   });
   it("检查器抛异常标记 error 且继续", async () => {
     const cfg: Config = {

@@ -24,7 +24,7 @@ export const versionCheck: Check = {
       return {
         status: "fail",
         check,
-        message: `${check.name} 版本 ${actual} 不满足要求（需 ${want}）`,
+        message: `版本 ${actual} 不满足要求（需 ${want}）`,
         fix: check.fix ?? `请升级 ${check.name}`,
         detail: cmp.reason,
       };

@@ -42,6 +42,9 @@ function normalizeCheck(c: unknown): CheckConfig {
   if (typeof o.type !== "string" || typeof o.name !== "string") {
     throw new Error(`check 缺少 type/name: ${JSON.stringify(c)}`);
   }
+  if (o.names !== undefined && !Array.isArray(o.names)) {
+    throw new Error(`check ${o.name} 的 names 必须是数组`);
+  }
   return {
     type: o.type,
     name: o.name,

@@ -7,8 +7,7 @@ export async function runChecks(config: Config, ctx: Context): Promise<CheckResu
   for (const check of config.checks) {
     const impl = getCheck(check.type);
     if (!impl) {
-      results.push({ status: "error", check, message: `未知检查类型 "${check.type}"` });
-      continue;
+      throw new Error(`未知检查类型 "${check.type}"`);
     }
     try {
       results.push(await impl.run(check, ctx));
