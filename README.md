@@ -34,4 +34,6 @@ claude plugin install narness-rust
 ## 参考文档
 
 - [Rust 测试 Harness 工程化](docs/reference/rust-test-harness.md)（nextest + llvm-cov + LLM 反馈）
-- [Harness 脚本的执行机制与时机](docs/reference/harness-execution.md)（git / Claude Code / Codex hooks）
+- [Git Hooks](docs/reference/git-hooks.md)（提交/推送时机的 harness 执行）
+- [Claude Code Hooks](docs/reference/claude-code-hooks.md)（agent 工具调用时机的 harness 执行）
+- [Codex Hooks](docs/reference/codex-hooks.md)（OpenAI Codex CLI 的 harness 执行）
