@@ -13,6 +13,7 @@ Narness 是「研究 + 文档 + Claude Code 工具集」项目，阐述并落地
 - `docs/theory/` — 理论研究文档
 - `docs/reference/` — 具体工具的 harness 工程化参考
 - `plugins/narness-rust/` — Rust harness 工程化插件（skill + hook + 脚本）
+- `cli/` — narness 环境检查器（npm 包）
 - `.claude-plugin/marketplace.json` — marketplace 定义
 
 ## 快速开始
@@ -37,3 +38,23 @@ claude plugin install narness-rust
 - [Git Hooks](docs/reference/git-hooks.md)（提交/推送时机的 harness 执行）
 - [Claude Code Hooks](docs/reference/claude-code-hooks.md)（agent 工具调用时机的 harness 执行）
 - [Codex Hooks](docs/reference/codex-hooks.md)（OpenAI Codex CLI 的 harness 执行）
+
+## 环境检查
+
+`cli/` 是一个 npm 包，项目根目录放 `.narness.toml` 声明 agent 运行环境要求，用 `npx narness` 检查：
+
+```toml
+[[checks]]
+type = "version"
+name = "node"
+min = "22"
+
+[[checks]]
+type = "exists"
+name = "rg"
+```
+
+```bash
+npx narness           # human 报告（失败项含修复建议）
+npx narness --json    # 结构化输出（供 hook/CI 消费）
+```
