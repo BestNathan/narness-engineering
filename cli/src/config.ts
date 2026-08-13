@@ -26,8 +26,11 @@ export function loadConfig(path: string): Config {
   } catch (err) {
     throw new Error(`TOML 解析失败: ${(err as Error).message}`);
   }
-  const obj = (parsed ?? {}) as { checks?: unknown[] };
-  const checks = (obj.checks ?? []).map(normalizeCheck);
+  const obj = (parsed ?? {}) as { checks?: unknown };
+  if (obj.checks !== undefined && !Array.isArray(obj.checks)) {
+    throw new Error(`checks 必须是数组`);
+  }
+  const checks = ((obj.checks ?? []) as unknown[]).map(normalizeCheck);
   return { checks };
 }
 
@@ -44,7 +47,7 @@ function normalizeCheck(c: unknown): CheckConfig {
     name: o.name,
     min: typeof o.min === "string" ? o.min : undefined,
     max: typeof o.max === "string" ? o.max : undefined,
-    names: Array.isArray(o.names) ? (o.names as string[]) : undefined,
+    names: Array.isArray(o.names) && o.names.every((n) => typeof n === "string") ? (o.names as string[]) : undefined,
     fix: typeof o.fix === "string" ? o.fix : undefined,
   };
 }
