@@ -93,3 +93,44 @@ fn coerces_paths() {
 fn rejects_logical_operators() {
     assert!(parse_bash("a && b").is_err());
 }
+
+#[test]
+fn handles_single_quotes() {
+    let p = parse_bash("echo 'hello world'").unwrap();
+    assert_eq!(
+        p.commands[0].arguments,
+        vec![Argument::Positional(Value::String("hello world".into()))]
+    );
+}
+
+#[test]
+fn coerces_booleans() {
+    let p = parse_bash("cmd --flag true --other false").unwrap();
+    assert_eq!(
+        p.commands[0].arguments,
+        vec![
+            Argument::Option(OptionArg { name: "flag".into(), value: Value::Boolean(true), syntax: OptionSyntax::Separate }),
+            Argument::Option(OptionArg { name: "other".into(), value: Value::Boolean(false), syntax: OptionSyntax::Separate }),
+        ]
+    );
+}
+
+#[test]
+fn rejects_unterminated_quote() {
+    assert!(parse_bash("echo \"unterminated").is_err());
+}
+
+#[test]
+fn rejects_empty_command() {
+    assert!(parse_bash("").is_err());
+    assert!(parse_bash("   ").is_err());
+}
+
+#[test]
+fn handles_backslash_escape() {
+    let p = parse_bash("echo foo\\ bar").unwrap();
+    assert_eq!(
+        p.commands[0].arguments,
+        vec![Argument::Positional(Value::String("foo bar".into()))]
+    );
+}

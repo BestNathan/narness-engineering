@@ -13,6 +13,21 @@ pub enum ParseError {
     EmptyCommand,
 }
 
+/// Parse a shell command string into a semantic [`Pipeline`].
+///
+/// # Known limitations (v0.1 — no type-hint schema)
+///
+/// - A `--flag` followed by a non-dash token is parsed as an `Option` that consumes
+///   that token (e.g. `cmd --public repo` → `Option{name:"public", value:"repo"}`),
+///   because without a schema we cannot distinguish a value-taking option from a flag.
+/// - Bundled short flags are not supported: `-rf` parses as a single short-attached
+///   option `Option{name:"r", value:"f"}` rather than two flags.
+/// - Logical operators (`&&`, `||`) and the pipe `|` are only recognized when
+///   surrounded by whitespace.
+/// - Inside double quotes a backslash escapes *any* following character (bash only
+///   treats `\` specially before `$`, `` ` ``, `"`, `\`, and newline).
+/// - A negative-number positional (e.g. `echo -5`) parses as a short option, not a
+///   `Positional(Integer(-5))`.
 pub fn parse_bash(input: &str) -> Result<Pipeline, ParseError> {
     let tokens = tokenize(input)?;
     if tokens.is_empty() {
@@ -109,7 +124,7 @@ fn parse_command(tokens: &[String]) -> Result<Command, ParseError> {
     let mut arguments = Vec::new();
     idx += 1;
     while idx < tokens.len() {
-        let (arg, consumed) = classify_arg(&tokens, idx);
+        let (arg, consumed) = classify_arg(tokens, idx);
         arguments.push(arg);
         idx += consumed;
     }
