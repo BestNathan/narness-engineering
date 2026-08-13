@@ -140,7 +140,7 @@ fn matches(matcher: &Matcher, call: &ToolCall) -> bool {
             }
             true
         }
-        Matcher::Context(_) => true, // placeholder — v0.2
+        Matcher::Context(_) => false, // placeholder — v0.2 (fail-closed: never matches until implemented)
     }
 }
 

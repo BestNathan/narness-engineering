@@ -141,3 +141,123 @@ fn deny_wins_over_rewrite() {
     assert_eq!(result.decision, Decision::Deny);
     assert!(result.effective_call.is_none());
 }
+
+#[test]
+fn removes_option() {
+    let policy = Policy {
+        id: "strip".into(), name: "strip".into(), priority: 100, scope: Scope::Global,
+        matcher: Matcher::All(vec![]),
+        rules: vec![Rule {
+            id: "r".into(),
+            condition: Condition::All(vec![]),
+            action: Action::Rewrite(vec![RewriteOp::Remove {
+                target: Target::Argument { name: "limit".into() },
+            }]),
+            feedback: None,
+        }],
+        metadata: PolicyMetadata,
+    };
+    let result = evaluate(&bash_call("gh run list --limit 100"), &[policy]);
+    assert_eq!(result.decision, Decision::Rewrite);
+    match &result.effective_call.as_ref().unwrap().input {
+        ToolInput::Command(c) => {
+            assert!(!c.arguments.iter().any(|a| matches!(a, Argument::Option(o) if o.name == "limit")));
+        }
+        _ => panic!("expected command input"),
+    }
+}
+
+#[test]
+fn inserts_option() {
+    let policy = Policy {
+        id: "add".into(), name: "add".into(), priority: 100, scope: Scope::Global,
+        matcher: Matcher::All(vec![]),
+        rules: vec![Rule {
+            id: "r".into(),
+            condition: Condition::All(vec![]),
+            action: Action::Rewrite(vec![RewriteOp::Insert {
+                target: Target::Argument { name: "json".into() },
+                value: Expr::Literal(Value::String("status".into())),
+            }]),
+            feedback: None,
+        }],
+        metadata: PolicyMetadata,
+    };
+    let result = evaluate(&bash_call("gh run list"), &[policy]);
+    assert_eq!(result.decision, Decision::Rewrite);
+    match &result.effective_call.as_ref().unwrap().input {
+        ToolInput::Command(c) => {
+            assert!(c.arguments.iter().any(|a| matches!(
+                a, Argument::Option(o) if o.name == "json" && o.value == Value::String("status".into())
+            )));
+        }
+        _ => panic!("expected command input"),
+    }
+}
+
+#[test]
+fn replaces_option() {
+    let policy = Policy {
+        id: "replace".into(), name: "replace".into(), priority: 100, scope: Scope::Global,
+        matcher: Matcher::All(vec![]),
+        rules: vec![Rule {
+            id: "r".into(),
+            condition: Condition::All(vec![]),
+            action: Action::Rewrite(vec![RewriteOp::Replace {
+                target: Target::Argument { name: "limit".into() },
+                value: Expr::Literal(Value::Integer(5)),
+            }]),
+            feedback: None,
+        }],
+        metadata: PolicyMetadata,
+    };
+    let result = evaluate(&bash_call("gh run list --limit 100"), &[policy]);
+    assert_eq!(result.decision, Decision::Rewrite);
+    match &result.effective_call.as_ref().unwrap().input {
+        ToolInput::Command(c) => {
+            assert!(c.arguments.iter().any(|a| matches!(
+                a, Argument::Option(o) if o.name == "limit" && o.value == Value::Integer(5)
+            )));
+        }
+        _ => panic!("expected command input"),
+    }
+}
+
+#[test]
+fn warns_and_adds_feedback() {
+    let policy = Policy {
+        id: "warn".into(), name: "warn".into(), priority: 100, scope: Scope::Global,
+        matcher: Matcher::All(vec![]),
+        rules: vec![Rule {
+            id: "r".into(),
+            condition: Condition::All(vec![]),
+            action: Action::Warn(FeedbackSpec {
+                code: "WARN".into(), severity: Severity::Warning,
+                message: Template("heads up".into()), guidance: vec![],
+                retry: RetryPolicy::Never, expose_rule: false,
+            }),
+            feedback: None,
+        }],
+        metadata: PolicyMetadata,
+    };
+    let result = evaluate(&bash_call("gh run list"), &[policy]);
+    assert_eq!(result.decision, Decision::Warn);
+    assert_eq!(result.feedback.len(), 1);
+    assert!(result.effective_call.is_none());
+}
+
+#[test]
+fn allows_unmatched_policy() {
+    let policy = Policy {
+        id: "no-rm".into(), name: "block rm".into(), priority: 100, scope: Scope::Global,
+        matcher: Matcher::Command(CommandMatcher { executable: Some("rm".into()), subcommand: None }),
+        rules: vec![Rule {
+            id: "r".into(), condition: Condition::All(vec![]), action: Action::Deny, feedback: None,
+        }],
+        metadata: PolicyMetadata,
+    };
+    let result = evaluate(&bash_call("gh run list"), &[policy]);
+    assert_eq!(result.decision, Decision::Allow);
+    assert!(result.effective_call.is_none());
+    assert!(result.matched_policies.is_empty());
+}
