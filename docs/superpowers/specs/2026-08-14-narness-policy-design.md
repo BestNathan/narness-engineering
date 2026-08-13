@@ -378,16 +378,18 @@ Policies are evaluated in `priority` order (descending). The result is merged as
 1. If any matched rule's action is `Deny` → final `Decision::Deny`, aggregating that rule's feedback.
 2. Else if any matched action is `Rewrite`/`Transform`/`Constrain` → apply transformations in
    priority order → final `Decision::Rewrite`.
-3. Else if any matched action is `Allow` (or nothing matched) → `Decision::Allow`.
+3. Else if any matched action is `Warn` → final `Decision::Warn` (feedback only, no rewrite).
+4. Else if any matched action is `Allow` (or nothing matched) → `Decision::Allow`.
 
 `Transform` and `Constrain` collapse to `Decision::Rewrite` at the decision level; their detail is
 recorded in `transformations`.
 
 ### 7.2 Original + effective call
 
-`EvaluationResult` always carries the original `ToolCall` (the input) and, when a rewrite happened,
-an `effective_call` (the rewritten AST). This pairing is what enables later behavior analysis:
-what the agent asked for → what policy changed → whether the agent then adapted.
+The original `ToolCall` is the input to `evaluate` (the caller retains it); `EvaluationResult`
+additionally carries an `effective_call` when a rewrite happened. This original-vs-effective pairing
+is what enables later behavior analysis: what the agent asked for → what policy changed → whether
+the agent then adapted.
 
 ## 8. CLI
 
@@ -420,14 +422,17 @@ The hook adapter (`check`: read `PreToolUse` stdin JSON, map `Deny` → exit 2 +
   preservation; priority ordering; the decision-merge table in §7.1.
 - **Integration test**: `narness-policy inspect 'gh run list --limit 100'` produces the expected
   AST JSON snapshot.
-- **Errors**: `ParseError` (tokenize/classification failure) and `EvalError` (unknown target, type
-  mismatch in `Compare`). CLI writes to stderr and exits 2.
+- **Errors**: `ParseError` (tokenize/classification failure). The evaluator is fail-closed rather
+  than error-returning in v0.1: a `Compare` type mismatch evaluates to `false`, and an
+  unknown/out-of-range rewrite target is a no-op. An explicit `EvalError` surface is deferred to
+  v0.2. The CLI writes diagnostics to stderr and exits 2 on parse/IO/deserialization errors.
 
 ## 10. Out of scope (v0.2+)
 
 - YAML DSL (the `match` / `when` / `expression` / `action` / `feedback` syntax).
 - The `check` hook adapter (`PreToolUse` stdin → exit-2 block / `updatedInput` rewrite).
 - `&&` / `||` command expressions; richer `Value` coercion (`Duration`/`Ip`/`Cidr` via type hints).
-- `Context` matcher, `Matches`/`In` conditions, `Function` expr, `Constrain`/`Transform` actions.
+- `Context` matcher, `Exists`/`Matches`/`In` conditions, `Arguments`/`Function` exprs,
+  `Constrain`/`Transform` actions.
 - `FileOperation` / `HttpRequest` tool inputs.
 - Integration: a `narness policy` subcommand in the existing TS CLI that shells out to this binary.
