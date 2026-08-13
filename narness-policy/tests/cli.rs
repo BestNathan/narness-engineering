@@ -44,3 +44,21 @@ fn eval_applies_policy() {
         serde_json::json!({ "Integer": 20 })
     );
 }
+
+#[test]
+fn inspect_parse_error_exits_2() {
+    let out = Command::new(env!("CARGO_BIN_EXE_narness-policy"))
+        .args(["inspect", "gh run \"unterminated"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+}
+
+#[test]
+fn eval_missing_policy_file_exits_2() {
+    let out = Command::new(env!("CARGO_BIN_EXE_narness-policy"))
+        .args(["eval", "gh run list", "--policy", "/nonexistent/policy.json"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+}

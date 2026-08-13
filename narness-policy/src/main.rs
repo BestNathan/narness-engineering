@@ -34,7 +34,7 @@ fn main() -> ExitCode {
     match cli.command {
         Command::Inspect { command } => match parse_bash(&command) {
             Ok(pipeline) => {
-                println!("{}", serde_json::to_string_pretty(&pipeline).unwrap());
+                println!("{}", serde_json::to_string_pretty(&pipeline).expect("serialize pipeline"));
                 ExitCode::SUCCESS
             }
             Err(e) => {
@@ -64,7 +64,7 @@ fn main() -> ExitCode {
                 }
             };
             let result = evaluate(&call, &policies);
-            println!("{}", serde_json::to_string_pretty(&result).unwrap());
+            println!("{}", serde_json::to_string_pretty(&result).expect("serialize evaluation result"));
             ExitCode::SUCCESS
         }
     }
@@ -72,7 +72,7 @@ fn main() -> ExitCode {
 
 fn make_tool_call(pipeline: Pipeline) -> ToolCall {
     // v0.1 evaluates the first command of a pipeline (documented in the spec).
-    let cmd = pipeline.commands.into_iter().next().unwrap();
+    let cmd = pipeline.commands.into_iter().next().expect("parsed pipeline has at least one command");
     ToolCall {
         id: "cli".to_string(),
         tool: ToolRef { name: "bash".to_string(), version: None },
