@@ -14,7 +14,7 @@ function ctx(over: Partial<Context> = {}): Context {
 }
 
 describe("runChecks", () => {
-  it("遍历所有 checks", async () => {
+  it("runs all checks", async () => {
     const cfg: Config = {
       checks: [
         { type: "version", name: "node", min: "22" },
@@ -25,11 +25,11 @@ describe("runChecks", () => {
     expect(results).toHaveLength(2);
     expect(results.every((r) => r.status === "pass")).toBe(true);
   });
-  it("未知 type 抛错", async () => {
+  it("throws on unknown type", async () => {
     const cfg: Config = { checks: [{ type: "nope", name: "x" }] };
-    await expect(runChecks(cfg, ctx())).rejects.toThrow("未知检查类型");
+    await expect(runChecks(cfg, ctx())).rejects.toThrow("unknown check type");
   });
-  it("检查器抛异常标记 error 且继续", async () => {
+  it("marks error and continues when a checker throws", async () => {
     const cfg: Config = {
       checks: [
         { type: "exists", name: "a" },

@@ -1,26 +1,28 @@
 # Narness
 
-Narness 是「研究 + 文档 + Claude Code 工具集」项目，阐述并落地「harness 工程化」理念。
+Narness is a "research + documentation + Claude Code tooling" project that articulates and puts into practice the idea of **harness engineering**.
 
-## 核心理念
+## Core idea
 
-能用代码、hook、脚本约束 AI agent 行为的，优先用这些，而非提示词。因为 agent 很可能不按提示词办事；脚本、hook 能让 agent 发现实现有问题，并指导其正确行为，从而保证长程任务的正确性。
+When code, hooks, or scripts can constrain an AI agent's behavior, prefer them over prompts. An agent will very likely not follow prompts; scripts and hooks let the agent *discover* that its implementation is wrong and guide it toward correct behavior, thereby guaranteeing correctness on long-running tasks.
 
-约束层级阶梯：L0 提示词 → L1 项目约定 → L2 Skill → L3 Hook → L4 脚本校验 → L5 编译期；目标是让约束从 L0-L2 下沉到 L3-L5。
+The constraint ladder: L0 prompts → L1 project conventions → L2 Skill → L3 Hook → L4 script validation → L5 compile-time. The goal is to sink constraints from L0–L2 down to L3–L5.
 
-## 项目约定（必须遵守）
+## Project conventions (must follow)
 
-1. **脚本单一职责**：校验脚本必须一个脚本只做一件事。禁止「完整门禁」这类把 fmt/lint/test 全包的上帝脚本。每个校验拆成独立的 `verify-*.sh`（如 `verify-fmt.sh` / `verify-check.sh` / `verify-clippy.sh` / `verify-test.sh`）。
-2. **hook 入口薄**：hook 脚本（`post-edit-gate.sh`）只做「判断触发条件 + 委派给单一职责脚本」，不内联校验逻辑。
-3. **失败信息回传 LLM**：脚本失败时必须把诊断写到 stderr（PostToolUse hook 退出码 2 会把 stderr 注入 LLM 上下文），确保 agent 能看到自己的错误并修复。
+1. **Script naming**: every script this project provides starts with `narness-`. The Rust plugin ships `narness-rust-fmt.sh`, `narness-rust-check.sh`, `narness-rust-clippy.sh`, `narness-rust-test.sh`, `narness-rust-invariants.sh`, `narness-rust-test-discipline.sh`.
+2. **Single-responsibility scripts**: each validation script does exactly one thing. "Full-gate" god scripts that bundle fmt/lint/test together are forbidden — split each check into its own `narness-rust-*.sh`.
+3. **Thin hook entrypoint**: the hook script (`post-edit-gate.sh`) only "judges the trigger condition + delegates to a single-responsibility script"; it does not inline validation logic.
+4. **Feed failures back to the LLM**: on failure, scripts must write diagnostics to stderr (a PostToolUse hook exit code 2 injects stderr into the LLM context), so the agent can see its own mistakes and fix them.
 
-## 结构
+## Structure
 
-- `plugins/narness-rust/` — Rust harness 工程化插件（skill + PostToolUse hook + 6 个 `verify-*.sh` 脚本）
-- `docs/theory/` — 理论文档（约束阶梯、决策准则等）
-- `docs/reference/` — 工具实践参考（如 Rust 测试 harness）
-- `.claude-plugin/marketplace.json` — 外层 marketplace
+- `plugins/narness-rust/` — Rust harness-engineering plugin (skill + PostToolUse hook + 6 `narness-rust-*.sh` scripts)
+- `docs/theory/` — theory docs (constraint ladder, decision guide, etc.)
+- `docs/reference/` — tool-practice references (e.g. the Rust test harness)
+- `cli/` — the narness environment checker (npm package)
+- `.claude-plugin/marketplace.json` — the outer marketplace
 
-## 首期范围
+## Initial scope
 
-只做 Rust，纯理论无示例项目。后续扩展：其他语言插件（narness-python 等）、示例项目。
+Rust only, pure theory with no example projects. Later extensions: plugins for other languages (narness-python, etc.), example projects.

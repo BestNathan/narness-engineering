@@ -1,66 +1,66 @@
-# Claude Code Hooks：agent 工具调用时机的 harness 执行
+# Claude Code hooks: harness execution at agent tool-call time
 
-## 1. 机制原理
+## 1. Mechanism
 
-Claude Code 在 agent 生命周期各节点触发 hook，执行外部脚本。hook 是「编码 agent 层」的约束——在 agent 编辑文件、调用工具、开始/结束会话时拦截或反馈。
+Claude Code fires hooks at each node of the agent's lifecycle, executing external scripts. A hook is a constraint at the "agent layer" — it intercepts or feeds back when the agent edits files, calls tools, or starts/ends a session.
 
-这是 Narness 最核心的执行层：**hook 能把校验失败直接反馈给 LLM**，让 agent 自己发现问题并修复。
+This is Narness's most important execution layer: **a hook can feed a validation failure directly back to the LLM**, letting the agent discover and fix problems itself.
 
-## 2. 完整事件表
+## 2. Full event table
 
-| 事件 | 时机 | exit 2 效果 | 用途 |
+| Event | Timing | exit-2 effect | Use |
 |---|---|---|---|
-| `PreToolUse` | 工具执行**前** | **阻止**工具调用 | 阻止/改写不该发生的调用 |
-| `PostToolUse` | 工具执行**后** | 非阻塞，stderr 反馈给 Claude | 校验、自动格式化、反馈 |
-| `PostToolUseFailure` | 工具失败后 | 非阻塞，stderr 反馈 | 错误分诊、日志 |
-| `PostToolBatch` | 一批并行工具调用解析后 | **阻止**（停下 agentic loop） | 批级校验 |
-| `UserPromptSubmit` | 用户提交提示词时 | **阻止**并擦除提示词 | 注入/校验用户输入 |
-| `UserPromptExpansion` | 提示词展开时 | **阻止**展开 | 门控快捷指令 |
-| `Stop` | Claude 即将结束响应 | **阻止**（强制继续） | 「测试没过不许停」 |
-| `SubagentStop` | 子 agent 即将结束 | **阻止**子 agent 停止 | 子 agent 继续逻辑 |
-| `SessionStart` | 会话开始/恢复 | 非阻塞，stderr 给用户 | 注入上下文、设环境 |
-| `SessionEnd` | 会话结束 | 非阻塞 | 清理、日志 |
-| `PreCompact` | 上下文压缩前 | **阻止**压缩 | 暂存自定义指令 |
-| `Setup` | `claude` setup 时 | 非阻塞 | 安装时引导 |
-| `Notification` | 系统通知产生时 | 非阻塞 | 自定义提醒 |
-| `PermissionRequest` | 权限弹窗时 | **阻止**（拒绝权限） | 自动化权限策略 |
-| `PermissionDenied` | 权限被拒后 | 忽略（用 JSON `retry`） | 响应拒绝 |
+| `PreToolUse` | before a tool executes | **block** the tool call | block/rewrite calls that shouldn't happen |
+| `PostToolUse` | after a tool executes | non-blocking, stderr fed back to Claude | validate, auto-format, feedback |
+| `PostToolUseFailure` | after a tool fails | non-blocking, stderr feedback | error triage, logging |
+| `PostToolBatch` | after a batch of parallel tool calls resolves | **block** (halt the agentic loop) | batch-level validation |
+| `UserPromptSubmit` | when the user submits a prompt | **block** and erase the prompt | inject/validate user input |
+| `UserPromptExpansion` | when a prompt expands | **block** the expansion | gate slash commands |
+| `Stop` | when Claude is about to end its response | **block** (force it to continue) | "don't stop until tests pass" |
+| `SubagentStop` | when a subagent is about to end | **block** the subagent's stop | subagent continuation logic |
+| `SessionStart` | session start/resume | non-blocking, stderr to user | inject context, set env |
+| `SessionEnd` | session end | non-blocking | cleanup, logging |
+| `PreCompact` | before context compaction | **block** compaction | stash custom instructions |
+| `Setup` | during `claude` setup | non-blocking | install-time guidance |
+| `Notification` | when a system notification is produced | non-blocking | custom reminders |
+| `PermissionRequest` | at the permission prompt | **block** (deny permission) | automated permission policy |
+| `PermissionDenied` | after permission is denied | ignored (JSON `retry`) | respond to denial |
 
-对 harness 最有用的是 `PreToolUse`（阻止）和 `PostToolUse`（反馈）。
+For a harness, the most useful are `PreToolUse` (block) and `PostToolUse` (feedback).
 
-## 3. 退出码与反馈机制（核心契约）
+## 3. Exit codes and feedback mechanism (core contract)
 
-这是 Claude Code hook 的核心，直接决定 harness 能否「让 agent 发现问题」：
+This is the core of Claude Code hooks — it directly determines whether a harness can "let the agent discover problems":
 
-| 退出码 | 含义 |
+| Exit code | Meaning |
 |---|---|
-| `0` | 通过（happy path 应静默，无 stdout） |
-| `2` | **阻止**（PreToolUse 等阻塞事件）或**反馈**（PostToolUse 等） |
-| `1` / 其他 | 非阻塞警告，**不**阻止 |
+| `0` | passed (happy path should be silent, no stdout) |
+| `2` | **block** (blocking events like PreToolUse) or **feedback** (events like PostToolUse) |
+| `1` / other | non-blocking warning, does **not** block |
 
-**反馈路径**：`PostToolUse` 退出码 2 时，hook 的 **stderr 会作为系统消息注入 Claude 上下文**。这是 Narness 的「让 agent 自己发现问题」的落地点。
+**Feedback path**: when `PostToolUse` exits 2, the hook's **stderr is injected into Claude's context as a system message**. This is where Narness's "let the agent discover its own problems" lands.
 
-三条铁律：
+Three iron rules:
 
-1. **stdout = JSON 控制通道**（exit 0 时若输出 stdout，会被当作 JSON 解析）
-2. **stderr = 反馈文本**（agent 实际看到的）
-3. **exit 2 = 触发反馈/阻止**；exit 1 只是警告，不阻止
+1. **stdout = JSON control channel** (with exit 0, if stdout is produced it's parsed as JSON)
+2. **stderr = feedback text** (what the agent actually sees)
+3. **exit 2 = trigger feedback/block**; exit 1 is just a warning, no block
 
-所以校验失败时，脚本必须把诊断写到 **stderr**，否则 agent 看不到：
+So on validation failure, the script must write diagnostics to **stderr**, or the agent won't see them:
 
 ```bash
-# 正确：诊断写 stderr，hook 回传给 Claude
+# Right: write diagnostics to stderr; the hook feeds them back to Claude
 if ! out="$(cargo check 2>&1)"; then
   printf '%s\n' "$out" >&2
   exit 2
 fi
 ```
 
-## 4. stdin 输入
+## 4. stdin input
 
-每个 hook 命令从 **stdin** 接收 JSON。通用字段：`session_id`、`transcript_path`、`cwd`、`hook_event_name`、`permission_mode`。
+Each hook command receives JSON on **stdin**. Common fields: `session_id`, `transcript_path`, `cwd`, `hook_event_name`, `permission_mode`.
 
-工具事件（PreToolUse / PostToolUse）额外含：
+Tool events (PreToolUse / PostToolUse) additionally contain:
 
 ```json
 {
@@ -72,32 +72,32 @@ fi
 }
 ```
 
-提取 `tool_input.file_path` 即可判断改动的文件。
+Extract `tool_input.file_path` to tell which file changed.
 
-## 5. 配置位置
+## 5. Configuration locations
 
-| 作用域 | 路径 |
+| Scope | Path |
 |---|---|
-| 用户 | `~/.claude/settings.json` |
-| 项目（共享） | `<project>/.claude/settings.json` |
-| 项目（本地） | `<project>/.claude/settings.local.json`（git-ignore） |
-| 插件 | `<plugin>/hooks/hooks.json`（启用插件即加载） |
+| User | `~/.claude/settings.json` |
+| Project (shared) | `<project>/.claude/settings.json` |
+| Project (local) | `<project>/.claude/settings.local.json` (git-ignored) |
+| Plugin | `<plugin>/hooks/hooks.json` (loaded when the plugin is enabled) |
 
-优先级（冲突时）：managed/enterprise → CLI 参数 → 本地项目 → 共享项目 → 用户。
+Priority (on conflict): managed/enterprise → CLI args → local project → shared project → user.
 
-## 6. matcher 语义
+## 6. matcher semantics
 
-`matcher` 用于过滤 hook 触发：
+`matcher` filters hook firing:
 
-| 事件 | matcher 匹配 |
+| Event | matcher matches |
 |---|---|
-| 工具事件（Pre/PostToolUse 等） | **工具名**（正则）：`Bash`、`Write\|Edit`、`mcp__.*`、`*` |
-| `UserPromptSubmit` | **提示词文本**（正则） |
-| `SessionStart` 等生命周期 | 不用（`true` 或 `""`） |
+| Tool events (Pre/PostToolUse, etc.) | **tool name** (regex): `Bash`, `Write\|Edit`, `mcp__.*`, `*` |
+| `UserPromptSubmit` | **prompt text** (regex) |
+| `SessionStart` etc. lifecycle | unused (`true` or `""`) |
 
-## 7. 具体示例
+## 7. Concrete examples
 
-### 7.1 PostToolUse：编辑后编译反馈
+### 7.1 PostToolUse: compile feedback after edit
 
 ```json
 {
@@ -119,9 +119,9 @@ fi
 }
 ```
 
-要点：`matcher` 限定改文件工具；`async: false` 保证失败能反馈；`${CLAUDE_PLUGIN_ROOT}` 定位插件目录。
+Points: `matcher` restricts to file-editing tools; `async: false` guarantees the failure can be fed back; `${CLAUDE_PLUGIN_ROOT}` locates the plugin directory.
 
-### 7.2 PreToolUse：阻止危险命令
+### 7.2 PreToolUse: block dangerous commands
 
 ```json
 {
@@ -142,9 +142,9 @@ fi
 }
 ```
 
-`guard-bash.sh` 检查命令是否含 `rm -rf /` 等危险模式，命中则 stderr + exit 2 **阻止**执行。
+`guard-bash.sh` checks whether the command contains dangerous patterns like `rm -rf /`; on a hit, stderr + exit 2 **blocks** execution.
 
-### 7.3 Stop：测试没过不许停
+### 7.3 Stop: don't stop until tests pass
 
 ```json
 {
@@ -154,7 +154,7 @@ fi
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-test.sh",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/narness-rust-test.sh",
             "timeout": 300
           }
         ]
@@ -164,19 +164,19 @@ fi
 }
 ```
 
-测试失败则 exit 2，强制 Claude 继续修，直到通过。
+A failing test exits 2, forcing Claude to keep fixing until it passes.
 
-## 8. 与 narness-rust 插件的关系
+## 8. Relationship to the narness-rust plugin
 
-narness-rust 的 `post-edit-gate.sh` 就是 Claude Code 适配层：解析 stdin JSON → 判断是否 `.rs` → 委派给 `verify-check.sh` → 失败写 stderr + exit 2。它是「Claude Code hook 契约」与「单一职责校验脚本」之间的桥。
+narness-rust's `post-edit-gate.sh` is the Claude Code adapter layer: parse stdin JSON → judge whether it's a `.rs` file → delegate to `narness-rust-check.sh` → on failure write stderr + exit 2. It is the bridge between "the Claude Code hook contract" and "single-responsibility validation scripts".
 
-## 9. 在分层 harness 中的位置
+## 9. Position in the layered harness
 
-Claude Code hook 是「编辑级」约束，粒度最细、反馈最即时：
+Claude Code hooks are "edit-level" constraints — finest granularity, most immediate feedback:
 
 ```
-编辑后（Claude Code PostToolUse）→ 提交前（git pre-commit）→ 推送前（git pre-push）→ CI
-  编译错误即时反馈 agent         阻止坏代码入库          全量测试门禁          回归保护
+After edit (Claude Code PostToolUse) → pre-commit (git) → pre-push (git) → CI
+  compile error fed back immediately   block bad code   full test gate   regression protection
 ```
 
-它回答 Narness 的核心问题：**如何让 agent 在错误还小时就看到并修复**。
+They answer Narness's core question: **how to let the agent see and fix errors while they're still small**.

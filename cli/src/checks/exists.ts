@@ -5,14 +5,14 @@ export const existsCheck: Check = {
     const targets = [check.name, ...(check.names ?? [])];
     const missing = targets.filter((t) => !ctx.which(t));
     if (missing.length === 0) {
-      return { status: "pass", check, detail: targets.join(", ") + " 已安装" };
+      return { status: "pass", check, detail: targets.join(", ") + " installed" };
     }
     const list = missing.join(", ");
     return {
       status: "fail",
       check,
-      message: `缺少工具: ${list}`,
-      fix: check.fix ?? `请安装 ${list}`,
+      message: `missing tool(s): ${list}`,
+      fix: check.fix ?? `please install ${list}`,
     };
   },
 };

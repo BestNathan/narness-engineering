@@ -24,11 +24,11 @@ export function loadConfig(path: string): Config {
   try {
     parsed = parse(raw);
   } catch (err) {
-    throw new Error(`TOML 解析失败: ${(err as Error).message}`);
+    throw new Error(`TOML parse failed: ${(err as Error).message}`);
   }
   const obj = (parsed ?? {}) as { checks?: unknown };
   if (obj.checks !== undefined && !Array.isArray(obj.checks)) {
-    throw new Error(`checks 必须是数组`);
+    throw new Error(`checks must be an array`);
   }
   const checks = ((obj.checks ?? []) as unknown[]).map(normalizeCheck);
   return { checks };
@@ -36,14 +36,14 @@ export function loadConfig(path: string): Config {
 
 function normalizeCheck(c: unknown): CheckConfig {
   if (typeof c !== "object" || c === null) {
-    throw new Error(`无效的 check 条目: ${JSON.stringify(c)}`);
+    throw new Error(`invalid check entry: ${JSON.stringify(c)}`);
   }
   const o = c as Record<string, unknown>;
   if (typeof o.type !== "string" || typeof o.name !== "string") {
-    throw new Error(`check 缺少 type/name: ${JSON.stringify(c)}`);
+    throw new Error(`check is missing type/name: ${JSON.stringify(c)}`);
   }
   if (o.names !== undefined && !Array.isArray(o.names)) {
-    throw new Error(`check ${o.name} 的 names 必须是数组`);
+    throw new Error(`check ${o.name}: names must be an array`);
   }
   return {
     type: o.type,

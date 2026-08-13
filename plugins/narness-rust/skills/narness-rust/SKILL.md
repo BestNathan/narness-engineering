@@ -1,64 +1,74 @@
 ---
 name: narness-rust
-description: "指导在 Rust 项目中实施 harness 工程化——用 cargo/clippy/hook/脚本约束 AI agent，而非提示词。当需要为 Rust 项目建立约束、或将靠提示词反复失效的约束下沉为代码时调用。"
+description: "Guide to applying harness engineering in Rust projects — constrain an AI agent with cargo/clippy/hooks/scripts instead of prompts. Use when establishing constraints for a Rust project, or when sinking a rule that keeps failing under prompt-only constraint into code."
 ---
 
-# Narness Rust — Rust Harness 工程化
+# Narness Rust — Rust harness engineering
 
-把对 AI agent 的约束从「提示词」下沉为「代码、hook、脚本」，保证长程任务的正确性。
+Sink constraints on an AI agent from "prompts" down to "code, hooks, scripts", guaranteeing correctness on long-running tasks.
 
-## 核心思想
+## Core idea
 
-能用代码、hook、脚本约束 agent 的，优先用它们，而非提示词。提示词是软约束，agent 可能忽略；脚本是硬约束，agent 无法逃避。
+When code, hooks, or scripts can constrain an agent, prefer them over prompts. Prompts are soft constraints an agent may ignore; scripts are hard constraints an agent cannot escape.
 
-## 约束层级阶梯（Rust 映射）
+## The constraint ladder (Rust mapping)
 
-| 层级 | 手段 | 约束力 |
+| Level | Means | Strength |
 |---|---|---|
-| L0 提示词 | 口头/文档要求 | 最弱 |
-| L1 项目约定 | CLAUDE.md | 弱 |
-| L2 Skill | 本 skill | 中弱 |
-| L3 Hook | PostToolUse 校验 | 中强 |
-| L4 脚本 | verify-*.sh / verify-invariants.sh | 强 |
-| L5 编译期 | clippy -D warnings、#![forbid] | 最强 |
+| L0 Prompts | verbal/doc requirements | weakest |
+| L1 Project conventions | CLAUDE.md | weak |
+| L2 Skill | this skill | weak-medium |
+| L3 Hook | PostToolUse validation | medium-strong |
+| L4 Scripts | narness-rust-*.sh / narness-rust-invariants.sh | strong |
+| L5 Compile-time | clippy -D warnings, #![forbid] | strongest |
 
-## 何时调用本 skill
+## When to use this skill
 
-- 需要为 Rust 项目建立 harness 约束时
-- 发现 agent 反复违反同一类约束（如总写 unwrap、总忘测试）时
-- 需要把某个「靠提示词约束失效」的规则下沉为代码时
+- When establishing harness constraints for a Rust project
+- When the agent repeatedly violates the same kind of constraint (e.g. always writing unwrap, always forgetting tests)
+- When sinking a rule that "fails under prompt-only constraint" into code
 
-## 把约束下沉的步骤
+## Steps to sink a constraint
 
-1. 识别：哪条规则 agent 反复违反？
-2. 定位层级：这条规则最适合落到 L3–L5 哪层？
-3. 落地：
-   - L3 → 配置 PostToolUse hook 跑校验脚本
-   - L4 → 调用 scripts/ 下的校验脚本
-   - L5 → 加 clippy lint / `#![forbid(...)]` / trait bound
+1. Identify: which rule does the agent repeatedly violate?
+2. Locate the level: which of L3–L5 does this rule best fit?
+3. Implement:
+   - L3 → configure a PostToolUse hook to run a validation script
+   - L4 → call a validation script under scripts/
+   - L5 → add a clippy lint / `#![forbid(...)]` / trait bound
 
-## 可用脚本
+## Available scripts
 
-| 脚本 | 用途 |
+| Script | Purpose |
 |---|---|
-| `scripts/verify-fmt.sh [DIR]` | 格式检查：cargo fmt --check |
-| `scripts/verify-check.sh [DIR]` | 编译检查：cargo check |
-| `scripts/verify-clippy.sh [DIR]` | lint 检查：cargo clippy -D warnings |
-| `scripts/verify-test.sh [DIR]` | 测试：cargo test |
-| `scripts/verify-invariants.sh [DIR]` | 不变量：禁 unwrap/expect/panic!/unsafe 无注释 |
-| `scripts/verify-test-discipline.sh [DIR]` | 测试纪律：改 .rs 必有测试 |
+| `scripts/narness-rust-fmt.sh [DIR]` | format check: cargo fmt --check |
+| `scripts/narness-rust-check.sh [DIR]` | compile check: cargo check |
+| `scripts/narness-rust-clippy.sh [DIR]` | lint check: cargo clippy -D warnings |
+| `scripts/narness-rust-test.sh [DIR]` | tests: cargo test |
+| `scripts/narness-rust-invariants.sh [DIR]` | invariants: ban unwrap/expect/panic!/unsafe without comment |
+| `scripts/narness-rust-test-discipline.sh [DIR]` | test discipline: a changed .rs must have a test |
 
-## 测试纪律
+## References (harness design)
 
-- 先写测试，再写实现
-- 改动 src/ 下的 .rs 必须有对应测试文件
-- 提交前按需跑 verify-fmt.sh / verify-clippy.sh / verify-test.sh
+The harness design behind each validation script — how to sink a constraint and how to feed failures back to the LLM:
 
-## 常见反模式与对应硬约束
-
-| 反模式 | 硬约束 |
+| Doc | Topic |
 |---|---|
-| 到处 unwrap() | clippy::unwrap_used + verify-invariants.sh |
-| 裸 panic! | clippy::panic + thiserror/anyhow |
-| 忘写测试 | verify-test-discipline.sh + hook |
-| 格式漂移 | cargo fmt --check 门禁 |
+| `references/fmt-harness.md` | format harness: single-responsibility gate design for rustfmt / `cargo fmt --check` |
+| `references/lint-harness.md` | lint harness: how clippy `-D warnings` sinks to L5 `#![forbid]` |
+| `references/test-harness.md` | test harness: cargo test + test discipline + layered coverage triggering |
+
+## Test discipline
+
+- Write tests before the implementation
+- A changed .rs under src/ must have a corresponding test file
+- Run narness-rust-fmt.sh / narness-rust-clippy.sh / narness-rust-test.sh as needed before committing
+
+## Common anti-patterns and their hard constraints
+
+| Anti-pattern | Hard constraint |
+|---|---|
+| unwrap() everywhere | clippy::unwrap_used + narness-rust-invariants.sh |
+| bare panic! | clippy::panic + thiserror/anyhow |
+| forgetting tests | narness-rust-test-discipline.sh + hook |
+| format drift | cargo fmt --check gate |

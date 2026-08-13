@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# verify-test-discipline.sh — Narness Rust 测试纪律检查
-# 用法: verify-test-discipline.sh [PROJECT_DIR]
-# 检查相对 git HEAD 改动过的非测试 .rs 源文件是否有对应测试文件。
+# narness-rust-test-discipline.sh — Narness Rust test discipline check
+# usage: narness-rust-test-discipline.sh [PROJECT_DIR]
+# checks that non-test .rs source files changed since git HEAD have a corresponding test file.
 set -uo pipefail
 
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
 
-# 改动过的非测试 .rs 源文件（含已跟踪改动 + 未跟踪新文件；排除 tests/、*_test.rs 等）
+# changed non-test .rs source files (tracked changes + untracked new files; exclude tests/, *_test.rs, etc.)
 changed="$( { git diff --name-only HEAD -- '*.rs'; git ls-files --others --exclude-standard -- '*.rs'; } 2>/dev/null | sort -u | grep -vE '(^|/)(tests?|benches|examples)/|(_test|\.test)\.rs$' || true)"
 
 if [[ -z "$changed" ]]; then
-  echo "✓ 没有改动非测试 .rs 源文件"
+  echo "✓ no changed non-test .rs source files"
   exit 0
 fi
 
 fail=0
 while IFS= read -r f; do
-  # src/foo/bar.rs → tests/foo/bar.rs 或 tests/foo/bar_test.rs 或 src/foo/bar_test.rs
+  # src/foo/bar.rs → tests/foo/bar.rs or tests/foo/bar_test.rs or src/foo/bar_test.rs
   stem="${f%.rs}"
   stem="${stem#src/}"
   candidates=(
@@ -30,15 +30,15 @@ while IFS= read -r f; do
     if [[ -f "$c" ]]; then found=1; break; fi
   done
   if [[ $found -eq 0 ]]; then
-    echo "✗ $f 有改动但无对应测试文件" >&2
+    echo "✗ $f changed but has no corresponding test file" >&2
     fail=1
   else
-    echo "✓ $f 有测试覆盖"
+    echo "✓ $f has test coverage"
   fi
 done <<< "$changed"
 
 if [[ $fail -ne 0 ]]; then
-  echo "==> 测试纪律检查失败: 请为上述文件补充测试" >&2
+  echo "==> test discipline check failed: add tests for the files above" >&2
   exit 1
 fi
-echo "==> 测试纪律检查通过"
+echo "==> test discipline check passed"

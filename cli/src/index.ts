@@ -66,7 +66,7 @@ async function main() {
 
   const path = configPath ? resolve(configPath) : findConfig(cwd);
   if (!path) {
-    console.error("未找到 .narness.toml（已从当前目录向上查找）");
+    console.error("Could not find .narness.toml (searched upward from the current directory)");
     process.exit(2);
   }
 
@@ -74,7 +74,7 @@ async function main() {
   try {
     config = loadConfig(path);
   } catch (err) {
-    console.error(`配置解析失败: ${(err as Error).message}`);
+    console.error(`Config parse failed: ${(err as Error).message}`);
     process.exit(2);
   }
 
@@ -82,7 +82,7 @@ async function main() {
   try {
     results = await runChecks(config, realContext(cwd));
   } catch (err) {
-    console.error(`配置错误: ${(err as Error).message}`);
+    console.error(`Config error: ${(err as Error).message}`);
     process.exit(2);
   }
   console.log(json ? reportJson(results) : reportHuman(results));

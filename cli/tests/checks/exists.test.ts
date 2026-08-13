@@ -12,11 +12,11 @@ function ctx(which: (c: string) => boolean): Context {
 }
 
 describe("existsCheck", () => {
-  it("工具存在则 pass", async () => {
+  it("passes when the tool exists", async () => {
     const r = await existsCheck.run({ type: "exists", name: "rg" }, ctx((c) => c === "rg"));
     expect(r.status).toBe("pass");
   });
-  it("工具缺失则 fail 且带 fix", async () => {
+  it("fails with a fix when the tool is missing", async () => {
     const r = await existsCheck.run(
       { type: "exists", name: "rg", fix: "brew install ripgrep" },
       ctx(() => false)
@@ -24,7 +24,7 @@ describe("existsCheck", () => {
     expect(r.status).toBe("fail");
     expect(r.fix).toBe("brew install ripgrep");
   });
-  it("names 数组一次检查多个", async () => {
+  it("checks multiple with a names array", async () => {
     const r = await existsCheck.run(
       { type: "exists", name: "rg", names: ["jq", "git"] },
       ctx((c) => c === "rg" || c === "git")

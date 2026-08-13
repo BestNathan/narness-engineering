@@ -8,24 +8,24 @@ export const versionCheck: Check = {
       return {
         status: "error",
         check,
-        message: `${check.name} --version 执行失败`,
-        fix: check.fix ?? `请先安装 ${check.name}`,
+        message: `${check.name} --version failed`,
+        fix: check.fix ?? `please install ${check.name} first`,
       };
     }
     const actual = extractVersion(res.stdout);
     if (!actual) {
-      return { status: "error", check, message: `无法从 "${res.stdout.trim()}" 解析版本号` };
+      return { status: "error", check, message: `unable to parse a version number from "${res.stdout.trim()}"` };
     }
     const cmp = compareVersion(actual, check.min, check.max);
     if (!cmp.ok) {
       const want = [check.min ? `>= ${check.min}` : "", check.max ? `<= ${check.max}` : ""]
         .filter(Boolean)
-        .join(" 且 ");
+        .join(" and ");
       return {
         status: "fail",
         check,
-        message: `版本 ${actual} 不满足要求（需 ${want}）`,
-        fix: check.fix ?? `请升级 ${check.name}`,
+        message: `version ${actual} does not meet requirements (needs ${want})`,
+        fix: check.fix ?? `please upgrade ${check.name}`,
         detail: cmp.reason,
       };
     }

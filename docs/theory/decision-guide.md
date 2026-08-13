@@ -1,32 +1,32 @@
-# 决策准则：何时把约束下沉
+# Decision guide: when to sink a constraint
 
-## 1. 决策树
+## 1. Decision tree
 
-遇到一条「希望 agent 遵守」的规则时，按以下顺序判断：
+When you meet a rule you "hope the agent will obey", judge in this order:
 
 ```
-这条规则，agent 违反过一次吗？
-├── 否 → 可以先用提示词（L0/L1）表达，观察
-└── 是 → 违反了两次及以上吗？
-    ├── 否 → 升级到 Skill（L2）或 Hook（L3）
-    └── 是 → 能否用脚本（L4）或编译期（L5）表达？
-        ├── 能 → 下沉到 L4/L5（优先编译期）
-        └── 不能 → 下沉到 Hook（L3），用脚本反馈失败
+Has the agent violated this rule once?
+├── No → express it with prompts (L0/L1) for now, and observe
+└── Yes → has it violated it twice or more?
+    ├── No → escalate to a Skill (L2) or Hook (L3)
+    └── Yes → can it be expressed as a script (L4) or at compile time (L5)?
+        ├── Yes → sink it to L4/L5 (prefer compile time)
+        └── No → sink it to a Hook (L3), and use a script to feed back failures
 ```
 
-## 2. 经验法则
+## 2. Rules of thumb
 
-- 能用 `clippy` lint 表达的规则，直接上 `clippy -D warnings`（L5）
-- 能用类型系统表达的不变量，用类型（L5），如 newtype、trait bound
-- 需要「改动后即时反馈」的，用 Hook（L3）
-- 需要「提交前/CI 校验」的，用脚本（L4）
-- 只剩「意图和背景」时，才留在提示词（L0/L1）
+- A rule expressible as a `clippy` lint → go straight to `clippy -D warnings` (L5)
+- An invariant expressible with the type system → use types (L5), e.g. newtype, trait bounds
+- Needs "immediate feedback after a change" → use a Hook (L3)
+- Needs "pre-commit / CI validation" → use a script (L4)
+- Only "intent and background" remain → leave it in prompts (L0/L1)
 
-## 3. 反模式清单
+## 3. Anti-pattern checklist
 
-| 反模式 | 问题 | 正确做法 |
+| Anti-pattern | Problem | Correct approach |
 |---|---|---|
-| 在 CLAUDE.md 写「务必写测试」 | 软约束，长程必然失效 | verify-test-discipline 脚本 + hook |
-| 提示词要求「别用 unwrap」 | agent 总会忘 | clippy::unwrap_used（L5） |
-| 口头要求「记得格式化」 | 无人执行 | cargo fmt --check 门禁（L4） |
-| 把不变量写成注释 | 注释不强制 | 类型系统或断言（L5/L4） |
+| Writing "be sure to write tests" in CLAUDE.md | soft constraint, inevitably fails long-term | narness-rust-test-discipline script + hook |
+| Prompting "don't use unwrap" | the agent always forgets | clippy::unwrap_used (L5) |
+| Verbally requiring "remember to format" | nobody executes it | cargo fmt --check gate (L4) |
+| Writing invariants as comments | comments don't enforce | type system or assertions (L5/L4) |

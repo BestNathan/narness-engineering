@@ -1,54 +1,54 @@
-# 约束层级阶梯
+# The constraint ladder
 
-## 1. 模型总览
+## 1. Model overview
 
-| 层级 | 名称 | 本质 | 约束力 | 失败后果 |
+| Level | Name | Essence | Strength | Failure consequence |
 |---|---|---|---|---|
-| L0 | 提示词 | 自然语言指令 | 最弱 | agent 可能直接忽略 |
-| L1 | 项目约定 | CLAUDE.md / AGENTS.md | 弱 | 靠 agent 自觉读取 |
-| L2 | Skill | 可主动调用的工作流 | 中弱 | agent 可能不调用 |
-| L3 | Hook | 事件驱动的强制脚本 | 中强 | 自动执行，失败回传 |
-| L4 | 脚本校验 | cargo check/test/clippy | 强 | 确定性 pass/fail |
-| L5 | 编译期 | 语言与类型系统 | 最强 | 违反无法编译 |
+| L0 | Prompts | natural-language instructions | weakest | the agent may simply ignore it |
+| L1 | Project conventions | CLAUDE.md / AGENTS.md | weak | relies on the agent reading them voluntarily |
+| L2 | Skill | workflow that can be invoked on demand | weak-medium | the agent may not invoke it |
+| L3 | Hook | event-driven enforced script | medium-strong | runs automatically; failure is fed back |
+| L4 | Script validation | cargo check/test/clippy | strong | deterministic pass/fail |
+| L5 | Compile-time | the language and type system | strongest | violating it won't compile |
 
-## 2. 各层详解
+## 2. Layer details
 
-### L0 提示词
+### L0 Prompts
 
-- 能约束什么：表达意图、方向性建议
-- 会漏什么：一切需要「必须遵守」的行为
-- 何时用：总是作为起点，但绝不作为终点
+- What it can constrain: expressing intent, directional suggestions
+- What it misses: anything that must be "always obeyed"
+- When to use: always as a starting point, never as the endpoint
 
-### L1 项目约定（CLAUDE.md）
+### L1 Project conventions (CLAUDE.md)
 
-- 能约束什么：项目的背景、约定、惯例
-- 会漏什么：依赖 agent 主动读取并遵守
-- 何时用：写「背景」和「why」，不写「必须」
+- What it can constrain: project background, conventions, habits
+- What it misses: depends on the agent reading and obeying voluntarily
+- When to use: to write "background" and "why", not "must"
 
 ### L2 Skill
 
-- 能约束什么：复杂工作流的步骤化指导
-- 会漏什么：agent 可能不触发该 skill
-- 何时用：把「怎么做」沉淀为可复用流程
+- What it can constrain: step-by-step guidance for complex workflows
+- What it misses: the agent may not trigger the skill
+- When to use: to capture "how to do it" as a reusable workflow
 
 ### L3 Hook
 
-- 能约束什么：事件触发时的自动检查
-- 会漏什么：只覆盖触发的事件，不覆盖主动决策
-- 何时用：改动后即时校验、失败即时回传
+- What it can constrain: automatic checks at event time
+- What it misses: covers only the triggered events, not proactive decisions
+- When to use: immediate validation after a change, immediate failure feedback
 
-### L4 脚本校验
+### L4 Script validation
 
-- 能约束什么：可独立验证的确定性规则
-- 会漏什么：需要 agent/CI 主动调用
-- 何时用：编译、测试、格式、不变量
+- What it can constrain: independently verifiable deterministic rules
+- What it misses: needs the agent/CI to invoke it
+- When to use: compile, test, format, invariants
 
-### L5 编译期
+### L5 Compile-time
 
-- 能约束什么：语言层面物理不可能违反的约束
-- 会漏什么：只有类型系统能表达的东西
-- 何时用：凡是能用类型表达的不变量
+- What it can constrain: constraints that are physically impossible to violate at the language level
+- What it misses: only what the type system can express
+- When to use: any invariant expressible with types
 
-## 3. 核心命题
+## 3. Core proposition
 
-约束力越靠上越依赖 agent 善意，越靠下越能保证长程正确性。目标：**把约束从 L0–L2 下沉到 L3–L5。**
+The higher the level, the more it depends on the agent's goodwill; the lower the level, the more it guarantees long-running correctness. The goal: **sink constraints from L0–L2 down to L3–L5.**

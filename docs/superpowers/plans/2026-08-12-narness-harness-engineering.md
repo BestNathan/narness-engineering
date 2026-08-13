@@ -1,26 +1,26 @@
-# Narness Harness Engineering 实现计划
+# Narness Harness Engineering Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 搭建 Narness 项目骨架——外层 marketplace、narness-rust 插件（skill + hook + 脚本）、以及四篇理论文档，落地「用代码/hook/脚本约束 agent 而非提示词」的工程化理念。
+**Goal:** Build the Narness project skeleton — the outer marketplace, the narness-rust plugin (skill + hook + scripts), and four theory docs — putting into practice the engineering idea of "constraining an agent with code/hooks/scripts rather than prompts".
 
-**Architecture:** 约束层级阶梯（L0 提示词 → L5 编译期）是理论内核，贯穿文档与脚本。仓库是「外层 marketplace + 子目录插件」结构：`marketplace.json` 指向 `plugins/narness-rust`；插件内含 skill、PostToolUse hook（快速门禁）、独立校验脚本（完整门禁/不变量/测试纪律）。
+**Architecture:** The constraint ladder (L0 prompts → L5 compile-time) is the theoretical core, threading through the docs and scripts. The repo is an "outer marketplace + subdirectory plugins" structure: `marketplace.json` points to `plugins/narness-rust`; the plugin contains a skill, a PostToolUse hook (fast gate), and standalone validation scripts (full gate / invariants / test discipline).
 
-**Tech Stack:** Claude Code 插件（marketplace.json / plugin.json / hooks.json / SKILL.md）、bash 脚本（macOS 兼容，零额外依赖，JSON 解析用系统自带 python3）、markdown 理论文档。
+**Tech Stack:** Claude Code plugins (marketplace.json / plugin.json / hooks.json / SKILL.md), bash scripts (macOS-compatible, zero extra dependencies, JSON parsed with the system python3), markdown theory docs.
 
-**已存在：** `.gitignore`、设计文档 `docs/superpowers/specs/2026-08-12-narness-harness-engineering-design.md`（已 commit）。
+**Already exists:** `.gitignore`, the design doc `docs/superpowers/specs/2026-08-12-narness-harness-engineering-design.md` (already committed).
 
-**验收（对齐设计文档第 7 节）：** 目录结构完整；marketplace/plugin JSON 格式正确；skill 覆盖 5.2 大纲；hook + 三脚本可执行；四篇理论文档存在且贯穿核心命题；README 简述理念与用法。
+**Acceptance (aligned with design doc section 7):** complete directory structure; correct marketplace/plugin JSON format; skill covers the 5.2 outline; hook + three scripts executable; four theory docs present and threaded with the core proposition; README briefly states the philosophy and usage.
 
 ---
 
-### Task 1: 项目脚手架与目录结构
+### Task 1: Project scaffold and directory structure
 
 **Files:**
 - Create: `LICENSE`
-- Create: 目录树（`plugins/narness-rust/{skills/narness-rust,hooks/scripts,scripts}`、`docs/theory`、`.claude-plugin`）
+- Create: directory tree (`plugins/narness-rust/{skills/narness-rust,hooks/scripts,scripts}`, `docs/theory`, `.claude-plugin`)
 
-- [ ] **Step 1: 创建目录结构**
+- [ ] **Step 1: Create the directory structure**
 
 ```bash
 mkdir -p .claude-plugin \
@@ -31,7 +31,7 @@ mkdir -p .claude-plugin \
   docs/theory
 ```
 
-- [ ] **Step 2: 写 LICENSE（MIT）**
+- [ ] **Step 2: Write LICENSE (MIT)**
 
 Create `LICENSE`:
 
@@ -59,10 +59,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-- [ ] **Step 3: 验证目录结构**
+- [ ] **Step 3: Verify the directory structure**
 
 Run: `find . -type d -not -path './.git*' | sort`
-Expected: 输出包含 `.claude-plugin`、`plugins/narness-rust/...`、`docs/theory` 等目录。
+Expected: output contains `.claude-plugin`, `plugins/narness-rust/...`, `docs/theory` and other directories.
 
 - [ ] **Step 4: Commit**
 
@@ -73,12 +73,12 @@ git commit -m "chore: scaffold project directories and MIT license"
 
 ---
 
-### Task 2: marketplace.json（外层 marketplace）
+### Task 2: marketplace.json (outer marketplace)
 
 **Files:**
 - Create: `.claude-plugin/marketplace.json`
 
-- [ ] **Step 1: 写 marketplace.json**
+- [ ] **Step 1: Write marketplace.json**
 
 Create `.claude-plugin/marketplace.json`:
 
@@ -101,12 +101,12 @@ Create `.claude-plugin/marketplace.json`:
 }
 ```
 
-- [ ] **Step 2: 校验 JSON 合法性**
+- [ ] **Step 2: Verify JSON validity**
 
 Run: `python3 -m json.tool .claude-plugin/marketplace.json > /dev/null && echo OK`
 Expected: `OK`
 
-- [ ] **Step 3: 校验字段**
+- [ ] **Step 3: Verify fields**
 
 Run: `python3 -c "import json;d=json.load(open('.claude-plugin/marketplace.json'));print(d['name'], d['version'], d['plugins'][0]['source'])"`
 Expected: `narness 0.1.0 ./plugins/narness-rust`
@@ -120,12 +120,12 @@ git commit -m "feat: add narness marketplace manifest"
 
 ---
 
-### Task 3: plugin.json（narness-rust 插件元数据）
+### Task 3: plugin.json (narness-rust plugin metadata)
 
 **Files:**
 - Create: `plugins/narness-rust/.claude-plugin/plugin.json`
 
-- [ ] **Step 1: 写 plugin.json**
+- [ ] **Step 1: Write plugin.json**
 
 Create `plugins/narness-rust/.claude-plugin/plugin.json`:
 
@@ -140,7 +140,7 @@ Create `plugins/narness-rust/.claude-plugin/plugin.json`:
 }
 ```
 
-- [ ] **Step 2: 校验 JSON 合法性**
+- [ ] **Step 2: Verify JSON validity**
 
 Run: `python3 -m json.tool plugins/narness-rust/.claude-plugin/plugin.json > /dev/null && echo OK`
 Expected: `OK`
@@ -159,47 +159,47 @@ git commit -m "feat: add narness-rust plugin manifest"
 **Files:**
 - Create: `README.md`
 
-- [ ] **Step 1: 写 README.md**
+- [ ] **Step 1: Write README.md**
 
 Create `README.md`:
 
 ```markdown
 # Narness
 
-Narness 是「研究 + 文档 + Claude Code 工具集」项目，阐述并落地一套工程化思想：
+Narness is a "research + documentation + Claude Code tooling" project that articulates and puts into practice an engineering philosophy:
 
-> 能用代码、hook、脚本约束 AI agent 行为的，优先用这些，而非提示词。因为 agent 很可能不按提示词办事；脚本、hook 能让 agent 发现实现有问题，并指导其正确行为，从而保证长程任务的正确性。
+> When code, hooks, or scripts can constrain an AI agent's behavior, prefer them over prompts. An agent will very likely not follow prompts; scripts and hooks let the agent discover that its implementation is wrong and guide it toward correct behavior, thereby guaranteeing correctness on long-running tasks.
 
-## 理念
+## Philosophy
 
-提示词是软约束，agent 可能忽略；脚本、hook 是硬约束，agent 无法逃避。Narness 用「约束层级阶梯」（L0 提示词 → L5 编译期）组织方法论，并提供插件把约束落地为代码。
+Prompts are soft constraints that an agent may ignore; scripts and hooks are hard constraints an agent cannot escape. Narness organizes its methodology around the **constraint ladder** (L0 prompts → L5 compile-time) and ships plugins that put constraints into code.
 
-## 目录
+## Layout
 
-- `docs/theory/` — 理论研究文档
-- `plugins/narness-rust/` — Rust harness 工程化插件（skill + hook + 脚本）
-- `.claude-plugin/marketplace.json` — marketplace 定义
+- `docs/theory/` — theory and research docs
+- `plugins/narness-rust/` — the Rust harness-engineering plugin (skill + hook + scripts)
+- `.claude-plugin/marketplace.json` — marketplace definition
 
-## 快速开始
+## Quick start
 
-安装 marketplace 后安装 `narness-rust` 插件：
+Install the `narness-rust` plugin after adding the marketplace:
 
 ```bash
-claude plugin marketplace add <本仓库地址>
+claude plugin marketplace add <this repo's URL>
 claude plugin install narness-rust
 ```
 
-## 理论文档
+## Theory docs
 
-- [为什么不能只靠提示词](docs/theory/why-not-prompts.md)
-- [约束层级阶梯](docs/theory/constraint-ladder.md)
-- [决策准则](docs/theory/decision-guide.md)
-- [长程任务的正确性](docs/theory/long-running-correctness.md)
+- [Why not just prompts](docs/theory/why-not-prompts.md)
+- [The constraint ladder](docs/theory/constraint-ladder.md)
+- [Decision guide](docs/theory/decision-guide.md)
+- [Correctness of long-running tasks](docs/theory/long-running-correctness.md)
 ```
 
-- [ ] **Step 2: 内容自审**
+- [ ] **Step 2: Self-review the content**
 
-检查：README 是否含理念一句话、目录说明、快速开始、四篇理论文档链接。若有缺漏，补上。
+Check: does the README contain the one-line philosophy, layout description, quick start, and links to the four theory docs? If anything is missing, add it.
 
 - [ ] **Step 3: Commit**
 
@@ -210,59 +210,59 @@ git commit -m "docs: add project README"
 
 ---
 
-### Task 5: 理论文档 — why-not-prompts.md
+### Task 5: Theory doc — why-not-prompts.md
 
 **Files:**
 - Create: `docs/theory/why-not-prompts.md`
 
-- [ ] **Step 1: 写 why-not-prompts.md**
+- [ ] **Step 1: Write why-not-prompts.md**
 
 Create `docs/theory/why-not-prompts.md`:
 
 ```markdown
-# 为什么不能只靠提示词
+# Why not just prompts
 
-## 1. 提示词是软约束
+## 1. Prompts are soft constraints
 
-提示词是一段自然语言文本，它「请求」或「建议」agent 做某事，而非「强制」。约束能否生效，取决于 agent 是否：
+A prompt is a piece of natural-language text that "requests" or "suggests" an agent do something, rather than "enforcing" it. Whether the constraint takes effect depends on whether the agent:
 
-1. 注意到这段文字
-2. 正确理解其含义
-3. 在具体决策点想起来要遵守
-4. 判断遵守的必要性高于其他目标
+1. notices the text
+2. correctly understands its meaning
+3. remembers to comply at the specific decision point
+4. judges compliance as more important than other goals
 
-任一环节断裂，约束即失效。这四个环节全部依赖 agent 的「善意」，而非任何可验证的机制。
+If any link breaks, the constraint fails. All four links depend on the agent's "goodwill", not on any verifiable mechanism.
 
-## 2. 三个失效机制
+## 2. Three failure mechanisms
 
-### 2.1 注意力稀释
+### 2.1 Attention dilution
 
-长上下文里，一段提示词与海量信息竞争注意力。随着对话增长，早期写下的约束（哪怕在 system prompt 或 CLAUDE.md 中）会被逐渐稀释，agent 在具体决策点可能根本「没想到」这条约束。
+In a long context, one prompt competes for attention against a mass of information. As the conversation grows, constraints written early (even in the system prompt or CLAUDE.md) get gradually diluted, and at the specific decision point the agent may not even "think of" the constraint.
 
-### 2.2 概率性服从
+### 2.2 Probabilistic compliance
 
-LLM 是概率模型，不是规则引擎。同一段提示词，在不同上下文、不同采样下，服从程度不同。今天记得写测试，明天可能就忘。
+An LLM is a probabilistic model, not a rules engine. The same prompt, under different contexts and different sampling, is obeyed to different degrees. Today it remembers to write tests; tomorrow it may forget.
 
-### 2.3 目标冲突时的让步
+### 2.3 Conceding when goals conflict
 
-当「遵守约束」与「完成当前目标」冲突时——例如急着修复一个 bug，跳过测试看起来「更快」——agent 可能理性化地忽略约束。
+When "following the constraint" conflicts with "finishing the current goal" — for example, hurrying to fix a bug, where skipping tests looks "faster" — the agent may rationalize the constraint away.
 
-## 3. 硬约束为什么有效
+## 3. Why hard constraints work
 
-代码、hook、脚本是硬约束：
+Code, hooks, and scripts are hard constraints:
 
-- 不依赖 agent 注意到——hook 由事件自动触发
-- 不依赖 agent 理解——脚本输出确定性的 pass/fail
-- 不依赖 agent 选择遵守——编译失败就是失败，无法「商量」
+- They don't depend on the agent noticing — a hook fires automatically on an event
+- They don't depend on the agent understanding — a script outputs a deterministic pass/fail
+- They don't depend on the agent choosing to comply — a compile failure is a failure, no negotiation possible
 
-## 4. 结论
+## 4. Conclusion
 
-提示词适合表达「意图」和「为什么」，不适合承担「必须遵守的什么」。约束应尽可能下沉到硬约束层。这是 Narness 的核心前提，详见 [约束层级阶梯](constraint-ladder.md)。
+Prompts are suited to expressing "intent" and "why", not to bearing the "must-do what". Constraints should sink as far as possible into the hard-constraint layers. This is Narness's core premise; see [the constraint ladder](constraint-ladder.md).
 ```
 
-- [ ] **Step 2: 内容自审**
+- [ ] **Step 2: Self-review the content**
 
-检查：是否覆盖「软约束定义 → 三个失效机制 → 硬约束为什么有效 → 结论」完整逻辑链，且结论指向 `constraint-ladder.md`。
+Check: does it cover the complete logical chain "soft-constraint definition → three failure mechanisms → why hard constraints work → conclusion", and does the conclusion point to `constraint-ladder.md`?
 
 - [ ] **Step 3: Commit**
 
@@ -273,75 +273,75 @@ git commit -m "docs: add why-not-prompts theory doc"
 
 ---
 
-### Task 6: 理论文档 — constraint-ladder.md
+### Task 6: Theory doc — constraint-ladder.md
 
 **Files:**
 - Create: `docs/theory/constraint-ladder.md`
 
-- [ ] **Step 1: 写 constraint-ladder.md**
+- [ ] **Step 1: Write constraint-ladder.md**
 
 Create `docs/theory/constraint-ladder.md`:
 
 ```markdown
-# 约束层级阶梯
+# The constraint ladder
 
-## 1. 模型总览
+## 1. Model overview
 
-| 层级 | 名称 | 本质 | 约束力 | 失败后果 |
+| Level | Name | Essence | Strength | Failure consequence |
 |---|---|---|---|---|
-| L0 | 提示词 | 自然语言指令 | 最弱 | agent 可能直接忽略 |
-| L1 | 项目约定 | CLAUDE.md / AGENTS.md | 弱 | 靠 agent 自觉读取 |
-| L2 | Skill | 可主动调用的工作流 | 中弱 | agent 可能不调用 |
-| L3 | Hook | 事件驱动的强制脚本 | 中强 | 自动执行，失败回传 |
-| L4 | 脚本校验 | cargo check/test/clippy | 强 | 确定性 pass/fail |
-| L5 | 编译期 | 语言与类型系统 | 最强 | 违反无法编译 |
+| L0 | Prompts | natural-language instructions | weakest | the agent may simply ignore it |
+| L1 | Project conventions | CLAUDE.md / AGENTS.md | weak | relies on the agent reading them voluntarily |
+| L2 | Skill | workflow that can be invoked on demand | weak-medium | the agent may not invoke it |
+| L3 | Hook | event-driven enforced script | medium-strong | runs automatically; failure is fed back |
+| L4 | Script validation | cargo check/test/clippy | strong | deterministic pass/fail |
+| L5 | Compile-time | the language and type system | strongest | violating it won't compile |
 
-## 2. 各层详解
+## 2. Layer details
 
-### L0 提示词
+### L0 Prompts
 
-- 能约束什么：表达意图、方向性建议
-- 会漏什么：一切需要「必须遵守」的行为
-- 何时用：总是作为起点，但绝不作为终点
+- What it can constrain: expressing intent, directional suggestions
+- What it misses: anything that must be "always obeyed"
+- When to use: always as a starting point, never as the endpoint
 
-### L1 项目约定（CLAUDE.md）
+### L1 Project conventions (CLAUDE.md)
 
-- 能约束什么：项目的背景、约定、惯例
-- 会漏什么：依赖 agent 主动读取并遵守
-- 何时用：写「背景」和「why」，不写「必须」
+- What it can constrain: project background, conventions, habits
+- What it misses: depends on the agent reading and obeying voluntarily
+- When to use: to write "background" and "why", not "must"
 
 ### L2 Skill
 
-- 能约束什么：复杂工作流的步骤化指导
-- 会漏什么：agent 可能不触发该 skill
-- 何时用：把「怎么做」沉淀为可复用流程
+- What it can constrain: step-by-step guidance for complex workflows
+- What it misses: the agent may not trigger the skill
+- When to use: to capture "how to do it" as a reusable workflow
 
 ### L3 Hook
 
-- 能约束什么：事件触发时的自动检查
-- 会漏什么：只覆盖触发的事件，不覆盖主动决策
-- 何时用：改动后即时校验、失败即时回传
+- What it can constrain: automatic checks at event time
+- What it misses: covers only the triggered events, not proactive decisions
+- When to use: immediate validation after a change, immediate failure feedback
 
-### L4 脚本校验
+### L4 Script validation
 
-- 能约束什么：可独立验证的确定性规则
-- 会漏什么：需要 agent/CI 主动调用
-- 何时用：编译、测试、格式、不变量
+- What it can constrain: independently verifiable deterministic rules
+- What it misses: needs the agent/CI to invoke it
+- When to use: compile, test, format, invariants
 
-### L5 编译期
+### L5 Compile-time
 
-- 能约束什么：语言层面物理不可能违反的约束
-- 会漏什么：只有类型系统能表达的东西
-- 何时用：凡是能用类型表达的不变量
+- What it can constrain: constraints that are physically impossible to violate at the language level
+- What it misses: only what the type system can express
+- When to use: any invariant expressible with types
 
-## 3. 核心命题
+## 3. Core proposition
 
-约束力越靠上越依赖 agent 善意，越靠下越能保证长程正确性。目标：**把约束从 L0–L2 下沉到 L3–L5。**
+The higher the level, the more it depends on the agent's goodwill; the lower the level, the more it guarantees long-running correctness. The goal: **sink constraints from L0–L2 down to L3–L5.**
 ```
 
-- [ ] **Step 2: 内容自审**
+- [ ] **Step 2: Self-review the content**
 
-检查：六层表格与设计文档 2.1 表一致；每层有「能约束什么/会漏什么/何时用」；核心命题明确。
+Check: the six-level table matches design doc table 2.1; each level has "what it can constrain / what it misses / when to use"; the core proposition is clear.
 
 - [ ] **Step 3: Commit**
 
@@ -352,53 +352,53 @@ git commit -m "docs: add constraint-ladder theory doc"
 
 ---
 
-### Task 7: 理论文档 — decision-guide.md
+### Task 7: Theory doc — decision-guide.md
 
 **Files:**
 - Create: `docs/theory/decision-guide.md`
 
-- [ ] **Step 1: 写 decision-guide.md**
+- [ ] **Step 1: Write decision-guide.md**
 
 Create `docs/theory/decision-guide.md`:
 
 ```markdown
-# 决策准则：何时把约束下沉
+# Decision guide: when to sink a constraint
 
-## 1. 决策树
+## 1. Decision tree
 
-遇到一条「希望 agent 遵守」的规则时，按以下顺序判断：
+When you meet a rule you "hope the agent will obey", judge in this order:
 
 ```
-这条规则，agent 违反过一次吗？
-├── 否 → 可以先用提示词（L0/L1）表达，观察
-└── 是 → 违反了两次及以上吗？
-    ├── 否 → 升级到 Skill（L2）或 Hook（L3）
-    └── 是 → 能否用脚本（L4）或编译期（L5）表达？
-        ├── 能 → 下沉到 L4/L5（优先编译期）
-        └── 不能 → 下沉到 Hook（L3），用脚本反馈失败
+Has the agent violated this rule once?
+├── No → express it with prompts (L0/L1) for now, and observe
+└── Yes → has it violated it twice or more?
+    ├── No → escalate to a Skill (L2) or Hook (L3)
+    └── Yes → can it be expressed as a script (L4) or at compile time (L5)?
+        ├── Yes → sink it to L4/L5 (prefer compile time)
+        └── No → sink it to a Hook (L3), and use a script to feed back failures
 ```
 
-## 2. 经验法则
+## 2. Rules of thumb
 
-- 能用 `clippy` lint 表达的规则，直接上 `clippy -D warnings`（L5）
-- 能用类型系统表达的不变量，用类型（L5），如 newtype、trait bound
-- 需要「改动后即时反馈」的，用 Hook（L3）
-- 需要「提交前/CI 校验」的，用脚本（L4）
-- 只剩「意图和背景」时，才留在提示词（L0/L1）
+- A rule expressible as a `clippy` lint → go straight to `clippy -D warnings` (L5)
+- An invariant expressible with the type system → use types (L5), e.g. newtype, trait bounds
+- Needs "immediate feedback after a change" → use a Hook (L3)
+- Needs "pre-commit / CI validation" → use a script (L4)
+- Only "intent and background" remain → leave it in prompts (L0/L1)
 
-## 3. 反模式清单
+## 3. Anti-pattern checklist
 
-| 反模式 | 问题 | 正确做法 |
+| Anti-pattern | Problem | Correct approach |
 |---|---|---|
-| 在 CLAUDE.md 写「务必写测试」 | 软约束，长程必然失效 | verify-test-discipline 脚本 + hook |
-| 提示词要求「别用 unwrap」 | agent 总会忘 | clippy::unwrap_used（L5） |
-| 口头要求「记得格式化」 | 无人执行 | cargo fmt --check 门禁（L4） |
-| 把不变量写成注释 | 注释不强制 | 类型系统或断言（L5/L4） |
+| Writing "be sure to write tests" in CLAUDE.md | soft constraint, inevitably fails long-term | verify-test-discipline script + hook |
+| Prompting "don't use unwrap" | the agent always forgets | clippy::unwrap_used (L5) |
+| Verbally requiring "remember to format" | nobody executes it | cargo fmt --check gate (L4) |
+| Writing invariants as comments | comments don't enforce | type system or assertions (L5/L4) |
 ```
 
-- [ ] **Step 2: 内容自审**
+- [ ] **Step 2: Self-review the content**
 
-检查：决策树逻辑自洽；经验法则覆盖 L3–L5；反模式清单与「代码约束 > 提示词」命题一致。
+Check: the decision tree is logically coherent; the rules of thumb cover L3–L5; the anti-pattern checklist is consistent with the "code constraints > prompts" proposition.
 
 - [ ] **Step 3: Commit**
 
@@ -409,45 +409,45 @@ git commit -m "docs: add decision-guide theory doc"
 
 ---
 
-### Task 8: 理论文档 — long-running-correctness.md
+### Task 8: Theory doc — long-running-correctness.md
 
 **Files:**
 - Create: `docs/theory/long-running-correctness.md`
 
-- [ ] **Step 1: 写 long-running-correctness.md**
+- [ ] **Step 1: Write long-running-correctness.md**
 
 Create `docs/theory/long-running-correctness.md`:
 
 ```markdown
-# 长程任务的正确性
+# Correctness of long-running tasks
 
-## 1. 什么是长程任务
+## 1. What is a long-running task
 
-单次对话内无法完成、需要多轮往返或跨会话的任务：从零实现一个模块、重构整个子系统、修复跨文件的 bug。特征：上下文持续增长、早期约束被稀释、错误不断累积。
+A task that can't be completed in a single conversation and needs multiple round-trips or spans sessions: implementing a module from scratch, refactoring a whole subsystem, fixing a cross-file bug. Traits: context keeps growing, early constraints get diluted, errors accumulate.
 
-## 2. 为什么长程任务最容易跑偏
+## 2. Why long-running tasks drift most easily
 
-- 早期提示词被后续上下文淹没
-- 每一步的小偏差累积成大的方向错误
-- 没有外部 checkpoint，agent 自己难以察觉「已经错了」
+- Early prompts get drowned by later context
+- Small deviations at each step accumulate into a large directional error
+- Without an external checkpoint, the agent struggles to notice "it's already wrong"
 
-## 3. harness 在各环节的作用
+## 3. The harness's role at each stage
 
-| 环节 | 对应 harness | 作用 |
+| Stage | Corresponding harness | Role |
 |---|---|---|
-| 任务启动 | L1/L2（CLAUDE.md + skill） | 明确 ground truth 和验收标准 |
-| 编码中 | L3（hook） | 每次改动即时校验，偏差不过夜 |
-| 阶段性提交 | L4（脚本） | 完整门禁，阻止累积错误进入下一步 |
-| 集成/回归 | L5（编译期）+ CI | 物理约束 + 回归保护 |
+| Task start | L1/L2 (CLAUDE.md + skill) | establish ground truth and acceptance criteria |
+| During coding | L3 (hook) | validate every change immediately; deviations don't survive overnight |
+| Staged commit | L4 (script) | full gate; keep accumulated errors from entering the next step |
+| Integration / regression | L5 (compile-time) + CI | physical constraints + regression protection |
 
-## 4. 核心洞察
+## 4. Core insight
 
-长程任务正确性不靠 agent「一直记得规则」，而靠：每一步改动都经过硬约束校验，错误在产生的那一刻就被脚本/hook 捕获并回传，agent 被迫在错误还小时就修正。这就是「让 agent 自己发现问题」的机制。
+Long-running correctness doesn't come from the agent "remembering the rules all along", but from this: every change passes through hard-constraint validation; an error is caught and fed back by a script/hook the moment it is produced; the agent is forced to fix it while it is still small. This is the mechanism of "letting the agent discover its own mistakes".
 ```
 
-- [ ] **Step 2: 内容自审**
+- [ ] **Step 2: Self-review the content**
 
-检查：长程任务定义、跑偏原因、harness 各环节作用表、核心洞察四部分完整。
+Check: the four parts — long-running task definition, drift reasons, harness role-by-stage table, core insight — are complete.
 
 - [ ] **Step 3: Commit**
 
@@ -463,82 +463,82 @@ git commit -m "docs: add long-running-correctness theory doc"
 **Files:**
 - Create: `plugins/narness-rust/skills/narness-rust/SKILL.md`
 
-- [ ] **Step 1: 写 SKILL.md**
+- [ ] **Step 1: Write SKILL.md**
 
 Create `plugins/narness-rust/skills/narness-rust/SKILL.md`:
 
 ```markdown
 ---
 name: narness-rust
-description: "指导在 Rust 项目中实施 harness 工程化——用 cargo/clippy/hook/脚本约束 AI agent，而非提示词。当需要为 Rust 项目建立约束、或将靠提示词反复失效的约束下沉为代码时调用。"
+description: "Guide to applying harness engineering in Rust projects — constrain an AI agent with cargo/clippy/hooks/scripts instead of prompts. Use when establishing constraints for a Rust project, or when sinking a rule that keeps failing under prompt-only constraint into code."
 ---
 
-# Narness Rust — Rust Harness 工程化
+# Narness Rust — Rust harness engineering
 
-把对 AI agent 的约束从「提示词」下沉为「代码、hook、脚本」，保证长程任务的正确性。
+Sink constraints on an AI agent from "prompts" down to "code, hooks, scripts", guaranteeing correctness on long-running tasks.
 
-## 核心思想
+## Core idea
 
-能用代码、hook、脚本约束 agent 的，优先用它们，而非提示词。提示词是软约束，agent 可能忽略；脚本是硬约束，agent 无法逃避。
+When code, hooks, or scripts can constrain an agent, prefer them over prompts. Prompts are soft constraints an agent may ignore; scripts are hard constraints an agent cannot escape.
 
-## 约束层级阶梯（Rust 映射）
+## The constraint ladder (Rust mapping)
 
-| 层级 | 手段 | 约束力 |
+| Level | Means | Strength |
 |---|---|---|
-| L0 提示词 | 口头/文档要求 | 最弱 |
-| L1 项目约定 | CLAUDE.md | 弱 |
-| L2 Skill | 本 skill | 中弱 |
-| L3 Hook | PostToolUse 校验 | 中强 |
-| L4 脚本 | check.sh / verify-invariants.sh | 强 |
-| L5 编译期 | clippy -D warnings、#![forbid] | 最强 |
+| L0 Prompts | verbal/doc requirements | weakest |
+| L1 Project conventions | CLAUDE.md | weak |
+| L2 Skill | this skill | weak-medium |
+| L3 Hook | PostToolUse validation | medium-strong |
+| L4 Scripts | check.sh / verify-invariants.sh | strong |
+| L5 Compile-time | clippy -D warnings, #![forbid] | strongest |
 
-## 何时调用本 skill
+## When to use this skill
 
-- 需要为 Rust 项目建立 harness 约束时
-- 发现 agent 反复违反同一类约束（如总写 unwrap、总忘测试）时
-- 需要把某个「靠提示词约束失效」的规则下沉为代码时
+- When establishing harness constraints for a Rust project
+- When the agent repeatedly violates the same kind of constraint (e.g. always writing unwrap, always forgetting tests)
+- When sinking a rule that "fails under prompt-only constraint" into code
 
-## 把约束下沉的步骤
+## Steps to sink a constraint
 
-1. 识别：哪条规则 agent 反复违反？
-2. 定位层级：这条规则最适合落到 L3–L5 哪层？
-3. 落地：
-   - L3 → 配置 PostToolUse hook 跑校验脚本
-   - L4 → 调用 scripts/ 下的校验脚本
-   - L5 → 加 clippy lint / `#![forbid(...)]` / trait bound
+1. Identify: which rule does the agent repeatedly violate?
+2. Locate the level: which of L3–L5 does this rule best fit?
+3. Implement:
+   - L3 → configure a PostToolUse hook to run a validation script
+   - L4 → call a validation script under scripts/
+   - L5 → add a clippy lint / `#![forbid(...)]` / trait bound
 
-## 可用脚本
+## Available scripts
 
-| 脚本 | 用途 |
+| Script | Purpose |
 |---|---|
-| `scripts/check.sh [DIR]` | 完整门禁：fmt + clippy -D warnings + test |
-| `scripts/verify-invariants.sh [DIR]` | 不变量：禁 unwrap/expect/panic!/unsafe 无注释 |
-| `scripts/verify-test-discipline.sh [DIR]` | 测试纪律：改 .rs 必有测试 |
+| `scripts/check.sh [DIR]` | full gate: fmt + clippy -D warnings + test |
+| `scripts/verify-invariants.sh [DIR]` | invariants: ban unwrap/expect/panic!/unsafe without comment |
+| `scripts/verify-test-discipline.sh [DIR]` | test discipline: a changed .rs must have a test |
 
-## 测试纪律
+## Test discipline
 
-- 先写测试，再写实现
-- 改动 src/ 下的 .rs 必须有对应测试文件
-- 提交前跑 `check.sh` 完整门禁
+- Write tests before the implementation
+- A changed .rs under src/ must have a corresponding test file
+- Run the `check.sh` full gate before committing
 
-## 常见反模式与对应硬约束
+## Common anti-patterns and their hard constraints
 
-| 反模式 | 硬约束 |
+| Anti-pattern | Hard constraint |
 |---|---|
-| 到处 unwrap() | clippy::unwrap_used + verify-invariants.sh |
-| 裸 panic! | clippy::panic + thiserror/anyhow |
-| 忘写测试 | verify-test-discipline.sh + hook |
-| 格式漂移 | cargo fmt --check 门禁 |
+| unwrap() everywhere | clippy::unwrap_used + verify-invariants.sh |
+| bare panic! | clippy::panic + thiserror/anyhow |
+| forgetting tests | verify-test-discipline.sh + hook |
+| format drift | cargo fmt --check gate |
 ```
 
-- [ ] **Step 2: 校验 frontmatter**
+- [ ] **Step 2: Verify the frontmatter**
 
 Run: `head -5 plugins/narness-rust/skills/narness-rust/SKILL.md`
-Expected: 前三行是 `---`、`name: narness-rust`、`description: "..."`、`---`。
+Expected: the first lines are `---`, `name: narness-rust`, `description: "..."`, `---`.
 
-- [ ] **Step 3: 内容自审**
+- [ ] **Step 3: Self-review the content**
 
-检查：是否覆盖设计文档 5.2 大纲（何时调用、阶梯 Rust 映射、下沉步骤、脚本指引、测试纪律）。若有缺漏，补上。
+Check: does it cover the design doc 5.2 outline (when to use, ladder Rust mapping, sinking steps, script guidance, test discipline)? If anything is missing, add it.
 
 - [ ] **Step 4: Commit**
 
@@ -549,19 +549,19 @@ git commit -m "feat: add narness-rust skill"
 
 ---
 
-### Task 10: hooks.json + post-edit-gate.sh（PostToolUse 快速门禁）
+### Task 10: hooks.json + post-edit-gate.sh (PostToolUse fast gate)
 
 **Files:**
 - Create: `plugins/narness-rust/hooks/hooks.json`
 - Create: `plugins/narness-rust/hooks/scripts/post-edit-gate.sh`
 
-- [ ] **Step 1: 写 hooks.json**
+- [ ] **Step 1: Write hooks.json**
 
 Create `plugins/narness-rust/hooks/hooks.json`:
 
 ```json
 {
-  "description": "Narness Rust 快速门禁：每次编辑 .rs 文件后校验格式与编译",
+  "description": "Narness Rust fast gate: verify format and compilation after every .rs file edit",
   "hooks": {
     "PostToolUse": [
       {
@@ -580,60 +580,60 @@ Create `plugins/narness-rust/hooks/hooks.json`:
 }
 ```
 
-- [ ] **Step 2: 校验 JSON 合法性**
+- [ ] **Step 2: Verify JSON validity**
 
 Run: `python3 -m json.tool plugins/narness-rust/hooks/hooks.json > /dev/null && echo OK`
 Expected: `OK`
 
-- [ ] **Step 3: 写 post-edit-gate.sh**
+- [ ] **Step 3: Write post-edit-gate.sh**
 
 Create `plugins/narness-rust/hooks/scripts/post-edit-gate.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# post-edit-gate.sh — PostToolUse 快速门禁
-# 由 Claude Code hook 调用，stdin 传入 hook JSON。
-# 只对 .rs 文件做快速校验（fmt + check）；失败时 stderr + exit 2 反馈给 Claude。
+# post-edit-gate.sh — PostToolUse fast gate
+# called by a Claude Code hook; hook JSON arrives on stdin.
+# does a fast check on .rs files only (fmt + check); on failure, stderr + exit 2 feeds back to Claude.
 set -uo pipefail
 
 input="$(cat)"
 
-# 提取 tool_input.file_path（Edit/Write/MultiEdit 的输入键名）
+# extract tool_input.file_path (the input key for Edit/Write/MultiEdit)
 file_path="$(printf '%s' "$input" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("tool_input",{}).get("file_path",""))' 2>/dev/null || true)"
 
-# 非 .rs 文件直接放行
+# non-.rs files pass through
 case "$file_path" in
   *.rs) ;;
   *) exit 0 ;;
 esac
 
-# 快速门禁 1: cargo fmt --check
+# fast gate 1: cargo fmt --check
 if ! cargo fmt --check 2>&1; then
-  echo "⚠ Narness 快速门禁: cargo fmt --check 失败，请运行 cargo fmt 后重试" >&2
+  echo "⚠ Narness fast gate: cargo fmt --check failed, please run cargo fmt and retry" >&2
   exit 2
 fi
 
-# 快速门禁 2: cargo check（不跑全量 test，避免拖慢编辑循环）
+# fast gate 2: cargo check (skip the full test suite to avoid slowing the edit loop)
 if ! cargo check 2>&1 | tail -n 30; then
-  echo "⚠ Narness 快速门禁: cargo check 失败，请修复编译错误" >&2
+  echo "⚠ Narness fast gate: cargo check failed, please fix the compile errors" >&2
   exit 2
 fi
 
 exit 0
 ```
 
-- [ ] **Step 4: 语法检查**
+- [ ] **Step 4: Syntax check**
 
 Run: `bash -n plugins/narness-rust/hooks/scripts/post-edit-gate.sh && chmod +x plugins/narness-rust/hooks/scripts/post-edit-gate.sh && echo OK`
 Expected: `OK`
 
-- [ ] **Step 5: 冒烟测试（非 .rs 文件应放行）**
+- [ ] **Step 5: Smoke test (non-.rs files should pass through)**
 
 Run:
 ```bash
 echo '{"tool_input":{"file_path":"/tmp/foo.txt"}}' | plugins/narness-rust/hooks/scripts/post-edit-gate.sh; echo "exit=$?"
 ```
-Expected: `exit=0`（不触发校验）
+Expected: `exit=0` (no validation triggered)
 
 - [ ] **Step 6: Commit**
 
@@ -644,25 +644,25 @@ git commit -m "feat: add PostToolUse fast-gate hook"
 
 ---
 
-### Task 11: check.sh（完整门禁）
+### Task 11: check.sh (full gate)
 
 **Files:**
 - Create: `plugins/narness-rust/scripts/check.sh`
 
-- [ ] **Step 1: 写 check.sh**
+- [ ] **Step 1: Write check.sh**
 
 Create `plugins/narness-rust/scripts/check.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# check.sh — Narness Rust 完整门禁
-# 用法: check.sh [PROJECT_DIR]
-# 依次运行: cargo fmt --check → cargo clippy -D warnings → cargo test
+# check.sh — Narness Rust full gate
+# usage: check.sh [PROJECT_DIR]
+# runs in sequence: cargo fmt --check → cargo clippy -D warnings → cargo test
 set -euo pipefail
 
 PROJECT_DIR="${1:-.}"
 
-echo "==> Narness 完整门禁: $PROJECT_DIR"
+echo "==> Narness full gate: $PROJECT_DIR"
 cd "$PROJECT_DIR"
 
 echo "==> 1/3 cargo fmt --check"
@@ -674,15 +674,15 @@ cargo clippy --all-targets --all-features -- -D warnings
 echo "==> 3/3 cargo test"
 cargo test
 
-echo "==> 全部通过"
+echo "==> all passed"
 ```
 
-- [ ] **Step 2: 语法检查**
+- [ ] **Step 2: Syntax check**
 
 Run: `bash -n plugins/narness-rust/scripts/check.sh && chmod +x plugins/narness-rust/scripts/check.sh && echo OK`
 Expected: `OK`
 
-- [ ] **Step 3: 冒烟测试（临时 cargo 项目）**
+- [ ] **Step 3: Smoke test (temporary cargo project)**
 
 Run:
 ```bash
@@ -693,7 +693,7 @@ bash "$OLDPWD/plugins/narness-rust/scripts/check.sh" "$tmp/smoke"
 echo "exit=$?"
 rm -rf "$tmp"
 ```
-Expected: 三阶段 `cargo fmt --check` / `cargo clippy` / `cargo test` 依次输出，末尾 `全部通过`，`exit=0`。（若环境无 cargo，此步跳过并在提交信息中说明。）
+Expected: the three stages `cargo fmt --check` / `cargo clippy` / `cargo test` output in sequence, ending with `all passed`, `exit=0`. (If cargo is unavailable in the environment, skip this step and note it in the commit message.)
 
 - [ ] **Step 4: Commit**
 
@@ -704,83 +704,83 @@ git commit -m "feat: add full-gate check script"
 
 ---
 
-### Task 12: verify-invariants.sh（不变量检查）
+### Task 12: verify-invariants.sh (invariant check)
 
 **Files:**
 - Create: `plugins/narness-rust/scripts/verify-invariants.sh`
 
-- [ ] **Step 1: 写 verify-invariants.sh**
+- [ ] **Step 1: Write verify-invariants.sh**
 
 Create `plugins/narness-rust/scripts/verify-invariants.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# verify-invariants.sh — Narness Rust 不变量检查
-# 用法: verify-invariants.sh [PROJECT_DIR]
-# 扫描 src/ 下 .rs 文件，检查:
-#   - 裸 unwrap() / expect()（生产代码禁止）
+# verify-invariants.sh — Narness Rust invariant check
+# usage: verify-invariants.sh [PROJECT_DIR]
+# scans .rs files under src/ for:
+#   - bare unwrap() / expect() (forbidden in production code)
 #   - panic! / unreachable! / todo! / unimplemented!
-#   - unsafe 缺少 SAFETY 注释
-# 零额外依赖（仅用 POSIX find + grep），macOS 兼容。
+#   - unsafe lacking a SAFETY comment
+# zero extra dependencies (POSIX find + grep only), macOS compatible.
 set -uo pipefail
 
 PROJECT_DIR="${1:-.}"
 SRC_DIR="$PROJECT_DIR/src"
 
 if [[ ! -d "$SRC_DIR" ]]; then
-  echo "错误: 未找到 src 目录: $SRC_DIR" >&2
+  echo "error: src directory not found: $SRC_DIR" >&2
   exit 1
 fi
 
 fail=0
-echo "==> Narness 不变量检查: $SRC_DIR"
+echo "==> Narness invariant check: $SRC_DIR"
 
-# 1. 裸 unwrap() / expect()
+# 1. bare unwrap() / expect()
 matches="$(find "$SRC_DIR" -name '*.rs' -type f -exec grep -nH -E '\.(unwrap|expect)\(' {} + 2>/dev/null || true)"
 if [[ -n "$matches" ]]; then
   printf '%s\n' "$matches" >&2
-  echo "✗ 发现 unwrap()/expect()，请用 anyhow/thiserror 或显式错误处理替代" >&2
+  echo "✗ found unwrap()/expect(); replace with anyhow/thiserror or explicit error handling" >&2
   fail=1
 else
-  echo "✓ 无裸 unwrap()/expect()"
+  echo "✓ no bare unwrap()/expect()"
 fi
 
 # 2. panic! / unreachable! / todo! / unimplemented!
 matches="$(find "$SRC_DIR" -name '*.rs' -type f -exec grep -nH -E '\b(panic|unreachable|todo|unimplemented)!' {} + 2>/dev/null || true)"
 if [[ -n "$matches" ]]; then
   printf '%s\n' "$matches" >&2
-  echo "✗ 发现 panic!/unreachable!/todo!/unimplemented!，请用 Result 错误传播" >&2
+  echo "✗ found panic!/unreachable!/todo!/unimplemented!; propagate errors with Result instead" >&2
   fail=1
 else
-  echo "✓ 无 panic!/unreachable!/todo!/unimplemented!"
+  echo "✓ no panic!/unreachable!/todo!/unimplemented!"
 fi
 
-# 3. unsafe 块缺少 SAFETY 注释
+# 3. unsafe blocks lacking a SAFETY comment
 unsafe_files="$(find "$SRC_DIR" -name '*.rs' -type f -exec grep -lE '\bunsafe\b' {} + 2>/dev/null || true)"
 if [[ -n "$unsafe_files" ]]; then
   while IFS= read -r f; do
     if ! grep -q 'SAFETY' "$f"; then
-      echo "✗ $f 含 unsafe 但无 SAFETY 注释" >&2
+      echo "✗ $f contains unsafe but no SAFETY comment" >&2
       fail=1
     fi
   done <<< "$unsafe_files"
 else
-  echo "✓ 无 unsafe 代码"
+  echo "✓ no unsafe code"
 fi
 
 if [[ $fail -ne 0 ]]; then
-  echo "==> 不变量检查失败" >&2
+  echo "==> invariant check failed" >&2
   exit 1
 fi
-echo "==> 不变量检查通过"
+echo "==> invariant check passed"
 ```
 
-- [ ] **Step 2: 语法检查**
+- [ ] **Step 2: Syntax check**
 
 Run: `bash -n plugins/narness-rust/scripts/verify-invariants.sh && chmod +x plugins/narness-rust/scripts/verify-invariants.sh && echo OK`
 Expected: `OK`
 
-- [ ] **Step 3: 冒烟测试（含违规的夹具）**
+- [ ] **Step 3: Smoke test (fixture with violations)**
 
 Run:
 ```bash
@@ -791,9 +791,9 @@ printf 'fn bad(x: Option<i32>) -> i32 { x.unwrap() }\nunsafe fn raw() {}\n' > "$
 plugins/narness-rust/scripts/verify-invariants.sh "$tmp"; echo "exit=$?"
 rm -rf "$tmp"
 ```
-Expected: 输出含 `✗ 发现 unwrap()/expect()` 和 `✗ ... 含 unsafe 但无 SAFETY 注释`，末尾 `不变量检查失败`，`exit=1`。
+Expected: output contains `✗ found unwrap()/expect()` and `✗ ... contains unsafe but no SAFETY comment`, ending with `invariant check failed`, `exit=1`.
 
-- [ ] **Step 4: 冒烟测试（干净的夹具应通过）**
+- [ ] **Step 4: Smoke test (clean fixture should pass)**
 
 Run:
 ```bash
@@ -803,7 +803,7 @@ printf 'fn good(x: Option<i32>) -> i32 { match x { Some(v) => v, None => 0 } }\n
 plugins/narness-rust/scripts/verify-invariants.sh "$tmp"; echo "exit=$?"
 rm -rf "$tmp"
 ```
-Expected: 三个 `✓`，末尾 `不变量检查通过`，`exit=0`。
+Expected: three `✓`, ending with `invariant check passed`, `exit=0`.
 
 - [ ] **Step 5: Commit**
 
@@ -814,36 +814,36 @@ git commit -m "feat: add invariant verification script"
 
 ---
 
-### Task 13: verify-test-discipline.sh（测试纪律检查）
+### Task 13: verify-test-discipline.sh (test discipline check)
 
 **Files:**
 - Create: `plugins/narness-rust/scripts/verify-test-discipline.sh`
 
-- [ ] **Step 1: 写 verify-test-discipline.sh**
+- [ ] **Step 1: Write verify-test-discipline.sh**
 
 Create `plugins/narness-rust/scripts/verify-test-discipline.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# verify-test-discipline.sh — Narness Rust 测试纪律检查
-# 用法: verify-test-discipline.sh [PROJECT_DIR]
-# 检查相对 git HEAD 改动过的非测试 .rs 源文件是否有对应测试文件。
+# verify-test-discipline.sh — Narness Rust test discipline check
+# usage: verify-test-discipline.sh [PROJECT_DIR]
+# checks that non-test .rs source files changed since git HEAD have a corresponding test file.
 set -uo pipefail
 
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
 
-# 改动过的非测试 .rs 源文件（排除 tests/、*_test.rs 等）
+# changed non-test .rs source files (exclude tests/, *_test.rs, etc.)
 changed="$(git diff --name-only HEAD -- '*.rs' 2>/dev/null | grep -vE '(^|/)(tests?|benches|examples)/|(_test|\.test)\.rs$' || true)"
 
 if [[ -z "$changed" ]]; then
-  echo "✓ 没有改动非测试 .rs 源文件"
+  echo "✓ no changed non-test .rs source files"
   exit 0
 fi
 
 fail=0
 while IFS= read -r f; do
-  # src/foo/bar.rs → tests/foo/bar.rs 或 tests/foo/bar_test.rs 或 src/foo/bar_test.rs
+  # src/foo/bar.rs → tests/foo/bar.rs or tests/foo/bar_test.rs or src/foo/bar_test.rs
   stem="${f%.rs}"
   stem="${stem#src/}"
   candidates=(
@@ -856,26 +856,26 @@ while IFS= read -r f; do
     if [[ -f "$c" ]]; then found=1; break; fi
   done
   if [[ $found -eq 0 ]]; then
-    echo "✗ $f 有改动但无对应测试文件" >&2
+    echo "✗ $f changed but has no corresponding test file" >&2
     fail=1
   else
-    echo "✓ $f 有测试覆盖"
+    echo "✓ $f has test coverage"
   fi
 done <<< "$changed"
 
 if [[ $fail -ne 0 ]]; then
-  echo "==> 测试纪律检查失败: 请为上述文件补充测试" >&2
+  echo "==> test discipline check failed: add tests for the files above" >&2
   exit 1
 fi
-echo "==> 测试纪律检查通过"
+echo "==> test discipline check passed"
 ```
 
-- [ ] **Step 2: 语法检查**
+- [ ] **Step 2: Syntax check**
 
 Run: `bash -n plugins/narness-rust/scripts/verify-test-discipline.sh && chmod +x plugins/narness-rust/scripts/verify-test-discipline.sh && echo OK`
 Expected: `OK`
 
-- [ ] **Step 3: 冒烟测试（临时 git 仓库，无测试应失败）**
+- [ ] **Step 3: Smoke test (temporary git repo, no test should fail)**
 
 Run:
 ```bash
@@ -889,9 +889,9 @@ printf 'pub fn f() -> i32 { 2 }\n' > src/lib.rs
 bash "$OLDPWD/plugins/narness-rust/scripts/verify-test-discipline.sh" "$tmp"; echo "exit=$?"
 rm -rf "$tmp"
 ```
-Expected: 输出含 `✗ src/lib.rs 有改动但无对应测试文件`，末尾 `测试纪律检查失败`，`exit=1`。
+Expected: output contains `✗ src/lib.rs changed but has no corresponding test file`, ending with `test discipline check failed`, `exit=1`.
 
-- [ ] **Step 4: 冒烟测试（有测试应通过）**
+- [ ] **Step 4: Smoke test (with a test should pass)**
 
 Run:
 ```bash
@@ -907,7 +907,7 @@ printf 'use mylib::f;\n#[test]\nfn t() { assert_eq!(f(), 2); }\n' > tests/lib_te
 bash "$OLDPWD/plugins/narness-rust/scripts/verify-test-discipline.sh" "$tmp"; echo "exit=$?"
 rm -rf "$tmp"
 ```
-Expected: 输出含 `✓ src/lib.rs 有测试覆盖`，末尾 `测试纪律检查通过`，`exit=0`。
+Expected: output contains `✓ src/lib.rs has test coverage`, ending with `test discipline check passed`, `exit=0`.
 
 - [ ] **Step 5: Commit**
 
@@ -918,9 +918,9 @@ git commit -m "feat: add test-discipline verification script"
 
 ---
 
-### Task 14: 最终验证与收尾
+### Task 14: Final verification and wrap-up
 
-- [ ] **Step 1: 全仓库 JSON 校验**
+- [ ] **Step 1: Validate all repo JSON**
 
 Run:
 ```bash
@@ -928,9 +928,9 @@ for f in .claude-plugin/marketplace.json plugins/narness-rust/.claude-plugin/plu
   python3 -m json.tool "$f" > /dev/null && echo "OK $f"
 done
 ```
-Expected: 三个 `OK ...`
+Expected: three `OK ...`
 
-- [ ] **Step 2: 全脚本语法检查**
+- [ ] **Step 2: Syntax-check all scripts**
 
 Run:
 ```bash
@@ -938,28 +938,28 @@ for f in plugins/narness-rust/hooks/scripts/post-edit-gate.sh plugins/narness-ru
   bash -n "$f" && echo "OK $f"
 done
 ```
-Expected: 四个 `OK ...`
+Expected: four `OK ...`
 
-- [ ] **Step 3: 对照设计文档第 7 节验收标准逐条核对**
+- [ ] **Step 3: Check each item against design doc section 7 acceptance criteria**
 
-核对清单：
-1. 目录结构完整（Task 1）
-2. marketplace/plugin JSON 格式正确（Task 2/3）
-3. skill 覆盖 5.2 大纲（Task 9）
-4. hook + 三脚本存在且可执行（Task 10–13）
-5. 四篇理论文档存在，核心命题贯穿（Task 5–8）
-6. README 简述理念与用法（Task 4）
+Checklist:
+1. Directory structure complete (Task 1)
+2. marketplace/plugin JSON format correct (Task 2/3)
+3. skill covers the 5.2 outline (Task 9)
+4. hook + three scripts present and executable (Task 10–13)
+5. Four theory docs present, core proposition threaded through (Task 5–8)
+6. README briefly states the philosophy and usage (Task 4)
 
-- [ ] **Step 4: 最终目录树检查**
+- [ ] **Step 4: Final directory tree check**
 
 Run: `find . -type f -not -path './.git/*' | sort`
-Expected: 输出包含全部 14 个目标文件（1 LICENSE + 1 README + 3 JSON + 1 SKILL.md + 4 脚本 + 4 理论文档）。
+Expected: output contains all 14 target files (1 LICENSE + 1 README + 3 JSON + 1 SKILL.md + 4 scripts + 4 theory docs).
 
-- [ ] **Step 5: Commit（如有遗漏文件）**
+- [ ] **Step 5: Commit (if any files are missing)**
 
 ```bash
 git status --short
 git add -A
 git commit -m "chore: finalize Narness scaffold" --allow-empty
 ```
-Expected: 工作区干净（`git status` 无未提交变更）。
+Expected: clean working tree (`git status` shows no uncommitted changes).

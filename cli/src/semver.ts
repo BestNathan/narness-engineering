@@ -11,15 +11,15 @@ export function compareVersion(
   max?: string
 ): { ok: boolean; reason?: string } {
   const a = semver.coerce(actual);
-  if (!a) return { ok: false, reason: `无法解析版本 "${actual}"` };
+  if (!a) return { ok: false, reason: `Unable to parse version "${actual}"` };
   if (min) {
     const m = semver.coerce(min);
-    if (!m) return { ok: false, reason: `配置的 min "${min}" 不是合法版本` };
+    if (!m) return { ok: false, reason: `configured min "${min}" is not a valid version` };
     if (semver.lt(a, m)) return { ok: false, reason: `${actual} < ${min}` };
   }
   if (max) {
     const x = semver.coerce(max);
-    if (!x) return { ok: false, reason: `配置的 max "${max}" 不是合法版本` };
+    if (!x) return { ok: false, reason: `configured max "${max}" is not a valid version` };
     if (semver.gt(a, x)) return { ok: false, reason: `${actual} > ${max}` };
   }
   return { ok: true };

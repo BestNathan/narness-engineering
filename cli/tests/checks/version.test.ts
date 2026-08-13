@@ -12,16 +12,16 @@ function ctx(stdout: string, code = 0): Context {
 }
 
 describe("versionCheck", () => {
-  it("版本满足则 pass", async () => {
+  it("passes when the version satisfies", async () => {
     const r = await versionCheck.run({ type: "version", name: "node", min: "22" }, ctx("v22.14.0"));
     expect(r.status).toBe("pass");
     expect(r.detail).toContain("22.14.0");
   });
-  it("版本过低则 fail", async () => {
+  it("fails when the version is too low", async () => {
     const r = await versionCheck.run({ type: "version", name: "node", min: "22" }, ctx("v18.0.0"));
     expect(r.status).toBe("fail");
   });
-  it("命令执行失败则 error", async () => {
+  it("errors when the command fails", async () => {
     const r = await versionCheck.run({ type: "version", name: "node", min: "22" }, ctx("", 127));
     expect(r.status).toBe("error");
   });

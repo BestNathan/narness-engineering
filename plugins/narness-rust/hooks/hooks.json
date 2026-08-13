@@ -1,5 +1,5 @@
 {
-  "description": "Narness Rust 快速门禁：每次编辑 .rs 文件后校验格式与编译",
+  "description": "Narness Rust fast gate: validate compilation after each edit to a .rs file",
   "hooks": {
     "PostToolUse": [
       {

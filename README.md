@@ -1,47 +1,47 @@
 # Narness
 
-Narness 是「研究 + 文档 + Claude Code 工具集」项目，阐述并落地一套工程化思想：
+Narness is a "research + documentation + Claude Code tooling" project that articulates and puts into practice an engineering philosophy:
 
-> 能用代码、hook、脚本约束 AI agent 行为的，优先用这些，而非提示词。因为 agent 很可能不按提示词办事；脚本、hook 能让 agent 发现实现有问题，并指导其正确行为，从而保证长程任务的正确性。
+> When code, hooks, or scripts can constrain an AI agent's behavior, prefer them over prompts. An agent will very likely not follow prompts; scripts and hooks let the agent discover that its implementation is wrong and guide it toward correct behavior, thereby guaranteeing correctness on long-running tasks.
 
-## 理念
+## Philosophy
 
-提示词是软约束，agent 可能忽略；脚本、hook 是硬约束，agent 无法逃避。Narness 用「约束层级阶梯」（L0 提示词 → L5 编译期）组织方法论，并提供插件把约束落地为代码。
+Prompts are soft constraints that an agent may ignore; scripts and hooks are hard constraints an agent cannot escape. Narness organizes its methodology around the **constraint ladder** (L0 prompts → L5 compile-time) and ships plugins that put constraints into code.
 
-## 目录
+## Layout
 
-- `docs/theory/` — 理论研究文档
-- `docs/reference/` — 具体工具的 harness 工程化参考
-- `plugins/narness-rust/` — Rust harness 工程化插件（skill + hook + 脚本）
-- `cli/` — narness 环境检查器（npm 包）
-- `.claude-plugin/marketplace.json` — marketplace 定义
+- `docs/theory/` — theory and research docs
+- `docs/reference/` — harness-engineering references for specific tools
+- `plugins/narness-rust/` — the Rust harness-engineering plugin (skill + hook + scripts)
+- `cli/` — the narness environment checker (npm package)
+- `.claude-plugin/marketplace.json` — marketplace definition
 
-## 快速开始
+## Quick start
 
-安装 marketplace 后安装 `narness-rust` 插件：
+Install the `narness-rust` plugin after adding the marketplace:
 
 ```bash
-claude plugin marketplace add <本仓库地址>
+claude plugin marketplace add <this repo's URL>
 claude plugin install narness-rust
 ```
 
-## 理论文档
+## Theory docs
 
-- [为什么不能只靠提示词](docs/theory/why-not-prompts.md)
-- [约束层级阶梯](docs/theory/constraint-ladder.md)
-- [决策准则](docs/theory/decision-guide.md)
-- [长程任务的正确性](docs/theory/long-running-correctness.md)
+- [Why not just prompts](docs/theory/why-not-prompts.md)
+- [The constraint ladder](docs/theory/constraint-ladder.md)
+- [Decision guide](docs/theory/decision-guide.md)
+- [Correctness of long-running tasks](docs/theory/long-running-correctness.md)
 
-## 参考文档
+## Reference docs
 
-- [Rust 测试 Harness 工程化](docs/reference/rust-test-harness.md)（nextest + llvm-cov + LLM 反馈）
-- [Git Hooks](docs/reference/git-hooks.md)（提交/推送时机的 harness 执行）
-- [Claude Code Hooks](docs/reference/claude-code-hooks.md)（agent 工具调用时机的 harness 执行）
-- [Codex Hooks](docs/reference/codex-hooks.md)（OpenAI Codex CLI 的 harness 执行）
+- [Rust test harness engineering](docs/reference/rust-test-harness.md) (nextest + llvm-cov + LLM feedback)
+- [Git hooks](docs/reference/git-hooks.md) (harness execution at commit/push time)
+- [Claude Code hooks](docs/reference/claude-code-hooks.md) (harness execution at agent tool-call time)
+- [Codex hooks](docs/reference/codex-hooks.md) (harness execution in the OpenAI Codex CLI)
 
-## 环境检查
+## Environment check
 
-`cli/` 是一个 npm 包，项目根目录放 `.narness.toml` 声明 agent 运行环境要求，用 `npx narness` 检查：
+`cli/` is an npm package. Put a `.narness.toml` in the project root declaring the agent's runtime requirements, then check them with `npx narness`:
 
 ```toml
 [[checks]]
@@ -55,6 +55,6 @@ name = "rg"
 ```
 
 ```bash
-npx narness           # human 报告（失败项含修复建议）
-npx narness --json    # 结构化输出（供 hook/CI 消费）
+npx narness           # human report (failures include fix suggestions)
+npx narness --json    # structured output (for hooks/CI)
 ```

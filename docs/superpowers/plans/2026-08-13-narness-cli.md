@@ -1,32 +1,32 @@
-# Narness CLI 实现计划
+# Narness CLI Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 实现 `npx narness` 环境检查器——读取 `.narness.toml`，用 version/exists/mcp 三类检查器验证 agent 运行环境，失败时给出修复引导，输出 human/JSON 报告并以 exit code 反馈。
+**Goal:** Implement the `npx narness` environment checker — read `.narness.toml`, verify the agent's runtime environment with three checker types (version/exists/mcp), give fix guidance on failure, output a human/JSON report and signal the result via exit code.
 
-**Architecture:** TypeScript npm 包放 Narness 仓库 `cli/` 子目录。核心是统一 `Check` 接口（扩展点）+ 引擎遍历 `[[checks]]` 并 dispatch 到注册表里的检查器。`Context` 抽象运行命令/探测工具/读 MCP 配置，便于测试 mock 与真实实现解耦。
+**Architecture:** A TypeScript npm package in the `cli/` subdirectory of the Narness repo. The core is a unified `Check` interface (extension point) + an engine that iterates `[[checks]]` and dispatches to checkers in a registry. `Context` abstracts running commands / probing tools / reading MCP config, decoupling test mocks from the real implementation.
 
-**Tech Stack:** TypeScript（`tsc` 构建）、vitest（测试）、`smol-toml`（TOML 解析）、`semver`（版本比较）。运行时零原生依赖。
+**Tech Stack:** TypeScript (`tsc` build), vitest (tests), `smol-toml` (TOML parsing), `semver` (version comparison). Zero native runtime dependencies.
 
-**设计文档:** `docs/superpowers/specs/2026-08-13-narness-cli-design.md`
+**Design doc:** `docs/superpowers/specs/2026-08-13-narness-cli-design.md`
 
 ---
 
-### Task 1: 脚手架与依赖
+### Task 1: Scaffold and dependencies
 
 **Files:**
 - Create: `cli/package.json`
 - Create: `cli/tsconfig.json`
 - Create: `cli/.gitignore`
-- Create: `cli/src/`、`cli/tests/` 目录
+- Create: `cli/src/`, `cli/tests/` directories
 
-- [ ] **Step 1: 创建目录**
+- [ ] **Step 1: Create directories**
 
 ```bash
 mkdir -p cli/src/checks cli/tests
 ```
 
-- [ ] **Step 2: 写 package.json**
+- [ ] **Step 2: Write package.json**
 
 Create `cli/package.json`:
 
@@ -55,7 +55,7 @@ Create `cli/package.json`:
 }
 ```
 
-- [ ] **Step 3: 写 tsconfig.json**
+- [ ] **Step 3: Write tsconfig.json**
 
 Create `cli/tsconfig.json`:
 
@@ -76,7 +76,7 @@ Create `cli/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 4: 写 cli/.gitignore**
+- [ ] **Step 4: Write cli/.gitignore**
 
 Create `cli/.gitignore`:
 
@@ -85,10 +85,10 @@ node_modules/
 dist/
 ```
 
-- [ ] **Step 5: 安装依赖**
+- [ ] **Step 5: Install dependencies**
 
 Run: `cd cli && npm install`
-Expected: 安装成功，无 peer 冲突报错。
+Expected: installs successfully with no peer conflict errors.
 
 - [ ] **Step 6: Commit**
 
@@ -99,12 +99,12 @@ git commit -m "chore(cli): scaffold TypeScript package"
 
 ---
 
-### Task 2: Check 接口与类型
+### Task 2: Check interface and types
 
 **Files:**
 - Create: `cli/src/checks/check.ts`
 
-- [ ] **Step 1: 写类型定义**
+- [ ] **Step 1: Write the type definitions**
 
 Create `cli/src/checks/check.ts`:
 
@@ -146,10 +146,10 @@ export interface Check {
 }
 ```
 
-- [ ] **Step 2: 类型编译检查**
+- [ ] **Step 2: Type compile check**
 
 Run: `cd cli && npx tsc --noEmit`
-Expected: 无错误（check.ts 是纯类型，能通过编译）。
+Expected: no errors (check.ts is pure types, so it compiles).
 
 - [ ] **Step 3: Commit**
 
@@ -160,13 +160,13 @@ git commit -m "feat(cli): add Check interface and types"
 
 ---
 
-### Task 3: semver 版本提取与比较
+### Task 3: semver version extraction and comparison
 
 **Files:**
 - Create: `cli/tests/semver.test.ts`
 - Create: `cli/src/semver.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write failing tests**
 
 Create `cli/tests/semver.test.ts`:
 
@@ -175,45 +175,45 @@ import { describe, it, expect } from "vitest";
 import { extractVersion, compareVersion } from "../src/semver.js";
 
 describe("extractVersion", () => {
-  it("提取 node 的 v22.14.0", () => {
+  it("extracts v22.14.0 from node", () => {
     expect(extractVersion("v22.14.0")).toBe("22.14.0");
   });
-  it("提取 cargo 的 cargo 1.70.0 (...)", () => {
+  it("extracts cargo 1.70.0 (...) from cargo", () => {
     expect(extractVersion("cargo 1.70.0 (abc123 2023-01-01)")).toBe("1.70.0");
   });
-  it("提取 git 的 git version 2.39.2", () => {
+  it("extracts git version 2.39.2 from git", () => {
     expect(extractVersion("git version 2.39.2")).toBe("2.39.2");
   });
-  it("无版本号返回 null", () => {
+  it("returns null when no version", () => {
     expect(extractVersion("not a version")).toBeNull();
   });
 });
 
 describe("compareVersion", () => {
-  it("22.14.0 满足 min=22", () => {
+  it("22.14.0 satisfies min=22", () => {
     expect(compareVersion("22.14.0", "22").ok).toBe(true);
   });
-  it("18.0.0 不满足 min=22", () => {
+  it("18.0.0 does not satisfy min=22", () => {
     expect(compareVersion("18.0.0", "22").ok).toBe(false);
   });
-  it("22 满足 min=22（宽松格式）", () => {
+  it("22 satisfies min=22 (loose format)", () => {
     expect(compareVersion("22", "22").ok).toBe(true);
   });
-  it("30.0.0 不满足 max=22", () => {
+  it("30.0.0 does not satisfy max=22", () => {
     expect(compareVersion("30.0.0", undefined, "22").ok).toBe(false);
   });
-  it("无法解析的版本返回不 ok", () => {
+  it("unparseable version returns not ok", () => {
     expect(compareVersion("abc", "22").ok).toBe(false);
   });
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run tests to confirm failure**
 
 Run: `cd cli && npx vitest run tests/semver.test.ts`
-Expected: FAIL（`Cannot find module '../src/semver.js'`）
+Expected: FAIL (`Cannot find module '../src/semver.js'`)
 
-- [ ] **Step 3: 实现 semver.ts**
+- [ ] **Step 3: Implement semver.ts**
 
 Create `cli/src/semver.ts`:
 
@@ -231,25 +231,25 @@ export function compareVersion(
   max?: string
 ): { ok: boolean; reason?: string } {
   const a = semver.coerce(actual);
-  if (!a) return { ok: false, reason: `无法解析版本 "${actual}"` };
+  if (!a) return { ok: false, reason: `Unable to parse version "${actual}"` };
   if (min) {
     const m = semver.coerce(min);
-    if (!m) return { ok: false, reason: `配置的 min "${min}" 不是合法版本` };
+    if (!m) return { ok: false, reason: `configured min "${min}" is not a valid version` };
     if (semver.lt(a, m)) return { ok: false, reason: `${actual} < ${min}` };
   }
   if (max) {
     const x = semver.coerce(max);
-    if (!x) return { ok: false, reason: `配置的 max "${max}" 不是合法版本` };
+    if (!x) return { ok: false, reason: `configured max "${max}" is not a valid version` };
     if (semver.gt(a, x)) return { ok: false, reason: `${actual} > ${max}` };
   }
   return { ok: true };
 }
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run tests to confirm they pass**
 
 Run: `cd cli && npx vitest run tests/semver.test.ts`
-Expected: PASS（9 个测试全过）
+Expected: PASS (all 9 tests pass)
 
 - [ ] **Step 5: Commit**
 
@@ -260,13 +260,13 @@ git commit -m "feat(cli): add semver extraction and comparison"
 
 ---
 
-### Task 4: config 定位与解析
+### Task 4: config location and parsing
 
 **Files:**
 - Create: `cli/tests/config.test.ts`
 - Create: `cli/src/config.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write failing tests**
 
 Create `cli/tests/config.test.ts`:
 
@@ -284,24 +284,24 @@ function tmpProject() {
 }
 
 describe("findConfig", () => {
-  it("在当前目录找到 .narness.toml", () => {
+  it("finds .narness.toml in the current directory", () => {
     const dir = tmpProject();
     writeFileSync(join(dir, ".narness.toml"), "[[checks]]\ntype=\"exists\"\nname=\"rg\"\n");
     expect(findConfig(dir)).toBe(join(dir, ".narness.toml"));
   });
-  it("从子目录向上找到 .narness.toml", () => {
+  it("finds .narness.toml by walking up from a subdirectory", () => {
     const dir = tmpProject();
     writeFileSync(join(dir, ".narness.toml"), "[[checks]]\n");
     expect(findConfig(join(dir, "src"))).toBe(join(dir, ".narness.toml"));
   });
-  it("找不到返回 null", () => {
+  it("returns null when not found", () => {
     const dir = tmpProject();
     expect(findConfig(dir)).toBeNull();
   });
 });
 
 describe("loadConfig", () => {
-  it("解析 checks 数组", () => {
+  it("parses the checks array", () => {
     const dir = tmpProject();
     const p = join(dir, ".narness.toml");
     writeFileSync(p, '[[checks]]\ntype = "version"\nname = "node"\nmin = "22"\n');
@@ -309,7 +309,7 @@ describe("loadConfig", () => {
     expect(cfg.checks).toHaveLength(1);
     expect(cfg.checks[0]).toEqual({ type: "version", name: "node", min: "22" });
   });
-  it("缺失 name 抛错", () => {
+  it("throws when name is missing", () => {
     const dir = tmpProject();
     const p = join(dir, ".narness.toml");
     writeFileSync(p, '[[checks]]\ntype = "version"\n');
@@ -318,12 +318,12 @@ describe("loadConfig", () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run tests to confirm failure**
 
 Run: `cd cli && npx vitest run tests/config.test.ts`
-Expected: FAIL（`Cannot find module '../src/config.js'`）
+Expected: FAIL (`Cannot find module '../src/config.js'`)
 
-- [ ] **Step 3: 实现 config.ts**
+- [ ] **Step 3: Implement config.ts**
 
 Create `cli/src/config.ts`:
 
@@ -354,7 +354,7 @@ export function loadConfig(path: string): Config {
   try {
     parsed = parse(raw);
   } catch (err) {
-    throw new Error(`TOML 解析失败: ${(err as Error).message}`);
+    throw new Error(`TOML parse failed: ${(err as Error).message}`);
   }
   const obj = (parsed ?? {}) as { checks?: unknown[] };
   const checks = (obj.checks ?? []).map(normalizeCheck);
@@ -363,11 +363,11 @@ export function loadConfig(path: string): Config {
 
 function normalizeCheck(c: unknown): CheckConfig {
   if (typeof c !== "object" || c === null) {
-    throw new Error(`无效的 check 条目: ${JSON.stringify(c)}`);
+    throw new Error(`invalid check entry: ${JSON.stringify(c)}`);
   }
   const o = c as Record<string, unknown>;
   if (typeof o.type !== "string" || typeof o.name !== "string") {
-    throw new Error(`check 缺少 type/name: ${JSON.stringify(c)}`);
+    throw new Error(`check is missing type/name: ${JSON.stringify(c)}`);
   }
   return {
     type: o.type,
@@ -380,10 +380,10 @@ function normalizeCheck(c: unknown): CheckConfig {
 }
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run tests to confirm they pass**
 
 Run: `cd cli && npx vitest run tests/config.test.ts`
-Expected: PASS（5 个测试全过）
+Expected: PASS (all 5 tests pass)
 
 - [ ] **Step 5: Commit**
 
@@ -394,13 +394,13 @@ git commit -m "feat(cli): add config location and TOML parsing"
 
 ---
 
-### Task 5: exists 检查器
+### Task 5: exists checker
 
 **Files:**
 - Create: `cli/tests/checks/exists.test.ts`
 - Create: `cli/src/checks/exists.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write failing tests**
 
 Create `cli/tests/checks/exists.test.ts`:
 
@@ -419,11 +419,11 @@ function ctx(which: (c: string) => boolean): Context {
 }
 
 describe("existsCheck", () => {
-  it("工具存在则 pass", async () => {
+  it("passes when the tool exists", async () => {
     const r = await existsCheck.run({ type: "exists", name: "rg" }, ctx((c) => c === "rg"));
     expect(r.status).toBe("pass");
   });
-  it("工具缺失则 fail 且带 fix", async () => {
+  it("fails with a fix when the tool is missing", async () => {
     const r = await existsCheck.run(
       { type: "exists", name: "rg", fix: "brew install ripgrep" },
       ctx(() => false)
@@ -431,7 +431,7 @@ describe("existsCheck", () => {
     expect(r.status).toBe("fail");
     expect(r.fix).toBe("brew install ripgrep");
   });
-  it("names 数组一次检查多个", async () => {
+  it("checks multiple with a names array", async () => {
     const r = await existsCheck.run(
       { type: "exists", name: "rg", names: ["jq", "git"] },
       ctx((c) => c === "rg" || c === "git")
@@ -442,12 +442,12 @@ describe("existsCheck", () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run tests to confirm failure**
 
 Run: `cd cli && npx vitest run tests/checks/exists.test.ts`
-Expected: FAIL（`Cannot find module '../../src/checks/exists.js'`）
+Expected: FAIL (`Cannot find module '../../src/checks/exists.js'`)
 
-- [ ] **Step 3: 实现 exists.ts**
+- [ ] **Step 3: Implement exists.ts**
 
 Create `cli/src/checks/exists.ts`:
 
@@ -459,23 +459,23 @@ export const existsCheck: Check = {
     const targets = [check.name, ...(check.names ?? [])];
     const missing = targets.filter((t) => !ctx.which(t));
     if (missing.length === 0) {
-      return { status: "pass", check, detail: targets.join(", ") + " 已安装" };
+      return { status: "pass", check, detail: targets.join(", ") + " installed" };
     }
     const list = missing.join(", ");
     return {
       status: "fail",
       check,
-      message: `缺少工具: ${list}`,
-      fix: check.fix ?? `请安装 ${list}`,
+      message: `missing tool(s): ${list}`,
+      fix: check.fix ?? `please install ${list}`,
     };
   },
 };
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run tests to confirm they pass**
 
 Run: `cd cli && npx vitest run tests/checks/exists.test.ts`
-Expected: PASS（3 个测试全过）
+Expected: PASS (all 3 tests pass)
 
 - [ ] **Step 5: Commit**
 
@@ -486,13 +486,13 @@ git commit -m "feat(cli): add exists checker"
 
 ---
 
-### Task 6: version 检查器
+### Task 6: version checker
 
 **Files:**
 - Create: `cli/tests/checks/version.test.ts`
 - Create: `cli/src/checks/version.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write failing tests**
 
 Create `cli/tests/checks/version.test.ts`:
 
@@ -511,28 +511,28 @@ function ctx(stdout: string, code = 0): Context {
 }
 
 describe("versionCheck", () => {
-  it("版本满足则 pass", async () => {
+  it("passes when the version satisfies", async () => {
     const r = await versionCheck.run({ type: "version", name: "node", min: "22" }, ctx("v22.14.0"));
     expect(r.status).toBe("pass");
     expect(r.detail).toContain("22.14.0");
   });
-  it("版本过低则 fail", async () => {
+  it("fails when the version is too low", async () => {
     const r = await versionCheck.run({ type: "version", name: "node", min: "22" }, ctx("v18.0.0"));
     expect(r.status).toBe("fail");
   });
-  it("命令执行失败则 error", async () => {
+  it("errors when the command fails", async () => {
     const r = await versionCheck.run({ type: "version", name: "node", min: "22" }, ctx("", 127));
     expect(r.status).toBe("error");
   });
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run tests to confirm failure**
 
 Run: `cd cli && npx vitest run tests/checks/version.test.ts`
-Expected: FAIL（`Cannot find module '../../src/checks/version.js'`）
+Expected: FAIL (`Cannot find module '../../src/checks/version.js'`)
 
-- [ ] **Step 3: 实现 version.ts**
+- [ ] **Step 3: Implement version.ts**
 
 Create `cli/src/checks/version.ts`:
 
@@ -547,24 +547,24 @@ export const versionCheck: Check = {
       return {
         status: "error",
         check,
-        message: `${check.name} --version 执行失败`,
-        fix: check.fix ?? `请先安装 ${check.name}`,
+        message: `${check.name} --version failed`,
+        fix: check.fix ?? `please install ${check.name} first`,
       };
     }
     const actual = extractVersion(res.stdout);
     if (!actual) {
-      return { status: "error", check, message: `无法从 "${res.stdout.trim()}" 解析版本号` };
+      return { status: "error", check, message: `unable to parse a version number from "${res.stdout.trim()}"` };
     }
     const cmp = compareVersion(actual, check.min, check.max);
     if (!cmp.ok) {
       const want = [check.min ? `>= ${check.min}` : "", check.max ? `<= ${check.max}` : ""]
         .filter(Boolean)
-        .join(" 且 ");
+        .join(" and ");
       return {
         status: "fail",
         check,
-        message: `${check.name} 版本 ${actual} 不满足要求（需 ${want}）`,
-        fix: check.fix ?? `请升级 ${check.name}`,
+        message: `version ${actual} does not meet requirements (needs ${want})`,
+        fix: check.fix ?? `please upgrade ${check.name}`,
         detail: cmp.reason,
       };
     }
@@ -573,10 +573,10 @@ export const versionCheck: Check = {
 };
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run tests to confirm they pass**
 
 Run: `cd cli && npx vitest run tests/checks/version.test.ts`
-Expected: PASS（3 个测试全过）
+Expected: PASS (all 3 tests pass)
 
 - [ ] **Step 5: Commit**
 
@@ -587,13 +587,13 @@ git commit -m "feat(cli): add version checker"
 
 ---
 
-### Task 7: mcp 检查器
+### Task 7: mcp checker
 
 **Files:**
 - Create: `cli/tests/checks/mcp.test.ts`
 - Create: `cli/src/checks/mcp.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write failing tests**
 
 Create `cli/tests/checks/mcp.test.ts`:
 
@@ -612,11 +612,11 @@ function ctx(servers: string[]): Context {
 }
 
 describe("mcpCheck", () => {
-  it("已声明则 pass", async () => {
+  it("passes when declared", async () => {
     const r = await mcpCheck.run({ type: "mcp", name: "filesystem" }, ctx(["filesystem", "github"]));
     expect(r.status).toBe("pass");
   });
-  it("未声明则 fail 且带 fix", async () => {
+  it("fails with a fix when not declared", async () => {
     const r = await mcpCheck.run({ type: "mcp", name: "filesystem" }, ctx(["github"]));
     expect(r.status).toBe("fail");
     expect(r.fix).toContain(".mcp.json");
@@ -624,12 +624,12 @@ describe("mcpCheck", () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run tests to confirm failure**
 
 Run: `cd cli && npx vitest run tests/checks/mcp.test.ts`
-Expected: FAIL（`Cannot find module '../../src/checks/mcp.js'`）
+Expected: FAIL (`Cannot find module '../../src/checks/mcp.js'`)
 
-- [ ] **Step 3: 实现 mcp.ts**
+- [ ] **Step 3: Implement mcp.ts**
 
 Create `cli/src/checks/mcp.ts`:
 
@@ -640,22 +640,22 @@ export const mcpCheck: Check = {
   async run(check: CheckConfig, ctx: Context): Promise<CheckResult> {
     const servers = ctx.readMcpServers();
     if (servers.includes(check.name)) {
-      return { status: "pass", check, detail: `MCP '${check.name}' 已声明` };
+      return { status: "pass", check, detail: `MCP '${check.name}' declared` };
     }
     return {
       status: "fail",
       check,
-      message: `MCP '${check.name}' 未声明`,
-      fix: check.fix ?? `请在 .mcp.json 的 mcpServers 中添加 '${check.name}'`,
+      message: `MCP '${check.name}' not declared`,
+      fix: check.fix ?? `add '${check.name}' to mcpServers in .mcp.json`,
     };
   },
 };
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run tests to confirm they pass**
 
 Run: `cd cli && npx vitest run tests/checks/mcp.test.ts`
-Expected: PASS（2 个测试全过）
+Expected: PASS (all 2 tests pass)
 
 - [ ] **Step 5: Commit**
 
@@ -666,14 +666,14 @@ git commit -m "feat(cli): add mcp checker"
 
 ---
 
-### Task 8: registry 与 engine
+### Task 8: registry and engine
 
 **Files:**
 - Create: `cli/tests/engine.test.ts`
 - Create: `cli/src/registry.ts`
 - Create: `cli/src/engine.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write failing tests**
 
 Create `cli/tests/engine.test.ts`:
 
@@ -694,7 +694,7 @@ function ctx(over: Partial<Context> = {}): Context {
 }
 
 describe("runChecks", () => {
-  it("遍历所有 checks", async () => {
+  it("runs all checks", async () => {
     const cfg: Config = {
       checks: [
         { type: "version", name: "node", min: "22" },
@@ -705,13 +705,13 @@ describe("runChecks", () => {
     expect(results).toHaveLength(2);
     expect(results.every((r) => r.status === "pass")).toBe(true);
   });
-  it("未知 type 标记 error", async () => {
+  it("marks error on unknown type", async () => {
     const cfg: Config = { checks: [{ type: "nope", name: "x" }] };
     const results = await runChecks(cfg, ctx());
     expect(results[0].status).toBe("error");
-    expect(results[0].message).toContain("未知检查类型");
+    expect(results[0].message).toContain("unknown check type");
   });
-  it("检查器抛异常标记 error 且继续", async () => {
+  it("marks error and continues when a checker throws", async () => {
     const cfg: Config = {
       checks: [
         { type: "exists", name: "a" },
@@ -729,12 +729,12 @@ describe("runChecks", () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run tests to confirm failure**
 
 Run: `cd cli && npx vitest run tests/engine.test.ts`
-Expected: FAIL（`Cannot find module '../src/engine.js'`）
+Expected: FAIL (`Cannot find module '../src/engine.js'`)
 
-- [ ] **Step 3: 实现 registry.ts**
+- [ ] **Step 3: Implement registry.ts**
 
 Create `cli/src/registry.ts`:
 
@@ -755,7 +755,7 @@ export function getCheck(type: string): Check | undefined {
 }
 ```
 
-- [ ] **Step 4: 实现 engine.ts**
+- [ ] **Step 4: Implement engine.ts**
 
 Create `cli/src/engine.ts`:
 
@@ -769,23 +769,23 @@ export async function runChecks(config: Config, ctx: Context): Promise<CheckResu
   for (const check of config.checks) {
     const impl = getCheck(check.type);
     if (!impl) {
-      results.push({ status: "error", check, message: `未知检查类型 "${check.type}"` });
+      results.push({ status: "error", check, message: `unknown check type "${check.type}"` });
       continue;
     }
     try {
       results.push(await impl.run(check, ctx));
     } catch (err) {
-      results.push({ status: "error", check, message: `检查器异常: ${(err as Error).message}` });
+      results.push({ status: "error", check, message: `checker error: ${(err as Error).message}` });
     }
   }
   return results;
 }
 ```
 
-- [ ] **Step 5: 跑测试确认通过**
+- [ ] **Step 5: Run tests to confirm they pass**
 
 Run: `cd cli && npx vitest run tests/engine.test.ts`
-Expected: PASS（3 个测试全过）
+Expected: PASS (all 3 tests pass)
 
 - [ ] **Step 6: Commit**
 
@@ -796,13 +796,13 @@ git commit -m "feat(cli): add registry and engine"
 
 ---
 
-### Task 9: 报告格式化
+### Task 9: Report formatting
 
 **Files:**
 - Create: `cli/tests/report.test.ts`
 - Create: `cli/src/report.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: Write failing tests**
 
 Create `cli/tests/report.test.ts`:
 
@@ -813,11 +813,11 @@ import type { CheckResult } from "../src/checks/check.js";
 
 const results: CheckResult[] = [
   { status: "pass", check: { type: "version", name: "node" }, detail: "node 22.14.0" },
-  { status: "fail", check: { type: "exists", name: "rg" }, message: "缺少工具: rg", fix: "brew install ripgrep" },
+  { status: "fail", check: { type: "exists", name: "rg" }, message: "missing tool(s): rg", fix: "brew install ripgrep" },
 ];
 
 describe("reportHuman", () => {
-  it("含 pass/fail 标记与修复建议", () => {
+  it("includes pass/fail marks and fix suggestions", () => {
     const out = reportHuman(results);
     expect(out).toContain("✔");
     expect(out).toContain("✗");
@@ -827,7 +827,7 @@ describe("reportHuman", () => {
 });
 
 describe("reportJson", () => {
-  it("输出可解析的结构化 JSON", () => {
+  it("emits parseable structured JSON", () => {
     const out = reportJson(results);
     const obj = JSON.parse(out);
     expect(obj.ok).toBe(false);
@@ -839,12 +839,12 @@ describe("reportJson", () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [ ] **Step 2: Run tests to confirm failure**
 
 Run: `cd cli && npx vitest run tests/report.test.ts`
-Expected: FAIL（`Cannot find module '../src/report.js'`）
+Expected: FAIL (`Cannot find module '../src/report.js'`)
 
-- [ ] **Step 3: 实现 report.ts**
+- [ ] **Step 3: Implement report.ts**
 
 Create `cli/src/report.ts`:
 
@@ -892,10 +892,10 @@ export function reportJson(results: CheckResult[]): string {
 }
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [ ] **Step 4: Run tests to confirm they pass**
 
 Run: `cd cli && npx vitest run tests/report.test.ts`
-Expected: PASS（3 个测试全过）
+Expected: PASS (all 3 tests pass)
 
 - [ ] **Step 5: Commit**
 
@@ -906,12 +906,12 @@ git commit -m "feat(cli): add report formatting"
 
 ---
 
-### Task 10: CLI 入口与真实 Context
+### Task 10: CLI entrypoint and real Context
 
 **Files:**
 - Create: `cli/src/index.ts`
 
-- [ ] **Step 1: 实现真实 Context 与 CLI 入口**
+- [ ] **Step 1: Implement the real Context and the CLI entrypoint**
 
 Create `cli/src/index.ts`:
 
@@ -970,7 +970,7 @@ async function main() {
 
   const path = configPath ? resolve(configPath) : findConfig(cwd);
   if (!path) {
-    console.error("未找到 .narness.toml（已从当前目录向上查找）");
+    console.error("Could not find .narness.toml (searched upward from the current directory)");
     process.exit(2);
   }
 
@@ -978,7 +978,7 @@ async function main() {
   try {
     config = loadConfig(path);
   } catch (err) {
-    console.error(`配置解析失败: ${(err as Error).message}`);
+    console.error(`Config parse failed: ${(err as Error).message}`);
     process.exit(2);
   }
 
@@ -992,12 +992,12 @@ async function main() {
 main();
 ```
 
-- [ ] **Step 2: 构建**
+- [ ] **Step 2: Build**
 
 Run: `cd cli && npm run build`
-Expected: 编译成功，生成 `cli/dist/index.js`。
+Expected: compiles successfully, producing `cli/dist/index.js`.
 
-- [ ] **Step 3: 手工冒烟测试**
+- [ ] **Step 3: Manual smoke test**
 
 Run:
 ```bash
@@ -1007,7 +1007,7 @@ printf '[[checks]]\ntype = "version"\nname = "node"\nmin = "18"\n\n[[checks]]\nt
 node /Users/nathan/workspace/narness-engineering/cli/dist/index.js; echo "exit=$?"
 rm -rf "$tmp"
 ```
-Expected: 输出 `✔ node`、`✔ git`，末尾 `2 passed, 0 failed`，`exit=0`。
+Expected: output `✔ node`, `✔ git`, ending with `2 passed, 0 failed`, `exit=0`.
 
 - [ ] **Step 4: Commit**
 
@@ -1018,12 +1018,12 @@ git commit -m "feat(cli): add CLI entrypoint with real context"
 
 ---
 
-### Task 11: CLI 集成测试与收尾
+### Task 11: CLI integration tests and wrap-up
 
 **Files:**
 - Create: `cli/tests/cli.test.ts`
 
-- [ ] **Step 1: 写集成测试**
+- [ ] **Step 1: Write integration tests**
 
 Create `cli/tests/cli.test.ts`:
 
@@ -1047,27 +1047,27 @@ function runIn(fixture: string, args: string[] = []) {
   }
 }
 
-describe("CLI 集成", () => {
+describe("CLI integration", () => {
   let dir: string;
   beforeAll(() => {
     dir = mkdtempSync(join(tmpdir(), "narness-cli-"));
   });
 
-  it("全部通过则 exit 0", () => {
+  it("exits 0 when all pass", () => {
     writeFileSync(join(dir, ".narness.toml"), '[[checks]]\ntype = "version"\nname = "node"\nmin = "18"\n');
     const r = runIn(dir);
     expect(r.code).toBe(0);
     expect(r.stdout).toContain("✔");
   });
 
-  it("有失败则 exit 1", () => {
+  it("exits 1 on failure", () => {
     writeFileSync(join(dir, ".narness.toml"), '[[checks]]\ntype = "exists"\nname = "definitely-not-a-real-cmd-xyz"\n');
     const r = runIn(dir);
     expect(r.code).toBe(1);
     expect(r.stdout).toContain("✗");
   });
 
-  it("--json 输出结构化", () => {
+  it("--json emits structured output", () => {
     writeFileSync(join(dir, ".narness.toml"), '[[checks]]\ntype = "exists"\nname = "git"\n');
     const r = runIn(dir, ["--json"]);
     expect(r.code).toBe(0);
@@ -1076,7 +1076,7 @@ describe("CLI 集成", () => {
     expect(obj.results[0].name).toBe("git");
   });
 
-  it("无配置则 exit 2", () => {
+  it("exits 2 with no config", () => {
     const empty = mkdtempSync(join(tmpdir(), "narness-empty-"));
     const r = runIn(empty);
     expect(r.code).toBe(2);
@@ -1084,15 +1084,15 @@ describe("CLI 集成", () => {
 });
 ```
 
-- [ ] **Step 2: 构建后跑集成测试**
+- [ ] **Step 2: Build then run integration tests**
 
 Run: `cd cli && npm run build && npx vitest run tests/cli.test.ts`
-Expected: PASS（4 个测试全过）
+Expected: PASS (all 4 tests pass)
 
-- [ ] **Step 3: 跑全量测试**
+- [ ] **Step 3: Run the full test suite**
 
 Run: `cd cli && npm test`
-Expected: 全部测试通过（semver 9 + config 5 + exists 3 + version 3 + mcp 2 + engine 3 + report 3 + cli 4 = 32 个）
+Expected: all tests pass (semver 9 + config 5 + exists 3 + version 3 + mcp 2 + engine 3 + report 3 + cli 4 = 32)
 
 - [ ] **Step 4: Commit**
 
@@ -1103,25 +1103,25 @@ git commit -m "test(cli): add CLI integration tests"
 
 ---
 
-### Task 12: 文档同步与最终验证
+### Task 12: Docs sync and final verification
 
-- [ ] **Step 1: README 加 CLI 说明**
+- [ ] **Step 1: Add CLI documentation to README**
 
-两处修改：
+Two edits:
 
-1. 「目录」列表加一行：`- \`cli/\` — narness 环境检查器（npm 包）`
-2. 文件末尾追加「环境检查」一节，包含：说明 `cli/` 是 npm 包；`.narness.toml` 示例（一个 `version` check + 一个 `exists` check）；`npx narness`（human 报告）与 `npx narness --json`（结构化输出，供 hook/CI）两个命令及用途。
+1. Add one line to the "Layout" list: `- \`cli/\` — the narness environment checker (npm package)`
+2. Append an "Environment check" section at the end of the file, containing: a note that `cli/` is an npm package; a `.narness.toml` example (one `version` check + one `exists` check); the two commands and their purposes — `npx narness` (human report) and `npx narness --json` (structured output, for hooks/CI).
 
-- [ ] **Step 2: 最终验证**
+- [ ] **Step 2: Final verification**
 
 Run:
 ```bash
 cd cli && npm run build && npm test
 git status --short
 ```
-Expected: 构建成功、32 个测试全过、工作区无遗漏（除待提交的 README 变更）。
+Expected: build succeeds, all 32 tests pass, working tree has nothing left out (except the README change to be committed).
 
-- [ ] **Step 3: Commit 并推送**
+- [ ] **Step 3: Commit and push**
 
 ```bash
 git add README.md

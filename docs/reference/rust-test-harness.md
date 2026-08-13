@@ -1,53 +1,53 @@
-# Rust 测试 Harness 工程化
+# Rust test harness engineering
 
-## 1. 定位
+## 1. Positioning
 
-测试是约束 AI agent 正确性的最强 ground truth（约束阶梯 L4）。本文档说明如何用 **cargo-nextest** + **cargo-llvm-cov** 构建一个 Rust 测试 harness——它不只是「跑测试」，而是能**把测试失败以结构化、可操作的方式反馈给 LLM**，让 agent 自己发现问题并修复。
+Tests are the strongest ground truth for constraining an AI agent's correctness (constraint ladder L4). This document explains how to build a Rust test harness with **cargo-nextest** + **cargo-llvm-cov** — one that doesn't just "run tests", but **feeds test failures back to the LLM in a structured, actionable way**, so the agent discovers problems and fixes them itself.
 
-核心命题：测试约束不应停留在提示词（「记得写测试」），而应下沉为可执行的 harness（脚本 + hook + 阈值门禁）。
+Core proposition: test constraints should not stay at the level of prompts ("remember to write tests"), but sink into an executable harness (scripts + hooks + threshold gates).
 
-## 2. 测试运行器：nextest
+## 2. Test runner: nextest
 
-### 2.1 为什么选 nextest 而非 cargo test
+### 2.1 Why nextest instead of cargo test
 
-| 维度 | cargo test | cargo-nextest |
+| Dimension | cargo test | cargo-nextest |
 |---|---|---|
-| 执行模型 | 测试二进制内多线程 | 每个测试独立进程，并行 |
-| 速度 | 基线 | 2–3× 更快（多二进制并行消除长尾） |
-| 隔离 | 共享进程（一个 panic 影响全局状态） | 进程隔离（一个崩溃不影响其余） |
-| flaky 处理 | 无 | `--retries` 自动重试 |
-| 超时 | 无（挂起卡死 CI） | 单测超时强杀 |
-| 输出 | 墙文本 | 结构化结果表 + 进度 + 单测耗时 |
-| 失败定位 | 需自行解析 | 每个失败单测的精确位置与输出 |
+| Execution model | multi-threaded within the test binary | each test in its own process, in parallel |
+| Speed | baseline | 2–3× faster (parallel binaries eliminate the long tail) |
+| Isolation | shared process (one panic affects global state) | process isolation (one crash doesn't affect the rest) |
+| Flaky handling | none | `--retries` automatic retries |
+| Timeout | none (a hang stalls CI) | per-test timeout, hard kill |
+| Output | wall of text | structured result table + progress + per-test duration |
+| Failure localization | must parse yourself | exact location and output of each failing test |
 
-**Narness 视角**：nextest 的价值不只是「快」。它对 harness 的关键意义在于**结构化输出**——每个测试的 pass/fail、位置、耗时都机器可读，这让脚本能把失败信息精确、简洁地回传给 LLM，而不是抛给它一堵文本墙。
+**Narness view**: nextest's value isn't just "speed". Its key meaning for a harness is **structured output** — each test's pass/fail, location, and duration are machine-readable, which lets a script feed failures back to the LLM precisely and concisely, instead of throwing it a wall of text.
 
-### 2.2 安装与基本用法
+### 2.2 Installation and basic usage
 
 ```bash
 cargo install cargo-nextest
 
-# 运行测试
+# run tests
 cargo nextest run
 
-# 只跑失败的测试（重跑 flaky）
+# rerun only failing tests (retry flaky)
 cargo nextest run --retries 2
 
-# 指定 profile
+# specify a profile
 cargo nextest run --profile ci
 ```
 
-注意：nextest 不运行 doctest，需单独执行 `cargo test --doc`。
+Note: nextest does not run doctests; run `cargo test --doc` separately.
 
-### 2.3 nextest.toml 配置
+### 2.3 nextest.toml configuration
 
-配置文件：`.config/nextest.toml`。
+Config file: `.config/nextest.toml`.
 
 ```toml
 [profile.default]
 retries = 0
 fail-fast = false
-failure-output = "immediate"   # 失败即时输出（而非全跑完才打印）
+failure-output = "immediate"   # print failures immediately (not after the whole run)
 
 [profile.ci]
 retries = 2
@@ -55,56 +55,56 @@ fail-fast = true
 failure-output = "immediate-final"
 slow-timeout = { period = "60s", terminate-after = 2 }
 
-# 输出 JUnit XML 供 CI 消费
+# emit JUnit XML for CI consumption
 [profile.ci.junit]
 path = "target/nextest/ci/junit.xml"
 ```
 
-关键点：`failure-output = "immediate"` 让失败即时打印，这是 harness 反馈 LLM 的前提——失败信息越早出现，agent 越早看到。
+Key point: `failure-output = "immediate"` prints failures as they happen — a prerequisite for feeding the LLM. The sooner the failure appears, the sooner the agent sees it.
 
-### 2.4 与 harness 集成
+### 2.4 Integrating with the harness
 
-把 nextest 封装为单一职责脚本，失败时输出到 stderr 并 exit 1：
+Wrap nextest in a single-responsibility script that writes failures to stderr and exits 1:
 
 ```bash
 #!/usr/bin/env bash
-# 只做一件事：用 nextest 跑测试
+# Do one thing: run tests with nextest
 set -euo pipefail
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
 cargo nextest run
 ```
 
-## 3. 覆盖率：llvm-cov
+## 3. Coverage: llvm-cov
 
-### 3.1 为什么需要覆盖率
+### 3.1 Why coverage is needed
 
-测试的「存在」不等于「覆盖」。agent 可能写了测试，但测试没覆盖关键分支。覆盖率是**测试质量的 ground truth**，把「写了测试」这个软约束变成「覆盖率 ≥ 阈值」这个硬约束。
+The "existence" of tests doesn't equal "coverage". An agent may have written tests that don't cover the critical branches. Coverage is the **ground truth of test quality**, turning the soft constraint "tests were written" into the hard constraint "coverage ≥ threshold".
 
-### 3.2 安装与用法
+### 3.2 Installation and usage
 
 ```bash
 cargo install cargo-llvm-cov
 
-# 跑测试并生成覆盖率
+# run tests and produce coverage
 cargo llvm-cov
 
-# 生成 HTML 报告（逐行高亮未覆盖代码）
+# generate an HTML report (line-by-line highlighting of uncovered code)
 cargo llvm-cov --html
-# 报告在 target/llvm-cov/html/index.html
+# report at target/llvm-cov/html/index.html
 
-# 输出 lcov（供 Codecov / VS Code Coverage Gutters）
+# emit lcov (for Codecov / VS Code Coverage Gutters)
 cargo llvm-cov --lcov --output-path lcov.info
 ```
 
-### 3.3 覆盖率阈值作为门禁
+### 3.3 Coverage thresholds as a gate
 
 ```bash
-# 行/区域/函数覆盖率同时强制，低于阈值则 exit 非零
+# enforce line/region/function coverage simultaneously; exit non-zero below threshold
 cargo llvm-cov --fail-under-lines 80 --fail-under-regions 80 --fail-under-functions 75
 ```
 
-或写入 `.llvm-cov.toml`：
+Or write `.llvm-cov.toml`:
 
 ```toml
 fail-under-lines = 80
@@ -112,68 +112,69 @@ fail-under-functions = 75
 fail-under-regions = 80
 ```
 
-**Narness 视角**：覆盖率阈值的价值在于把「测试是否充分」从 agent 的自觉判断变成**确定性的 pass/fail**。低于阈值 → exit 非零 → hook/脚本把「覆盖率 78% < 80%，以下函数未覆盖：…」回传给 LLM，agent 被迫补测试。
+**Narness view**: the value of a coverage threshold is turning "are tests sufficient" from the agent's own judgment into a **deterministic pass/fail**. Below threshold → exit non-zero → a hook/script feeds "coverage 78% < 80%, the following functions are uncovered: …" back to the LLM, forcing the agent to add tests.
 
-## 4. 何时触发测试（分层触发）
+## 4. When to trigger tests (layered triggering)
 
-测试 harness 不应只有一个触发时机。按约束阶梯 L3–L5 分层：
+A test harness shouldn't have a single trigger time. Layer it by constraint ladder L3–L5:
 
-| 时机 | 触发方式 | 跑什么 | 目的 |
+| Timing | Trigger | What runs | Purpose |
 |---|---|---|---|
-| 编辑后（L3 hook） | PostToolUse hook | 快速编译检查（`cargo check`，非全量测试） | 编译错误即时反馈 |
-| 提交前（L4 脚本） | agent 主动调用 verify-*.sh | 全量 nextest + llvm-cov 阈值 | 完整门禁，阻止累积错误 |
-| CI（L4/L5） | CI pipeline | 全量测试 + 覆盖率 + JUnit | 回归保护，物理约束 |
+| After edit (L3 hook) | PostToolUse hook | fast compile check (`cargo check`, not full tests) | immediate compile-error feedback |
+| Pre-commit (L4 script) | agent invokes narness-rust-*.sh | full nextest + llvm-cov thresholds | complete gate, stop accumulated errors |
+| CI (L4/L5) | CI pipeline | full tests + coverage + JUnit | regression protection, physical constraint |
 
-**为什么 hook 阶段只跑 check 而非全量测试**：全量测试耗时，每次编辑都跑会拖慢编辑循环、打断 agent 心流。hook 只做最快的编译检查，全量测试交给提交前的脚本和 CI——这是「快速 hook + 可组合脚本」的分层。
+**Why the hook stage runs only check, not full tests**: full tests are slow; running them on every edit drags down the edit loop and breaks the agent's flow. The hook does only the fastest compile check; full tests are left to pre-commit scripts and CI — the "fast hook + composable scripts" layering.
 
-## 5. 如何保证 harness 能给 LLM 反馈
+## 5. How to guarantee the harness can feed the LLM
 
-这是 Narness 的核心：harness 的价值不在于「检测失败」，而在于**让 LLM 看到失败并据此修复**。四个要点：
+This is Narness's core: a harness's value isn't "detecting failure", but **letting the LLM see the failure and fix it accordingly**. Four points:
 
-### 5.1 输出可定位
+### 5.1 Localizable output
 
-失败信息必须含精确位置（文件:行号 + 失败原因），让 agent 不用猜。nextest 的结构化输出天然满足这点；覆盖率报告能指出「哪些行未覆盖」。
+Failure info must contain a precise location (file:line + reason) so the agent doesn't have to guess. nextest's structured output satisfies this naturally; coverage reports can point out "which lines are uncovered".
 
-### 5.2 exit code 语义明确
+### 5.2 Clear exit-code semantics
 
-- `0`：通过
-- `1`：校验失败（脚本层面）
-- `2`：hook 失败，stderr 回传 LLM
+- `0`: passed
+- `1`: validation failed (script level)
+- `2`: hook failed, stderr fed back to the LLM
 
-脚本用明确的 exit code 区分「通过/失败」，hook 用 exit 2 触发回传。
+Scripts use distinct exit codes to distinguish "passed/failed"; hooks use exit 2 to trigger feedback.
 
-### 5.3 hook 的 stderr 回传机制
+### 5.3 The hook's stderr feedback mechanism
 
-PostToolUse hook 退出码 2 时，其 **stderr 会被作为系统消息注入 LLM 上下文**。所以校验失败时，脚本必须把诊断写到 stderr（而非 stdout），否则 LLM 看不到。
+When a PostToolUse hook exits 2, its **stderr is injected into the LLM context as a system message**. So on failure, the script must write diagnostics to stderr (not stdout), or the LLM won't see them.
 
 ```bash
-# 错误示范：诊断信息进了 stdout，hook 回传的是 stderr，LLM 看不到
+# Wrong: diagnostics go to stdout; the hook feeds back stderr, so the LLM can't see them
 cargo nextest run 2>&1 | tail
 
-# 正确：把诊断信息写到 stderr
+# Right: write diagnostics to stderr
 if ! out="$(cargo nextest run 2>&1)"; then
-  printf '%s\n' "$out" >&2   # 写 stderr，hook 回传给 LLM
+  printf '%s\n' "$out" >&2   # stderr; the hook feeds it back to the LLM
   exit 2
 fi
 ```
 
-### 5.4 失败信息可操作
+### 5.4 Actionable failure info
 
-失败信息要回答三个问题，而不只是「失败了」：
-1. **哪里失败**：文件名 + 行号 + 测试名
-2. **为什么失败**：断言期望 vs 实际、编译错误、覆盖率差距
-3. **怎么修**：下一步建议（如「覆盖率 78% < 80%，请为 `foo::bar` 补测试」）
+Failure info should answer three questions, not just "it failed":
 
-## 6. 与 narness-rust 脚本的对应
+1. **Where it failed**: filename + line + test name
+2. **Why it failed**: assertion expected vs actual, compile error, coverage gap
+3. **How to fix**: next-step suggestion (e.g. "coverage 78% < 80%, add tests for `foo::bar`")
 
-本文档的工具映射到 narness-rust 插件的单一职责脚本：
+## 6. Mapping to narness-rust scripts
 
-| 脚本 | 工具 | 对应本文档 |
+This document's tools map to the narness-rust plugin's single-responsibility scripts:
+
+| Script | Tool | See |
 |---|---|---|
-| `verify-check.sh` | cargo check | §4 编辑后 hook |
-| `verify-test.sh` | cargo test（可替换为 nextest） | §2 |
-| `verify-clippy.sh` | cargo clippy -D warnings | 编译期约束 |
-| `verify-invariants.sh` | 不变量扫描 | 代码规范 |
-| `verify-test-discipline.sh` | 测试纪律 | §4 提交前 |
+| `narness-rust-check.sh` | cargo check | §4 after-edit hook |
+| `narness-rust-test.sh` | cargo test (can be swapped for nextest) | §2 |
+| `narness-rust-clippy.sh` | cargo clippy -D warnings | compile-time constraint |
+| `narness-rust-invariants.sh` | invariant scan | code standards |
+| `narness-rust-test-discipline.sh` | test discipline | §4 pre-commit |
 
-（首期脚本为保持零依赖使用 `cargo test`；`nextest` / `llvm-cov` 作为推荐工具在本文档说明，后续可作为脚本的可选后端。）
+(The initial scripts use `cargo test` to stay dependency-free; `nextest` / `llvm-cov` are recommended tools documented here and can later serve as optional script backends.)

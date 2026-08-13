@@ -17,27 +17,27 @@ function runIn(fixture: string, args: string[] = []) {
   }
 }
 
-describe("CLI 集成", () => {
+describe("CLI integration", () => {
   let dir: string;
   beforeAll(() => {
     dir = mkdtempSync(join(tmpdir(), "narness-cli-"));
   });
 
-  it("全部通过则 exit 0", () => {
+  it("exits 0 when all pass", () => {
     writeFileSync(join(dir, ".narness.toml"), '[[checks]]\ntype = "version"\nname = "node"\nmin = "18"\n');
     const r = runIn(dir);
     expect(r.code).toBe(0);
     expect(r.stdout).toContain("✔");
   });
 
-  it("有失败则 exit 1", () => {
+  it("exits 1 on failure", () => {
     writeFileSync(join(dir, ".narness.toml"), '[[checks]]\ntype = "exists"\nname = "definitely-not-a-real-cmd-xyz"\n');
     const r = runIn(dir);
     expect(r.code).toBe(1);
     expect(r.stdout).toContain("✗");
   });
 
-  it("--json 输出结构化", () => {
+  it("--json emits structured output", () => {
     writeFileSync(join(dir, ".narness.toml"), '[[checks]]\ntype = "exists"\nname = "git"\n');
     const r = runIn(dir, ["--json"]);
     expect(r.code).toBe(0);
@@ -46,13 +46,13 @@ describe("CLI 集成", () => {
     expect(obj.results[0].name).toBe("git");
   });
 
-  it("无配置则 exit 2", () => {
+  it("exits 2 with no config", () => {
     const empty = mkdtempSync(join(tmpdir(), "narness-empty-"));
     const r = runIn(empty);
     expect(r.code).toBe(2);
   });
 
-  it("--config 指定路径", () => {
+  it("--config specifies a path", () => {
     const alt = mkdtempSync(join(tmpdir(), "narness-alt-"));
     writeFileSync(join(alt, "custom.toml"), '[[checks]]\ntype = "exists"\nname = "git"\n');
     const empty = mkdtempSync(join(tmpdir(), "narness-empty2-"));
@@ -61,7 +61,7 @@ describe("CLI 集成", () => {
     expect(r.stdout).toContain("✔");
   });
 
-  it("未知 type 则 exit 2", () => {
+  it("exits 2 on unknown type", () => {
     writeFileSync(join(dir, ".narness.toml"), '[[checks]]\ntype = "nope"\nname = "x"\n');
     const r = runIn(dir);
     expect(r.code).toBe(2);

@@ -1,121 +1,121 @@
-# Git Hooks：提交/推送时机的 harness 执行
+# Git hooks: harness execution at commit/push time
 
-## 1. 机制原理
+## 1. Mechanism
 
-git 在特定动作前后，执行 `.git/hooks/` 目录下的同名脚本。这些脚本是**版本控制层**的约束机制——在代码进入 git 历史前拦截。
+Git executes same-named scripts in the `.git/hooks/` directory around specific actions. These scripts are the **version-control layer** of constraints — they intercept code before it enters git history.
 
-hooks 分两类：
+Hooks come in two kinds:
 
-- **客户端 hooks**：在本地仓库触发（commit、push 等），用于提交前校验
-- **服务端 hooks**：在远程仓库触发（pre-receive、update、post-receive），用于强制策略
+- **Client-side hooks**: triggered in the local repo (commit, push, etc.), used for pre-commit validation
+- **Server-side hooks**: triggered on the remote (pre-receive, update, post-receive), used to enforce policy
 
-harness 脚本主要挂在**客户端 hooks**上，因为目标是「在 agent 提交前拦截坏代码」。
+Harness scripts mostly mount on **client-side hooks**, because the goal is "intercept bad code before the agent commits it".
 
-## 2. 常用客户端 hooks
+## 2. Common client-side hooks
 
-| 钩子 | 时机 | 用途 | 退出非零效果 |
+| Hook | Timing | Use | Non-zero exit effect |
 |---|---|---|---|
-| `pre-commit` | `git commit` 前，提交信息编辑器弹出前 | 格式、lint、快速测试 | 阻止提交 |
-| `commit-msg` | 提交信息编辑后、提交前 | 校验提交信息格式 | 阻止提交 |
-| `pre-push` | `git push` 前 | 全量测试、较重门禁 | 阻止推送 |
-| `post-commit` | 提交完成后 | 通知、日志 | 不阻止 |
-| `pre-rebase` | `git rebase` 前 | 阻止危险 rebase | 阻止 |
-| `post-merge` / `post-checkout` | 合并/切换分支后 | 触发依赖更新 | 不阻止 |
+| `pre-commit` | before `git commit`, before the commit-message editor opens | format, lint, fast tests | block the commit |
+| `commit-msg` | after editing the message, before committing | validate commit-message format | block the commit |
+| `pre-push` | before `git push` | full tests, heavier gates | block the push |
+| `post-commit` | after the commit completes | notification, logging | doesn't block |
+| `pre-rebase` | before `git rebase` | block dangerous rebases | block |
+| `post-merge` / `post-checkout` | after merging/switching branches | trigger dependency updates | doesn't block |
 
-对 harness 最有用的是 `pre-commit`（快检查）和 `pre-push`（重检查）。
+For a harness, the most useful are `pre-commit` (fast checks) and `pre-push` (heavy checks).
 
-## 3. 配置方式
+## 3. Configuration
 
-### 3.1 直接写 `.git/hooks/`
+### 3.1 Write `.git/hooks/` directly
 
 ```bash
 # .git/hooks/pre-commit
 #!/usr/bin/env bash
 set -euo pipefail
-bash plugins/narness-rust/scripts/verify-fmt.sh
-bash plugins/narness-rust/scripts/verify-clippy.sh
+bash plugins/narness-rust/scripts/narness-rust-fmt.sh
+bash plugins/narness-rust/scripts/narness-rust-clippy.sh
 ```
 
 ```bash
 chmod +x .git/hooks/pre-commit
 ```
 
-**缺点**：`.git/` 不入库，无法与团队共享；换机器/克隆后丢失。
+**Downside**: `.git/` isn't checked in, so it can't be shared; it's lost on a new machine / clone.
 
-### 3.2 `core.hooksPath` 指向仓库内目录
+### 3.2 Point `core.hooksPath` at an in-repo directory
 
-把 hooks 放进仓库（如 `.githooks/`），再指向它：
+Put hooks in the repo (e.g. `.githooks/`) and point git at it:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-**优点**：hooks 脚本入库、可共享、可 code review。
+**Upside**: hook scripts are checked in, shareable, code-reviewable.
 
-### 3.3 pre-commit 框架
+### 3.3 The pre-commit framework
 
-用 `.pre-commit-config.yaml` 声明式管理，跨语言、自动安装：
+Declarative management via `.pre-commit-config.yaml` — cross-language, auto-installed:
 
 ```yaml
 # .pre-commit-config.yaml
 repos:
   - repo: local
     hooks:
-      - id: verify-fmt
+      - id: narness-rust-fmt
         name: cargo fmt --check
-        entry: bash plugins/narness-rust/scripts/verify-fmt.sh
+        entry: bash plugins/narness-rust/scripts/narness-rust-fmt.sh
         language: system
         files: '\.rs$'
-      - id: verify-clippy
+      - id: narness-rust-clippy
         name: cargo clippy -D warnings
-        entry: bash plugins/narness-rust/scripts/verify-clippy.sh
+        entry: bash plugins/narness-rust/scripts/narness-rust-clippy.sh
         language: system
         files: '\.rs$'
 ```
 
-**优点**：自动管理 hook 安装、支持 `files` 过滤（只在 `.rs` 改动时触发）、生态成熟。
+**Upside**: manages hook installation automatically, supports `files` filtering (only fires on `.rs` changes), mature ecosystem.
 
-## 4. hook 脚本规范
+## 4. Hook script conventions
 
-1. **退出码**：`0` = 通过；**非零 = 阻止提交/推送**。这是 git hook 的强制机制。
-2. **stdout/stderr**：hook 的输出会显示给用户（提交者），但**不会**反馈给任何 LLM——git hook 只做「阻止」，不做「反馈」。
-3. **性能**：pre-commit 必须快（每次提交都跑），重的检查留给 pre-push 或 CI。
+1. **Exit code**: `0` = pass; **non-zero = block the commit/push**. This is git hooks' enforcement mechanism.
+2. **stdout/stderr**: hook output is shown to the user (the committer), but is **not** fed back to any LLM — a git hook only "blocks", it doesn't "feed back".
+3. **Performance**: pre-commit must be fast (runs on every commit); leave heavy checks to pre-push or CI.
 
-## 5. 具体示例：分层挂载
+## 5. Concrete example: layered mounting
 
-**pre-commit（快）**——只跑格式和 lint，几秒内完成：
+**pre-commit (fast)** — only format and lint, done in seconds:
 
 ```bash
 #!/usr/bin/env bash
 # .githooks/pre-commit
 set -euo pipefail
-bash plugins/narness-rust/scripts/verify-fmt.sh
-bash plugins/narness-rust/scripts/verify-clippy.sh
+bash plugins/narness-rust/scripts/narness-rust-fmt.sh
+bash plugins/narness-rust/scripts/narness-rust-clippy.sh
 ```
 
-**pre-push（重）**——跑全量测试和覆盖率：
+**pre-push (heavy)** — full tests and coverage:
 
 ```bash
 #!/usr/bin/env bash
 # .githooks/pre-push
 set -euo pipefail
-bash plugins/narness-rust/scripts/verify-test.sh
+bash plugins/narness-rust/scripts/narness-rust-test.sh
 cargo llvm-cov --fail-under-lines 80
 ```
 
-## 6. 注意事项
+## 6. Caveats
 
-- **绕过**：`git commit --no-verify` 会跳过 pre-commit。git hook 是「约束」，不是「物理不可违反」——真正强制的只有服务端 hook 或 CI。
-- **服务端 hook**：`pre-receive` 在远程强制校验，agent 无法绕过。这是 git 层面最强的约束（对应约束阶梯 L5 的「物理不可能违反」）。
-- **Windows**：hook 脚本默认用 sh 执行，shebang 需要兼容；或用 pre-commit 框架规避平台差异。
+- **Bypass**: `git commit --no-verify` skips pre-commit. A git hook is a "constraint", not "physically unviolable" — only server-side hooks or CI are truly enforced.
+- **Server-side hooks**: `pre-receive` validates on the remote, which the agent cannot bypass. This is git's strongest constraint (corresponding to L5's "physically impossible to violate").
+- **Windows**: hook scripts run with sh by default; the shebang must be compatible, or use the pre-commit framework to dodge platform differences.
 
-## 7. 在分层 harness 中的位置
+## 7. Position in the layered harness
 
-git hook 是「提交级」约束，比 agent 的编辑级 hook（Claude Code / Codex）更粗、但更「硬」——它由 git 执行，不依赖 agent 自觉。分层：
+A git hook is a "commit-level" constraint, coarser but "harder" than the agent's edit-level hooks (Claude Code / Codex) — it's executed by git, independent of the agent's goodwill. Layering:
 
 ```
-编辑后（CC/Codex hook）→ 提交前（git pre-commit）→ 推送前（git pre-push）→ CI
-  细粒度即时反馈        阻止坏代码入库            全量测试门禁          回归保护
+After edit (CC/Codex hook) → pre-commit (git) → pre-push (git) → CI
+  fine-grained immediate feedback   block bad code      full test gate      regression protection
 ```
 
-git hook 的价值在于：即使 agent 忽略了编辑级的即时反馈，坏代码也**进不了 git 历史**。
+A git hook's value: even if the agent ignores edit-level immediate feedback, bad code **never enters git history**.

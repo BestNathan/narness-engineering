@@ -1,24 +1,24 @@
-# 长程任务的正确性
+# Correctness of long-running tasks
 
-## 1. 什么是长程任务
+## 1. What is a long-running task
 
-单次对话内无法完成、需要多轮往返或跨会话的任务：从零实现一个模块、重构整个子系统、修复跨文件的 bug。特征：上下文持续增长、早期约束被稀释、错误不断累积。
+A task that can't be completed in a single conversation and needs multiple round-trips or spans sessions: implementing a module from scratch, refactoring a whole subsystem, fixing a cross-file bug. Traits: context keeps growing, early constraints get diluted, errors accumulate.
 
-## 2. 为什么长程任务最容易跑偏
+## 2. Why long-running tasks drift most easily
 
-- 早期提示词被后续上下文淹没
-- 每一步的小偏差累积成大的方向错误
-- 没有外部 checkpoint，agent 自己难以察觉「已经错了」
+- Early prompts get drowned by later context
+- Small deviations at each step accumulate into a large directional error
+- Without an external checkpoint, the agent struggles to notice "it's already wrong"
 
-## 3. harness 在各环节的作用
+## 3. The harness's role at each stage
 
-| 环节 | 对应 harness | 作用 |
+| Stage | Corresponding harness | Role |
 |---|---|---|
-| 任务启动 | L1/L2（CLAUDE.md + skill） | 明确 ground truth 和验收标准 |
-| 编码中 | L3（hook） | 每次改动即时校验，偏差不过夜 |
-| 阶段性提交 | L4（脚本） | 完整门禁，阻止累积错误进入下一步 |
-| 集成/回归 | L5（编译期）+ CI | 物理约束 + 回归保护 |
+| Task start | L1/L2 (CLAUDE.md + skill) | establish ground truth and acceptance criteria |
+| During coding | L3 (hook) | validate every change immediately; deviations don't survive overnight |
+| Staged commit | L4 (script) | full gate; keep accumulated errors from entering the next step |
+| Integration / regression | L5 (compile-time) + CI | physical constraints + regression protection |
 
-## 4. 核心洞察
+## 4. Core insight
 
-长程任务正确性不靠 agent「一直记得规则」，而靠：每一步改动都经过硬约束校验，错误在产生的那一刻就被脚本/hook 捕获并回传，agent 被迫在错误还小时就修正。这就是「让 agent 自己发现问题」的机制。
+Long-running correctness doesn't come from the agent "remembering the rules all along", but from this: every change passes through hard-constraint validation; an error is caught and fed back by a script/hook the moment it is produced; the agent is forced to fix it while it is still small. This is the mechanism of "letting the agent discover its own mistakes".

@@ -1,38 +1,38 @@
-# Narness CLI — 环境检查器设计文档
+# Narness CLI — environment checker design doc
 
-- 日期：2026-08-13
-- 状态：已批准设计（方案 A：声明式 TOML + 内置检查器 + 统一 Check 接口）
+- Date: 2026-08-13
+- Status: design approved (Option A: declarative TOML + built-in checkers + a unified Check interface)
 
-## 1. 概述
+## 1. Overview
 
-Narness CLI 是一个 **preflight 环境检查器**：项目根目录放一个 `.narness.toml` 配置文件，声明 agent 运行环境必须满足的要求；运行 `npx narness` 逐项检查，检查失败时给出「哪里失败 + 为什么 + 怎么修」的修复引导，并以结构化输出（human + JSON）和明确 exit code 反馈。
+The Narness CLI is a **preflight environment checker**: a `.narness.toml` config in the project root declares the requirements the agent's runtime environment must satisfy; running `npx narness` checks each one, and on failure gives a "where it failed + why + how to fix" remediation, feeding back via structured output (human + JSON) and a clear exit code.
 
-**核心理念**（延续 Narness 的 harness 工程化思想）：环境约束不应停留在文档里（「你需要 node 22」），而应下沉为可执行、可验证、能给 LLM 反馈的检查器。
+**Core idea** (continuing Narness's harness-engineering philosophy): environment constraints shouldn't stay in docs ("you need node 22"), but sink into an executable, verifiable checker that can feed the LLM.
 
-**定位**：环境检查为主，harness 配置检查作为可扩展类型（架构上通过 `Check` 接口预留，首期不实现）。
+**Positioning**: environment checks first; harness-config checks as an extensible type (reserved architecturally via the `Check` interface, not implemented in the initial phase).
 
-## 2. 技术栈与依赖
+## 2. Tech stack and dependencies
 
-- **TypeScript / Node.js**，`npx narness` 直接运行
-- 依赖（最小化）：
-  - `smol-toml` — TOML 解析
-  - `semver` — 版本比较
-- 无运行时原生依赖，纯 JS
+- **TypeScript / Node.js**, run directly via `npx narness`
+- Dependencies (minimized):
+  - `smol-toml` — TOML parsing
+  - `semver` — version comparison
+- No runtime native dependencies; pure JS
 
-## 3. 配置 schema（`.narness.toml`）
+## 3. Config schema (`.narness.toml`)
 
-项目根目录放 `.narness.toml`，顶层 `[[checks]]` 数组，每项一个检查。
+A `.narness.toml` in the project root with a top-level `[[checks]]` array, one check per entry.
 
 ```toml
 # .narness.toml
 
-# 版本检查：命令版本需满足 min/max（semver）
+# version check: the command's version must satisfy min/max (semver)
 [[checks]]
 type = "version"
 name = "node"
 min = "22"
 
-# 存在性检查：shell 工具必须可执行
+# existence check: the shell tool must be executable
 [[checks]]
 type = "exists"
 name = "rg"
@@ -41,38 +41,38 @@ name = "rg"
 type = "exists"
 name = "jq"
 
-# MCP 检查：MCP 配置里必须声明该 server
+# MCP check: the MCP config must declare this server
 [[checks]]
 type = "mcp"
 name = "filesystem"
 ```
 
-### 3.1 字段定义
+### 3.1 Field definitions
 
-每个 check 的通用字段：
+Common fields per check:
 
-| 字段 | 类型 | 必需 | 说明 |
+| Field | Type | Required | Description |
 |---|---|---|---|
-| `type` | string | 是 | `"version"` / `"exists"` / `"mcp"` |
-| `name` | string | 是 | 目标（version=命令名；exists=命令名；mcp=server 名） |
+| `type` | string | yes | `"version"` / `"exists"` / `"mcp"` |
+| `name` | string | yes | target (version=command name; exists=command name; mcp=server name) |
 
-各类型专属字段：
+Type-specific fields:
 
-| 类型 | 字段 | 说明 |
+| Type | Field | Description |
 |---|---|---|
-| `version` | `min` | 最低版本（semver 宽松格式，如 `"22"`、`"22.14"`、`"22.14.0"`） |
-| `version` | `max`（可选） | 最高版本 |
-| `exists` | `names`（可选） | 字符串数组，一次声明多个工具；可与 `name` 同时提供（都会检查） |
+| `version` | `min` | minimum version (loose semver, e.g. `"22"`, `"22.14"`, `"22.14.0"`) |
+| `version` | `max` (optional) | maximum version |
+| `exists` | `names` (optional) | string array declaring multiple tools at once; may be provided alongside `name` (both are checked) |
 
-### 3.2 检查器语义
+### 3.2 Checker semantics
 
-- **`version`**：运行 `<name> --version`，从输出中提取 semver 版本号（正则匹配第一个 `\d+\.\d+(\.\d+)?`，兼容 `node` 的 `v22.14.0`、`cargo` 的 `cargo 1.70.0 (…)` 等不同格式），与 `min`/`max` 比较。失败时 `detail` 记录实际版本。
-- **`exists`**：`command -v <name>` 探测命令是否可执行。失败时 `fix` 建议安装方式（通用提示「请安装 <name>」，具体包名由用户写进配置的 `fix` 字段——见 3.3）。
-- **`mcp`**：检查 `.mcp.json`（项目级）的 `mcpServers` 键是否声明了 `name`。失败时 `fix` 建议添加该 server。
+- **`version`**: run `<name> --version`, extract a semver from the output (regex for the first `\d+\.\d+(\.\d+)?`, compatible with `node`'s `v22.14.0`, `cargo`'s `cargo 1.70.0 (…)`, etc.), compare against `min`/`max`. On failure, `detail` records the actual version.
+- **`exists`**: `command -v <name>` probes whether the command is executable. On failure, `fix` suggests an install (generic "please install <name>"; the concrete package name is written by the user into the config's `fix` field — see 3.3).
+- **`mcp`**: checks whether the `mcpServers` key of `.mcp.json` (project-level) declares `name`. On failure, `fix` suggests adding that server.
 
-### 3.3 自定义修复提示（可选）
+### 3.3 Custom fix hint (optional)
 
-每个 check 可带 `fix` 字段覆盖默认的修复建议：
+Each check may carry a `fix` field overriding the default remediation:
 
 ```toml
 [[checks]]
@@ -81,71 +81,71 @@ name = "rg"
 fix = "brew install ripgrep"
 ```
 
-若未提供 `fix`，检查器用默认建议（如 `version` 失败提示「请升级 <name> 到 >= <min>」）。
+Without a `fix`, the checker uses a default suggestion (e.g. a `version` failure suggests "please upgrade <name> to >= <min>").
 
-## 4. 包结构
+## 4. Package structure
 
-npm 包放 Narness 仓库 **`cli/` 子目录**，独立 `package.json`（`name: "narness"`，`bin` 暴露 `narness`），可 `npm publish`。
+The npm package lives in the Narness repo's **`cli/` subdirectory**, its own `package.json` (`name: "narness"`, `bin` exposes `narness`), publishable via `npm publish`.
 
 ```
 cli/
 ├── package.json           # name: narness, bin, dependencies (smol-toml, semver)
 ├── tsconfig.json
 ├── src/
-│   ├── index.ts           # CLI 入口：解析 --json / --config，调用引擎，设置 exit code
-│   ├── config.ts          # 从 cwd 向上定位 .narness.toml，解析为类型化 Config
-│   ├── engine.ts          # 遍历 checks，按 type dispatch 到检查器，收集 CheckResult[]
+│   ├── index.ts           # CLI entrypoint: parse --json / --config, call the engine, set exit code
+│   ├── config.ts          # locate .narness.toml upward from cwd, parse into a typed Config
+│   ├── engine.ts          # iterate checks, dispatch to checkers by type, collect CheckResult[]
 │   ├── checks/
-│   │   ├── check.ts       # Check 接口 + CheckResult 类型（扩展点）
-│   │   ├── version.ts     # 版本检查器
-│   │   ├── exists.ts      # 存在性检查器
-│   │   └── mcp.ts         # MCP 声明检查器
-│   ├── report.ts          # human / JSON 输出格式化
-│   └── registry.ts        # type → Check 的注册表（引擎 dispatch 用）
-└── tests/                 # 单元 + 集成 + CLI 测试
+│   │   ├── check.ts       # Check interface + CheckResult type (extension point)
+│   │   ├── version.ts     # version checker
+│   │   ├── exists.ts      # existence checker
+│   │   └── mcp.ts         # MCP declaration checker
+│   ├── report.ts          # human / JSON output formatting
+│   └── registry.ts        # type → Check registry (used by the engine's dispatch)
+└── tests/                 # unit + integration + CLI tests
 ```
 
-## 5. 核心接口
+## 5. Core interface
 
 ```ts
-// checks/check.ts — 所有检查器的统一契约（扩展点）
+// checks/check.ts — the unified contract for all checkers (extension point)
 interface Check {
   run(check: CheckConfig, ctx: Context): Promise<CheckResult>;
 }
 
 interface CheckResult {
-  status: "pass" | "fail" | "error";  // error = 检查器自身出错（如命令无法执行）
+  status: "pass" | "fail" | "error";  // error = the checker itself errored (e.g. command couldn't run)
   check: CheckConfig;
-  message?: string;   // 失败时：哪里失败 + 为什么
-  fix?: string;       // 失败时：怎么修（修复引导）
-  detail?: string;    // 额外信息（如实际版本号）
+  message?: string;   // on failure: where it failed + why
+  fix?: string;       // on failure: how to fix (remediation)
+  detail?: string;    // extra info (e.g. the actual version)
 }
 ```
 
-`registry.ts` 维护 `type → Check` 映射。新增检查器类型 = 新增一个模块 + 注册一行，不改引擎——这就是可扩展架构的落点。
+`registry.ts` maintains the `type → Check` mapping. Adding a checker type = adding one module + one registry line, without touching the engine — the landing point of the extensible architecture.
 
-## 6. 数据流
+## 6. Data flow
 
-1. `npx narness [--json] [--config <path>]` → 解析 CLI 参数
-2. `config.ts` 从 cwd 向上查找 `.narness.toml`（支持 `--config` 指定路径），解析为 `Config`
-3. `engine.ts` 遍历 checks：查 registry 得到检查器 → `await check.run(...)` → `CheckResult`
-4. 汇总 `CheckResult[]`
-5. `report.ts` 输出（human 或 `--json`）
-6. 设置 exit code
+1. `npx narness [--json] [--config <path>]` → parse CLI args
+2. `config.ts` finds `.narness.toml` upward from cwd (or via `--config`), parses it into `Config`
+3. `engine.ts` iterates checks: look up the checker in the registry → `await check.run(...)` → `CheckResult`
+4. collect `CheckResult[]`
+5. `report.ts` outputs (human or `--json`)
+6. set exit code
 
-## 7. 输出格式
+## 7. Output format
 
-**human-readable**（默认）：
+**human-readable** (default):
 
 ```
-✔ node >= 22            (实际 v22.14.0)
-✗ rg 未安装              → brew install ripgrep
-✗ MCP 'filesystem' 未声明 → 请在 .mcp.json 中添加该 server
+✔ node >= 22            (actual v22.14.0)
+✗ rg not installed       → brew install ripgrep
+✗ MCP 'filesystem' not declared → add it to .mcp.json
 
 2 passed, 2 failed
 ```
 
-**JSON**（`--json`，供 hook/CI 消费）：
+**JSON** (`--json`, for hook/CI consumption):
 
 ```json
 {
@@ -154,54 +154,54 @@ interface CheckResult {
   "failed": 2,
   "results": [
     { "type": "version", "name": "node", "status": "pass", "detail": "v22.14.0" },
-    { "type": "exists", "name": "rg", "status": "fail", "message": "rg 未安装", "fix": "brew install ripgrep" }
+    { "type": "exists", "name": "rg", "status": "fail", "message": "rg not installed", "fix": "brew install ripgrep" }
   ]
 }
 ```
 
-**exit code**：
+**exit code**:
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `0` | 全部通过 |
-| `1` | 有检查失败 |
-| `2` | 配置或工具错误（找不到 .narness.toml、TOML 语法错误、未知 type） |
+| `0` | all passed |
+| `1` | some check failed |
+| `2` | config or tool error (no .narness.toml, TOML syntax error, unknown type) |
 
-## 8. 错误处理
+## 8. Error handling
 
-| 场景 | 行为 |
+| Scenario | Behavior |
 |---|---|
-| 找不到 `.narness.toml` | 提示「未找到 .narness.toml」+ exit 2 |
-| TOML 语法错误 | 提示错误位置 + exit 2 |
-| 未知 `type` | 提示「未知检查类型 <type>」+ exit 2 |
-| 单个检查器异常（如 `node` 不存在却检查版本） | 标记 `status: "error"`，继续其余检查，最终 exit 1 |
+| no `.narness.toml` found | prompt "could not find .narness.toml" + exit 2 |
+| TOML syntax error | report the error position + exit 2 |
+| unknown `type` | report "unknown check type <type>" + exit 2 |
+| a single checker throws (e.g. `node` absent while checking version) | mark `status: "error"`, continue the rest, final exit 1 |
 
-## 9. 测试
+## 9. Testing
 
-- **单元测试**：`semver` 比较（`"22"` vs `"22.14.0"`、`v` 前缀剥离）；`exists` 探测；`mcp` 解析 `.mcp.json`；每个检查器对 pass/fail/error 的 `CheckResult`
-- **集成测试**：fixture `.narness.toml` + mock 环境（注入假的 `command -v` / 版本命令 / `.mcp.json`），验证引擎汇总结果与 exit code
-- **CLI 测试**：`--json` 输出结构、`--config` 指定路径、无配置时的 exit 2
+- **Unit tests**: `semver` comparison (`"22"` vs `"22.14.0"`, `v` prefix stripping); `exists` probing; `mcp` parsing `.mcp.json`; each checker's `CheckResult` for pass/fail/error
+- **Integration tests**: fixture `.narness.toml` + mocked environment (inject fake `command -v` / version command / `.mcp.json`), verifying the engine's aggregation and exit code
+- **CLI tests**: `--json` output structure, `--config` path, exit 2 when no config
 
-## 10. 验收标准
+## 10. Acceptance criteria
 
-1. `cli/` 目录有可构建的 TypeScript 包（`package.json` + `tsconfig.json` + 依赖）
-2. `npx narness` 能解析 `.narness.toml`，对三类检查器（version/exists/mcp）正确判定 pass/fail
-3. 失败项输出含「哪里 + 为什么 + 怎么修」；`--json` 输出结构化结果
-4. exit code 符合第 7 节（0/1/2）
-5. 错误处理符合第 8 节
-6. 测试覆盖三类检查器 + 引擎 + CLI
-7. 设计文档与 README/CLAUDE.md 同步（README 加 CLI 说明）
+1. `cli/` has a buildable TypeScript package (`package.json` + `tsconfig.json` + dependencies)
+2. `npx narness` parses `.narness.toml` and correctly judges pass/fail for the three checkers (version/exists/mcp)
+3. failures include "where + why + how to fix"; `--json` emits structured results
+4. exit code matches section 7 (0/1/2)
+5. error handling matches section 8
+6. tests cover the three checkers + engine + CLI
+7. design doc synced with README/CLAUDE.md (README gains a CLI section)
 
-## 11. 明确排除（YAGNI）
+## 11. Explicitly excluded (YAGNI)
 
-- 插件系统（加载本地自定义检查器 JS 文件）—— 通过 `Check` 接口预留，首期不实现
-- harness 配置检查（hook/脚本存在性）—— 作为后续检查器类型，首期不实现
-- 命令检查器（`[[checks.command]]`）—— 首期不实现
-- 自动修复（检查失败自动执行安装/修复）—— 只报告 + 引导，不自动改环境
-- MCP 实际连接验证 —— 只做配置声明检查
+- plugin system (loading local custom checker JS files) — reserved via the `Check` interface, not implemented in the initial phase
+- harness-config checks (hook/script existence) — a future checker type, not implemented in the initial phase
+- command checker (`[[checks.command]]`) — not implemented in the initial phase
+- auto-fix (auto-run install/fix on failure) — report + guide only, no automatic environment mutation
+- actual MCP connection verification — config-declaration check only
 
-## 12. 后续步骤
+## 12. Next steps
 
-1. 用户审阅本设计文档
-2. 通过 `writing-plans` skill 产出实现计划
-3. 按计划实现
+1. User reviews this design doc
+2. Produce an implementation plan via the `writing-plans` skill
+3. Implement per the plan

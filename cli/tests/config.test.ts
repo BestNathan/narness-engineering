@@ -11,24 +11,24 @@ function tmpProject() {
 }
 
 describe("findConfig", () => {
-  it("在当前目录找到 .narness.toml", () => {
+  it("finds .narness.toml in the current directory", () => {
     const dir = tmpProject();
     writeFileSync(join(dir, ".narness.toml"), "[[checks]]\ntype=\"exists\"\nname=\"rg\"\n");
     expect(findConfig(dir)).toBe(join(dir, ".narness.toml"));
   });
-  it("从子目录向上找到 .narness.toml", () => {
+  it("finds .narness.toml by walking up from a subdirectory", () => {
     const dir = tmpProject();
     writeFileSync(join(dir, ".narness.toml"), "[[checks]]\n");
     expect(findConfig(join(dir, "src"))).toBe(join(dir, ".narness.toml"));
   });
-  it("找不到返回 null", () => {
+  it("returns null when not found", () => {
     const dir = tmpProject();
     expect(findConfig(dir)).toBeNull();
   });
 });
 
 describe("loadConfig", () => {
-  it("解析 checks 数组", () => {
+  it("parses the checks array", () => {
     const dir = tmpProject();
     const p = join(dir, ".narness.toml");
     writeFileSync(p, '[[checks]]\ntype = "version"\nname = "node"\nmin = "22"\n');
@@ -36,7 +36,7 @@ describe("loadConfig", () => {
     expect(cfg.checks).toHaveLength(1);
     expect(cfg.checks[0]).toEqual({ type: "version", name: "node", min: "22" });
   });
-  it("缺失 name 抛错", () => {
+  it("throws when name is missing", () => {
     const dir = tmpProject();
     const p = join(dir, ".narness.toml");
     writeFileSync(p, '[[checks]]\ntype = "version"\n');

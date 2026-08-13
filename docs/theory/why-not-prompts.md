@@ -1,38 +1,38 @@
-# 为什么不能只靠提示词
+# Why not just prompts
 
-## 1. 提示词是软约束
+## 1. Prompts are soft constraints
 
-提示词是一段自然语言文本，它「请求」或「建议」agent 做某事，而非「强制」。约束能否生效，取决于 agent 是否：
+A prompt is a piece of natural-language text that "requests" or "suggests" an agent do something, rather than "enforcing" it. Whether the constraint takes effect depends on whether the agent:
 
-1. 注意到这段文字
-2. 正确理解其含义
-3. 在具体决策点想起来要遵守
-4. 判断遵守的必要性高于其他目标
+1. notices the text
+2. correctly understands its meaning
+3. remembers to comply at the specific decision point
+4. judges compliance as more important than other goals
 
-任一环节断裂，约束即失效。这四个环节全部依赖 agent 的「善意」，而非任何可验证的机制。
+If any link breaks, the constraint fails. All four links depend on the agent's "goodwill", not on any verifiable mechanism.
 
-## 2. 三个失效机制
+## 2. Three failure mechanisms
 
-### 2.1 注意力稀释
+### 2.1 Attention dilution
 
-长上下文里，一段提示词与海量信息竞争注意力。随着对话增长，早期写下的约束（哪怕在 system prompt 或 CLAUDE.md 中）会被逐渐稀释，agent 在具体决策点可能根本「没想到」这条约束。
+In a long context, one prompt competes for attention against a mass of information. As the conversation grows, constraints written early (even in the system prompt or CLAUDE.md) get gradually diluted, and at the specific decision point the agent may not even "think of" the constraint.
 
-### 2.2 概率性服从
+### 2.2 Probabilistic compliance
 
-LLM 是概率模型，不是规则引擎。同一段提示词，在不同上下文、不同采样下，服从程度不同。今天记得写测试，明天可能就忘。
+An LLM is a probabilistic model, not a rules engine. The same prompt, under different contexts and different sampling, is obeyed to different degrees. Today it remembers to write tests; tomorrow it may forget.
 
-### 2.3 目标冲突时的让步
+### 2.3 Conceding when goals conflict
 
-当「遵守约束」与「完成当前目标」冲突时——例如急着修复一个 bug，跳过测试看起来「更快」——agent 可能理性化地忽略约束。
+When "following the constraint" conflicts with "finishing the current goal" — for example, hurrying to fix a bug, where skipping tests looks "faster" — the agent may rationalize the constraint away.
 
-## 3. 硬约束为什么有效
+## 3. Why hard constraints work
 
-代码、hook、脚本是硬约束：
+Code, hooks, and scripts are hard constraints:
 
-- 不依赖 agent 注意到——hook 由事件自动触发
-- 不依赖 agent 理解——脚本输出确定性的 pass/fail
-- 不依赖 agent 选择遵守——编译失败就是失败，无法「商量」
+- They don't depend on the agent noticing — a hook fires automatically on an event
+- They don't depend on the agent understanding — a script outputs a deterministic pass/fail
+- They don't depend on the agent choosing to comply — a compile failure is a failure, no negotiation possible
 
-## 4. 结论
+## 4. Conclusion
 
-提示词适合表达「意图」和「为什么」，不适合承担「必须遵守的什么」。约束应尽可能下沉到硬约束层。这是 Narness 的核心前提，详见 [约束层级阶梯](constraint-ladder.md)。
+Prompts are suited to expressing "intent" and "why", not to bearing the "must-do what". Constraints should sink as far as possible into the hard-constraint layers. This is Narness's core premise; see [the constraint ladder](constraint-ladder.md).

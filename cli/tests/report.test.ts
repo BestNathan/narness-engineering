@@ -4,11 +4,11 @@ import type { CheckResult } from "../src/checks/check.js";
 
 const results: CheckResult[] = [
   { status: "pass", check: { type: "version", name: "node" }, detail: "node 22.14.0" },
-  { status: "fail", check: { type: "exists", name: "rg" }, message: "缺少工具: rg", fix: "brew install ripgrep" },
+  { status: "fail", check: { type: "exists", name: "rg" }, message: "missing tool(s): rg", fix: "brew install ripgrep" },
 ];
 
 describe("reportHuman", () => {
-  it("含 pass/fail 标记与修复建议", () => {
+  it("includes pass/fail marks and fix suggestions", () => {
     const out = reportHuman(results);
     expect(out).toContain("✔");
     expect(out).toContain("✗");
@@ -18,7 +18,7 @@ describe("reportHuman", () => {
 });
 
 describe("reportJson", () => {
-  it("输出可解析的结构化 JSON", () => {
+  it("emits parseable structured JSON", () => {
     const out = reportJson(results);
     const obj = JSON.parse(out);
     expect(obj.ok).toBe(false);

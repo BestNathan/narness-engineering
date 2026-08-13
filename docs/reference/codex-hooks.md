@@ -1,10 +1,10 @@
-# Codex Hooks：OpenAI Codex CLI 的 harness 执行
+# Codex hooks: harness execution in the OpenAI Codex CLI
 
-## 1. 机制原理
+## 1. Mechanism
 
-OpenAI Codex CLI 也有 hook 机制（v0.124 起稳定）。与 Claude Code 类似，它在 agent 生命周期节点触发外部脚本，但**反馈机制有本质区别**。
+The OpenAI Codex CLI also has a hook mechanism (stable since v0.124). Like Claude Code, it fires external scripts at agent lifecycle nodes, but **the feedback mechanism is fundamentally different**.
 
-hooks 需通过 feature flag 启用：
+Hooks must be enabled via a feature flag:
 
 ```toml
 # config.toml
@@ -12,9 +12,9 @@ hooks 需通过 feature flag 启用：
 codex_hooks = true
 ```
 
-## 2. 配置方式
+## 2. Configuration
 
-两种等价写法：
+Two equivalent forms:
 
 ### 2.1 `.codex/hooks.json`
 
@@ -37,7 +37,7 @@ codex_hooks = true
 }
 ```
 
-### 2.2 `config.toml` 内联
+### 2.2 Inline in `config.toml`
 
 ```toml
 [features]
@@ -53,76 +53,77 @@ timeout = 30
 statusMessage = "Validating after Bash"
 ```
 
-## 3. 事件列表
+## 3. Event list
 
-| 事件 | 时机 | 用途 |
+| Event | Timing | Use |
 |---|---|---|
-| `SessionStart` | 会话开始/恢复/clear/compact | 注入上下文 |
-| `PreToolUse` | 工具执行前 | 阻止/改写调用 |
-| `PostToolUse` | 工具执行后 | 校验、反馈 |
-| `SubagentStop` | 子 agent 结束 | 子 agent 继续逻辑 |
-| `Stop` | 会话结束 | 结束前校验 |
-| `UserPromptSubmit` | 用户提交提示词 | 注入/校验输入 |
-| `PermissionRequest` | 权限请求 | 自动化权限 |
+| `SessionStart` | session start/resume/clear/compact | inject context |
+| `PreToolUse` | before a tool executes | block/rewrite calls |
+| `PostToolUse` | after a tool executes | validate, feedback |
+| `SubagentStop` | subagent ends | subagent continuation logic |
+| `Stop` | session ends | end-of-session validation |
+| `UserPromptSubmit` | user submits a prompt | inject/validate input |
+| `PermissionRequest` | permission request | automate permissions |
 
-## 4. 关键限制
+## 4. Key limitation
 
-**`PreToolUse` / `PostToolUse` 只拦截三种工具**：
+**`PreToolUse` / `PostToolUse` only intercept three kinds of tools**:
+
 - `Bash`
-- `apply_patch`（Edit/Write 的别名）
-- MCP 工具（`mcp__…`）
+- `apply_patch` (an alias for Edit/Write)
+- MCP tools (`mcp__…`)
 
-不是所有工具路径都能挂 hook——这是 Codex 与 Claude Code 的一个重要差异。
+Not every tool path can mount a hook — an important difference between Codex and Claude Code.
 
-## 5. 输出契约（与 Claude Code 的本质区别）
+## 5. Output contract (the fundamental difference from Claude Code)
 
-Codex 的反馈机制与 Claude Code **不同**。Claude Code 用「exit 2 + stderr」，Codex 用 **stdout JSON**：
+Codex's feedback mechanism **differs** from Claude Code's. Claude Code uses "exit 2 + stderr"; Codex uses **stdout JSON**:
 
-### 5.1 注入上下文（让模型看到）
-
-```json
-{"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "测试失败：src/lib.rs 第 3 行 …"}}
-```
-
-`additionalContext` 是**模型可见**的文本，用于反馈失败信息。
-
-### 5.2 阻止工具（PreToolUse）
+### 5.1 Inject context (let the model see it)
 
 ```json
-{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "危险命令"}}
+{"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "test failed: src/lib.rs line 3 …"}}
 ```
 
-### 5.3 阻止结果（PostToolUse / Stop）
+`additionalContext` is text the **model can see**, used to feed back failure info.
+
+### 5.2 Block a tool (PreToolUse)
 
 ```json
-{"decision": "block", "reason": "测试未通过"}
+{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "dangerous command"}}
 ```
 
-### 5.4 退出码
+### 5.3 Block a result (PostToolUse / Stop)
 
-| 退出码 | 含义 |
+```json
+{"decision": "block", "reason": "tests did not pass"}
+```
+
+### 5.4 Exit codes
+
+| Exit code | Meaning |
 |---|---|
-| `0` | 成功，stdout JSON 被解析 |
-| `2` | 特殊行为（PreToolUse 阻止工具 / PostToolUse 阻止结果，原因从 stderr 读） |
-| 其他非零 | hook 失败，报错但处理继续 |
+| `0` | success, stdout JSON is parsed |
+| `2` | special behavior (PreToolUse blocks the tool / PostToolUse blocks the result; reason read from stderr) |
+| other non-zero | hook failed; an error is reported but processing continues |
 
-**约束**：`permissionDecisionReason` / `reason` 在 deny/block 时**必填**；schema 严格校验，多余字段会导致整个输出失效、动作不拦截。
+**Constraint**: `permissionDecisionReason` / `reason` are **required** on deny/block; the schema is strictly validated, and extra fields invalidate the whole output so the action isn't intercepted.
 
-## 6. 与 AGENTS.md 的关系
+## 6. Relationship to AGENTS.md
 
-- **AGENTS.md** 是 Codex 的约定文件（类似 Claude Code 的 CLAUDE.md），分层发现：全局 `~/.codex/AGENTS.md` + 项目逐级 walk
-- 默认大小上限 32 KiB，超限静默截断
-- AGENTS.md 是**静态指令层**（项目约定、测试命令、代码风格），hooks 是**动态执行层**——两者互补：AGENTS.md 说「应该怎么做」，hooks 强制「必须这么做」
+- **AGENTS.md** is Codex's conventions file (like Claude Code's CLAUDE.md), discovered hierarchically: global `~/.codex/AGENTS.md` + per-project walking
+- Default size cap 32 KiB; silently truncated beyond it
+- AGENTS.md is the **static instruction layer** (project conventions, test commands, code style); hooks are the **dynamic execution layer** — complementary: AGENTS.md says "what you should do", hooks enforce "what you must do"
 
-## 7. 具体示例：PostToolUse 挂编译检查
+## 7. Concrete example: PostToolUse mounts a compile check
 
-Codex 侧适配层（区别于 Claude Code 的 stderr 机制）：
+The Codex-side adapter layer (distinct from Claude Code's stderr mechanism):
 
 ```bash
 #!/usr/bin/env bash
 # ~/.codex/hooks/post-edit-gate.sh
-# 读取 stdin JSON，判断是否改 .rs，是则跑 verify-check.sh，
-# 失败时用 stdout JSON 的 additionalContext 反馈给模型
+# read stdin JSON, judge whether a .rs file changed; if so run narness-rust-check.sh;
+# on failure feed back to the model via stdout JSON's additionalContext
 input="$(cat)"
 file_path="$(printf '%s' "$input" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("tool_input",{}).get("file_path",""))' 2>/dev/null || true)"
 
@@ -131,36 +132,36 @@ case "$file_path" in
   *) exit 0 ;;
 esac
 
-if ! out="$(bash /path/to/verify-check.sh 2>&1)"; then
-  # Codex 用 stdout JSON 注入，而非 stderr
-  python3 -c 'import json,sys; print(json.dumps({"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"cargo check 失败：\n" + sys.argv[1]}}))' "$out"
+if ! out="$(bash /path/to/narness-rust-check.sh 2>&1)"; then
+  # Codex injects via stdout JSON, not stderr
+  python3 -c 'import json,sys; print(json.dumps({"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"cargo check failed:\n" + sys.argv[1]}}))' "$out"
   exit 0
 fi
 exit 0
 ```
 
-注意：注入上下文用 **stdout JSON + exit 0**（不是 exit 2 + stderr）。
+Note: injecting context uses **stdout JSON + exit 0** (not exit 2 + stderr).
 
-## 8. Codex vs Claude Code 对比
+## 8. Codex vs Claude Code comparison
 
-| 维度 | Claude Code | Codex |
+| Dimension | Claude Code | Codex |
 |---|---|---|
-| 配置 | `settings.json` / 插件 `hooks.json` | `.codex/hooks.json` + feature flag |
-| 反馈给 LLM | **exit 2 + stderr** | **stdout JSON** `additionalContext` |
-| 阻止工具 | PreToolUse exit 2 | PreToolUse `permissionDecision: deny` |
-| 阻止结果 | Stop exit 2 | `{"decision": "block"}` |
-| 拦截范围 | 所有工具 | 仅 Bash / apply_patch / MCP |
-| 约定文件 | CLAUDE.md | AGENTS.md |
+| Config | `settings.json` / plugin `hooks.json` | `.codex/hooks.json` + feature flag |
+| Feedback to LLM | **exit 2 + stderr** | **stdout JSON** `additionalContext` |
+| Block a tool | PreToolUse exit 2 | PreToolUse `permissionDecision: deny` |
+| Block a result | Stop exit 2 | `{"decision": "block"}` |
+| Interception scope | all tools | only Bash / apply_patch / MCP |
+| Conventions file | CLAUDE.md | AGENTS.md |
 
-**Narness 含义**：同一个 harness 校验脚本，核心逻辑（`verify-check.sh`）可复用，但「反馈适配层」因工具而异——Claude Code 用 exit 2 + stderr，Codex 用 stdout JSON。
+**Narness meaning**: the same harness validation script — the core logic (`narness-rust-check.sh`) — is reusable, but the "feedback adapter layer" differs per tool: Claude Code uses exit 2 + stderr, Codex uses stdout JSON.
 
-## 9. 在分层 harness 中的位置
+## 9. Position in the layered harness
 
-Codex hook 是「编辑级」约束，与 Claude Code hook 同层，但适配方式不同：
+Codex hooks are "edit-level" constraints, same tier as Claude Code hooks, adapted differently:
 
 ```
-编辑后（Codex PostToolUse）→ 提交前（git pre-commit）→ 推送前（git pre-push）→ CI
-  编译错误即时反馈模型      阻止坏代码入库          全量测试门禁          回归保护
+After edit (Codex PostToolUse) → pre-commit (git) → pre-push (git) → CI
+  compile error fed back to model   block bad code   full test gate   regression protection
 ```
 
-关键工程决策：**校验逻辑只写一次**（`verify-*.sh`），每个工具写一层薄的适配器。
+Key engineering decision: **write validation logic once** (`narness-rust-*.sh`); write a thin adapter per tool.
