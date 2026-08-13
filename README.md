@@ -31,6 +31,7 @@ claude plugin install narness-rust
 - [The constraint ladder](docs/theory/constraint-ladder.md)
 - [Decision guide](docs/theory/decision-guide.md)
 - [Correctness of long-running tasks](docs/theory/long-running-correctness.md)
+- [Command interception](docs/theory/command-interception.md) (replacing and normalizing agent commands via config + the narness CLI)
 
 ## Reference docs
 
