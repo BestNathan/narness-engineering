@@ -230,6 +230,8 @@ fn compare(l: &Value, op: &CompareOp, r: &Value) -> bool {
     let ord = match (l, r) {
         (Value::Integer(a), Value::Integer(b)) => Some(a.cmp(b)),
         (Value::Float(a), Value::Float(b)) => a.partial_cmp(b),
+        // Note: i64→f64 coercion loses precision for |i64| > 2^53, and a NaN float
+        // compares false for every operator including Ne (v0.1 known limitation).
         (Value::Integer(a), Value::Float(b)) => (*a as f64).partial_cmp(b),
         (Value::Float(a), Value::Integer(b)) => a.partial_cmp(&(*b as f64)),
         (Value::String(a), Value::String(b)) => Some(a.cmp(b)),
@@ -328,7 +330,7 @@ fn remove(cmd: &mut Command, target: &Target) {
         Target::Environment { name } => {
             cmd.environment.retain(|e| e.name != *name);
         }
-        Target::Executable => {}
+        Target::Executable => {} // removing an executable is meaningless; intentional no-op
         Target::WorkingDirectory => {
             cmd.working_directory = None;
         }

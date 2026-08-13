@@ -261,3 +261,102 @@ fn allows_unmatched_policy() {
     assert!(result.effective_call.is_none());
     assert!(result.matched_policies.is_empty());
 }
+
+#[test]
+fn sets_positional() {
+    let policy = Policy {
+        id: "p".into(), name: "p".into(), priority: 100, scope: Scope::Global,
+        matcher: Matcher::All(vec![]),
+        rules: vec![Rule {
+            id: "r".into(), condition: Condition::All(vec![]),
+            action: Action::Rewrite(vec![RewriteOp::Set {
+                target: Target::Positional { index: 1 },
+                value: Expr::Literal(Value::String("list".into())),
+            }]),
+            feedback: None,
+        }],
+        metadata: PolicyMetadata,
+    };
+    let result = evaluate(&bash_call("gh run foo"), &[policy]);
+    assert_eq!(result.decision, Decision::Rewrite);
+    match &result.effective_call.as_ref().unwrap().input {
+        ToolInput::Command(c) => {
+            let pos: Vec<&String> = c.arguments.iter().filter_map(|a| match a {
+                Argument::Positional(Value::String(s)) => Some(s),
+                _ => None,
+            }).collect();
+            assert_eq!(pos, vec!["run", "list"]);
+        }
+        _ => panic!("expected command"),
+    }
+}
+
+#[test]
+fn sets_environment() {
+    let policy = Policy {
+        id: "e".into(), name: "e".into(), priority: 100, scope: Scope::Global,
+        matcher: Matcher::All(vec![]),
+        rules: vec![Rule {
+            id: "r".into(), condition: Condition::All(vec![]),
+            action: Action::Rewrite(vec![RewriteOp::Set {
+                target: Target::Environment { name: "FOO".into() },
+                value: Expr::Literal(Value::String("bar".into())),
+            }]),
+            feedback: None,
+        }],
+        metadata: PolicyMetadata,
+    };
+    let result = evaluate(&bash_call("gh run list"), &[policy]);
+    match &result.effective_call.as_ref().unwrap().input {
+        ToolInput::Command(c) => {
+            assert!(c.environment.iter().any(|e| e.name == "FOO" && e.value == Value::String("bar".into())));
+        }
+        _ => panic!("expected command"),
+    }
+}
+
+#[test]
+fn sets_executable() {
+    let policy = Policy {
+        id: "x".into(), name: "x".into(), priority: 100, scope: Scope::Global,
+        matcher: Matcher::All(vec![]),
+        rules: vec![Rule {
+            id: "r".into(), condition: Condition::All(vec![]),
+            action: Action::Rewrite(vec![RewriteOp::Set {
+                target: Target::Executable,
+                value: Expr::Literal(Value::String("echo".into())),
+            }]),
+            feedback: None,
+        }],
+        metadata: PolicyMetadata,
+    };
+    let result = evaluate(&bash_call("gh run list"), &[policy]);
+    match &result.effective_call.as_ref().unwrap().input {
+        ToolInput::Command(c) => assert_eq!(c.executable, "echo"),
+        _ => panic!("expected command"),
+    }
+}
+
+#[test]
+fn sets_working_directory() {
+    let policy = Policy {
+        id: "w".into(), name: "w".into(), priority: 100, scope: Scope::Global,
+        matcher: Matcher::All(vec![]),
+        rules: vec![Rule {
+            id: "r".into(), condition: Condition::All(vec![]),
+            action: Action::Rewrite(vec![RewriteOp::Set {
+                target: Target::WorkingDirectory,
+                value: Expr::Literal(Value::Path(PathExpr { raw: "/tmp".into(), normalized: None, absolute: true })),
+            }]),
+            feedback: None,
+        }],
+        metadata: PolicyMetadata,
+    };
+    let result = evaluate(&bash_call("gh run list"), &[policy]);
+    match &result.effective_call.as_ref().unwrap().input {
+        ToolInput::Command(c) => {
+            assert_eq!(c.working_directory.as_ref().map(|p| p.raw.as_str()), Some("/tmp"));
+        }
+        _ => panic!("expected command"),
+    }
+}
