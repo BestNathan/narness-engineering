@@ -1,0 +1,8 @@
+{
+  "name": "narness-git",
+  "description": "Git harness engineering: mount narness validation scripts on git hooks to block bad code before it enters history",
+  "version": "0.1.0",
+  "author": { "name": "narness" },
+  "license": "MIT",
+  "keywords": ["git", "hooks", "harness", "pre-commit", "pre-push", "commit-msg", "engineering"]
+}

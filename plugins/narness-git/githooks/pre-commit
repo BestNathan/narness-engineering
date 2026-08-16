@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# pre-commit — thin git-hook entrypoint (commit-time fast gate)
+# responsibility: judge the trigger (a commit is happening → always true) and
+#   delegate to single-responsibility narness-rust scripts for the fast checkpoints.
+# on failure: a script's non-zero exit blocks the commit; output goes to the
+#   committer (git hooks block, they never feed back to an LLM).
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+narness="${NARNESS_RUST_SCRIPTS:-$root/plugins/narness-rust/scripts}"
+
+# fast checkpoints only — heavy checks belong on pre-push
+bash "$narness/narness-rust-fmt.sh" "$root"
+bash "$narness/narness-rust-clippy.sh" "$root"

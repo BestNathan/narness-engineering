@@ -11,6 +11,13 @@
       "version": "0.1.0",
       "source": "./plugins/narness-rust",
       "author": { "name": "narness" }
+    },
+    {
+      "name": "narness-git",
+      "description": "Git harness engineering skills, git hooks and install script",
+      "version": "0.1.0",
+      "source": "./plugins/narness-git",
+      "author": { "name": "narness" }
     }
   ]
 }

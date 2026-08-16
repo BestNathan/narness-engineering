@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# commit-msg — thin git-hook entrypoint (commit-message gate)
+# responsibility: judge the trigger (a commit message was provided → $1 is its
+#   file path) and delegate to the single-responsibility narness-git-commit-msg.sh.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+narness="${NARNESS_GIT_SCRIPTS:-$root/plugins/narness-git/scripts}"
+
+msg_file="$1"
+bash "$narness/narness-git-commit-msg.sh" "$msg_file"

@@ -36,6 +36,7 @@ Every script obeys the same six rules: one script = one checkpoint; a determinis
 ## Structure
 
 - `plugins/narness-rust/` — Rust harness-engineering plugin (skill + PostToolUse hook + 9 `narness-rust-*.sh` scripts)
+- `plugins/narness-git/` — Git harness-engineering plugin (skill + thin git hooks + `narness-git-install.sh` / `narness-git-commit-msg.sh`)
 - `docs/theory/` — theory docs (constraint ladder, decision guide, etc.)
 - `docs/reference/` — tool-practice references (e.g. the Rust test harness)
 - `cli/` — the narness environment checker (npm package)
