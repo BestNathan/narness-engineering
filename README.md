@@ -8,6 +8,23 @@ Narness is a "research + documentation + Claude Code tooling" project that artic
 
 Prompts are soft constraints that an agent may ignore; scripts and hooks are hard constraints an agent cannot escape. Narness organizes its methodology around the **constraint ladder** (L0 prompts → L5 compile-time) and ships plugins that put constraints into code.
 
+## Harness checkpoints
+
+A harness is built from a small set of checkpoints — each one a yes/no question answered by one single-responsibility script:
+
+| Checkpoint | Guards against | Script design |
+|---|---|---|
+| Format | style drift, diff noise | check-only gate; auto-fix on the hook tier; rules fixed in config |
+| Compile / type-check | broken builds | fastest check; immediate after-edit feedback |
+| Lint | code smells | warnings escalated to errors; sunk to `forbid` at compile time |
+| Invariants | project-specific rule violations | grep scan for what the linter can't express |
+| Test | wrong behavior | three tiers — unit (pre-push), integration + e2e (CI) — each a deterministic gate with localizable failures |
+| Coverage | untested critical paths | per-tier numeric threshold (unit ≥95%, integration ≥80%); uncovered lines fed back |
+| Test discipline | silently missing tests | VCS diff → test-file mapping |
+| Dependency audit | vulnerable dependencies | lockfile audit on the slow tier |
+
+See [harness checkpoints](docs/theory/harness-checkpoints.md) for the design rubric behind each.
+
 ## Layout
 
 - `docs/theory/` — theory and research docs
@@ -31,6 +48,8 @@ claude plugin install narness-rust
 - [The constraint ladder](docs/theory/constraint-ladder.md)
 - [Decision guide](docs/theory/decision-guide.md)
 - [Correctness of long-running tasks](docs/theory/long-running-correctness.md)
+- [Harness checkpoints](docs/theory/harness-checkpoints.md) (the checkpoint taxonomy + script-design rubric)
+- [Tool checkpoints](docs/theory/tool-checkpoints.md) (what each tool can enforce: git, GitHub, GitLab, Claude Code, Codex)
 - [Command interception](docs/theory/command-interception.md) (replacing and normalizing agent commands via config + the narness CLI)
 
 ## Reference docs

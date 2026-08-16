@@ -10,14 +10,32 @@ The constraint ladder: L0 prompts → L1 project conventions → L2 Skill → L3
 
 ## Project conventions (must follow)
 
-1. **Script naming**: every script this project provides starts with `narness-`. The Rust plugin ships `narness-rust-fmt.sh`, `narness-rust-check.sh`, `narness-rust-clippy.sh`, `narness-rust-test.sh`, `narness-rust-invariants.sh`, `narness-rust-test-discipline.sh`.
+1. **Script naming**: every script this project provides starts with `narness-`. The Rust plugin ships `narness-rust-fmt.sh`, `narness-rust-check.sh`, `narness-rust-clippy.sh`, `narness-rust-test-unit.sh`, `narness-rust-test-integration.sh`, `narness-rust-test-e2e.sh`, `narness-rust-test.sh`, `narness-rust-invariants.sh`, `narness-rust-test-discipline.sh`.
 2. **Single-responsibility scripts**: each validation script does exactly one thing. "Full-gate" god scripts that bundle fmt/lint/test together are forbidden — split each check into its own `narness-rust-*.sh`.
 3. **Thin hook entrypoint**: the hook script (`post-edit-gate.sh`) only "judges the trigger condition + delegates to a single-responsibility script"; it does not inline validation logic.
 4. **Feed failures back to the LLM**: on failure, scripts must write diagnostics to stderr (a PostToolUse hook exit code 2 injects stderr into the LLM context), so the agent can see its own mistakes and fix them.
+5. **Develop directly on `main`**: this project commits straight to `main` — no feature branches or pull requests. Commit working changes to `main` as they land.
+
+## Checkpoint taxonomy
+
+A harness is a sequence of checkpoints — each asks one yes/no question and is backed by one single-responsibility script. When you add or extend a check, pick the right checkpoint and follow its script-design rule.
+
+| Checkpoint | Question to answer | Script design |
+|---|---|---|
+| Format | conforms to the fixed style? | `--check` (gate) vs auto-fix (hook); fix style in config, not prompts |
+| Compile / type-check | compiles? | the fastest full check; the after-edit hook's default |
+| Lint | written badly (compiles but shouldn't)? | escalate warnings to errors; sink to a source-level forbid |
+| Invariants | obeys project rules a linter can't express? | grep scan; only for the linter's gaps, never to duplicate it |
+| Test | does the right thing? | full gate; localizable failure output |
+| Coverage | tested *enough*? | numeric threshold; feed uncovered lines back |
+| Test discipline | changed source has a test? | VCS diff → map to a matching test file |
+| Dependency audit | vulnerable deps? | audit the lockfile; slow tier only (pre-commit/CI) |
+
+Every script obeys the same six rules: one script = one checkpoint; a deterministic verdict via exit code (`0` pass / `1` fail / `2` hook-feedback); diagnostics to stderr; failure output states where / why / how-to-fix; a fast form for the hook and a full form for the gate; sink the check to its lowest reachable level (prefer compile-time over script, tool-native over grep).
 
 ## Structure
 
-- `plugins/narness-rust/` — Rust harness-engineering plugin (skill + PostToolUse hook + 6 `narness-rust-*.sh` scripts)
+- `plugins/narness-rust/` — Rust harness-engineering plugin (skill + PostToolUse hook + 9 `narness-rust-*.sh` scripts)
 - `docs/theory/` — theory docs (constraint ladder, decision guide, etc.)
 - `docs/reference/` — tool-practice references (e.g. the Rust test harness)
 - `cli/` — the narness environment checker (npm package)

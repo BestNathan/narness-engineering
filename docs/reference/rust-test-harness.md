@@ -97,22 +97,30 @@ cargo llvm-cov --html
 cargo llvm-cov --lcov --output-path lcov.info
 ```
 
-### 3.3 Coverage thresholds as a gate
+### 3.3 Coverage thresholds as a gate (per tier)
+
+Coverage is a hard gate, but the threshold depends on the test tier — the three tiers measure different things, so they have different bars:
+
+| Tier | Gate | Why |
+|---|---|---|
+| Unit | `cargo llvm-cov --lib --fail-under-lines 95` | unit reaches private internals, so it should cover nearly every branch |
+| Integration | `cargo llvm-cov --tests --fail-under-lines 80` | integration only reaches the pub surface; the ~15% it can't touch is what unit owns |
+| E2E | `cargo test --features e2e` (no threshold) | e2e is 补位 (gap-filling): scenario-driven, not line-driven |
+
+Add `--fail-under-regions` / `--fail-under-functions` as secondary axes:
 
 ```bash
-# enforce line/region/function coverage simultaneously; exit non-zero below threshold
-cargo llvm-cov --fail-under-lines 80 --fail-under-regions 80 --fail-under-functions 75
+cargo llvm-cov --lib --fail-under-lines 95 --fail-under-regions 95
 ```
 
 Or write `.llvm-cov.toml`:
 
 ```toml
-fail-under-lines = 80
-fail-under-functions = 75
-fail-under-regions = 80
+fail-under-lines = 95
+fail-under-regions = 95
 ```
 
-**Narness view**: the value of a coverage threshold is turning "are tests sufficient" from the agent's own judgment into a **deterministic pass/fail**. Below threshold → exit non-zero → a hook/script feeds "coverage 78% < 80%, the following functions are uncovered: …" back to the LLM, forcing the agent to add tests.
+**Narness view**: the value of a coverage threshold is turning "are tests sufficient" from the agent's own judgment into a **deterministic pass/fail**. Below threshold → exit non-zero → a hook/script feeds "coverage 93% < 95%, the following functions are uncovered: …" back to the LLM, forcing the agent to add tests.
 
 ## 4. When to trigger tests (layered triggering)
 
@@ -121,8 +129,8 @@ A test harness shouldn't have a single trigger time. Layer it by constraint ladd
 | Timing | Trigger | What runs | Purpose |
 |---|---|---|---|
 | After edit (L3 hook) | PostToolUse hook | fast compile check (`cargo check`, not full tests) | immediate compile-error feedback |
-| Pre-commit (L4 script) | agent invokes narness-rust-*.sh | full nextest + llvm-cov thresholds | complete gate, stop accumulated errors |
-| CI (L4/L5) | CI pipeline | full tests + coverage + JUnit | regression protection, physical constraint |
+| **Every push** | git pre-push | `narness-rust-test-unit.sh` (unit + ≥95% coverage) | fast logic gate before code leaves the machine |
+| CI | CI pipeline | integration (≥80% coverage) + e2e (补位) as separate jobs | full coverage + system-level regression |
 
 **Why the hook stage runs only check, not full tests**: full tests are slow; running them on every edit drags down the edit loop and breaks the agent's flow. The hook does only the fastest compile check; full tests are left to pre-commit scripts and CI — the "fast hook + composable scripts" layering.
 
@@ -172,7 +180,10 @@ This document's tools map to the narness-rust plugin's single-responsibility scr
 | Script | Tool | See |
 |---|---|---|
 | `narness-rust-check.sh` | cargo check | §4 after-edit hook |
-| `narness-rust-test.sh` | cargo test (can be swapped for nextest) | §2 |
+| `narness-rust-test-unit.sh` | cargo llvm-cov --lib --fail-under-lines 95 | §3.3 unit tier |
+| `narness-rust-test-integration.sh` | cargo llvm-cov --tests --fail-under-lines 80 | §3.3 integration tier |
+| `narness-rust-test-e2e.sh` | cargo test --features e2e | §3.3 e2e tier |
+| `narness-rust-test.sh` | cargo test (can be swapped for nextest) | §2 full run |
 | `narness-rust-clippy.sh` | cargo clippy -D warnings | compile-time constraint |
 | `narness-rust-invariants.sh` | invariant scan | code standards |
 | `narness-rust-test-discipline.sh` | test discipline | §4 pre-commit |

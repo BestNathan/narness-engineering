@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "narness-rust@narness": true
+  }
+}
