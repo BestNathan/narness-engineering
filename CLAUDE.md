@@ -10,7 +10,7 @@ The constraint ladder: L0 prompts → L1 project conventions → L2 Skill → L3
 
 ## Project conventions (must follow)
 
-1. **Script naming**: every script this project provides starts with `narness-`. The Rust plugin ships `narness-rust-fmt.sh`, `narness-rust-check.sh`, `narness-rust-clippy.sh`, `narness-rust-test-unit.sh`, `narness-rust-test-integration.sh`, `narness-rust-test-e2e.sh`, `narness-rust-test.sh`, `narness-rust-invariants.sh`, `narness-rust-test-discipline.sh`.
+1. **Script naming**: every script this project provides starts with `narness-`. The Rust plugin ships `narness-rust-fmt.sh`, `narness-rust-check.sh`, `narness-rust-clippy.sh`, `narness-rust-test-unit.sh`, `narness-rust-test-integration.sh`, `narness-rust-test-e2e.sh`, `narness-rust-test.sh`, `narness-rust-invariants.sh`, `narness-rust-test-discipline.sh`, plus the `narness-rust-changed-packages.sh` helper (maps changed files → changed crates).
 2. **Single-responsibility scripts**: each validation script does exactly one thing. "Full-gate" god scripts that bundle fmt/lint/test together are forbidden — split each check into its own `narness-rust-*.sh`.
 3. **Thin hook entrypoint**: the hook script (`post-edit-gate.sh`) only "judges the trigger condition + delegates to a single-responsibility script"; it does not inline validation logic.
 4. **Feed failures back to the LLM**: on failure, scripts must write diagnostics to stderr (a PostToolUse hook exit code 2 injects stderr into the LLM context), so the agent can see its own mistakes and fix them.
@@ -33,9 +33,13 @@ A harness is a sequence of checkpoints — each asks one yes/no question and is 
 
 Every script obeys the same six rules: one script = one checkpoint; a deterministic verdict via exit code (`0` pass / `1` fail / `2` hook-feedback); diagnostics to stderr; failure output states where / why / how-to-fix; a fast form for the hook and a full form for the gate; sink the check to its lowest reachable level (prefer compile-time over script, tool-native over grep).
 
+## Changed vs full scope (增量 vs 全量)
+
+Lint and unit/integration test are scope-aware. `--scope=changed` runs only the crates changed since the last push (the **crate** is the unit of change, not the file); `--scope=full` runs the whole workspace. e2e is always full — it has no changed form. `--coverage` (opt-in) enforces the coverage threshold; without it the tests just run. Client-side git hooks run `--scope=changed` (fast); CI runs `--scope=full --coverage`. When the changed set can't be determined, or a workspace-level file changed (`Cargo.lock`, root `Cargo.toml`, `rust-toolchain.toml`), it fails safe to full — a gate never under-checks.
+
 ## Structure
 
-- `plugins/narness-rust/` — Rust harness-engineering plugin (skill + PostToolUse hook + 9 `narness-rust-*.sh` scripts)
+- `plugins/narness-rust/` — Rust harness-engineering plugin (skill + PostToolUse hook + 10 `narness-rust-*.sh` scripts: 9 checkpoints + 1 changed-packages helper)
 - `plugins/narness-git/` — Git harness-engineering plugin (skill + thin git hooks + `narness-git-install.sh` / `narness-git-commit-msg.sh`)
 - `docs/theory/` — theory docs (constraint ladder, decision guide, etc.)
 - `docs/reference/` — tool-practice references (e.g. the Rust test harness)

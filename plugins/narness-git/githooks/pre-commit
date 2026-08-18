@@ -11,4 +11,4 @@ narness="${NARNESS_RUST_SCRIPTS:-$root/plugins/narness-rust/scripts}"
 
 # fast checkpoints only — heavy checks belong on pre-push
 bash "$narness/narness-rust-fmt.sh" "$root"
-bash "$narness/narness-rust-clippy.sh" "$root"
+bash "$narness/narness-rust-clippy.sh" "$root" --scope=changed

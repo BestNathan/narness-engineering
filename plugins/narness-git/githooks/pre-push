@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# pre-push — thin git-hook entrypoint (push-time heavy gate)
+# pre-push — thin git-hook entrypoint (push-time gate)
 # responsibility: judge the trigger (a push is happening → always true) and
-#   delegate to the single-responsibility narness-rust full-test script.
+#   delegate to the single-responsibility narness-rust unit-test script, changed-scope.
 # on failure: a non-zero exit blocks the push; output goes to the committer.
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
 narness="${NARNESS_RUST_SCRIPTS:-$root/plugins/narness-rust/scripts}"
 
-# heavy checkpoints only — the fast ones already ran at pre-commit
-bash "$narness/narness-rust-test.sh" "$root"
+# changed-scope unit tests only — the fast fmt/lint checks already ran at pre-commit,
+# and the full unit/integration/e2e suite (with coverage) runs in CI.
+bash "$narness/narness-rust-test-unit.sh" "$root" --scope=changed

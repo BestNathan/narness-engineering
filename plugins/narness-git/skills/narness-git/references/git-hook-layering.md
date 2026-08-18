@@ -44,8 +44,9 @@ Why `git rev-parse --show-toplevel`: git runs hooks from the top of the working 
 
 ### pre-commit — the fast gate (runs on every commit)
 
-- Format (`fmt --check`), lint (`clippy -D warnings`), invariants (grep), test discipline (diff → test mapping).
+- Format (`fmt --check`, whole workspace), lint (`clippy -D warnings --scope=changed`), invariants (grep), test discipline (diff → test mapping).
 - Must be *fast* — seconds, not minutes. A slow check here makes commits painful and teaches the agent to reach for `--no-verify`.
+- Lint runs **changed-scope**: only the crates touched since the last push, so a commit never pays workspace-wide clippy. The whole-workspace lint runs in CI.
 - Whole-crate for Rust (`cargo fmt --all`); staged-files-only is a JS/TS optimization (lint-staged / husky), not the Rust default.
 
 ### commit-msg — the message gate
@@ -53,10 +54,16 @@ Why `git rev-parse --show-toplevel`: git runs hooks from the top of the working 
 - Conventional-commit prefix, no WIP / fixup! / squash! markers, subject ≤ 72 chars.
 - The one git-native checkpoint: it checks *the commit*, not *the code*. It has no edit-time equivalent, so it lives only here.
 
-### pre-push — the heavy gate (runs on every push)
+### pre-push — the changed-scope gate (runs on every push)
 
-- Full test suite, coverage threshold, dependency audit.
-- The fast checks already passed at pre-commit; pre-push adds only what is too expensive to run per-commit.
+- Changed-scope unit tests (`narness-rust-test-unit.sh --scope=changed`, run-only), dependency audit.
+- The fast checks already passed at pre-commit; pre-push adds only the changed crates' unit tests, so the push path stays seconds even in a large workspace.
+- The full unit/integration suites with coverage, plus e2e, run in CI — the place allowed to run long. Client-side hooks stay changed-scope; CI stays full-scope.
+
+### CI — the full-scope gate
+
+- `clippy --scope=full`, `test-unit --scope=full --coverage`, `test-integration --scope=full --coverage`, `test-e2e` (always full), as separate jobs.
+- This is the only place the coverage thresholds are enforced (`--coverage`) and the only place the whole workspace is re-checked. It backstops the client-side changed-scope hooks, which are fast *and* skippable via `--no-verify`.
 
 ## 5. Sharing hooks: core.hooksPath
 

@@ -42,12 +42,15 @@ Each checkpoint mounts on the earliest git hook that can still enforce it — ch
 | Checkpoint | Hook point | Script mounted | Why there |
 |---|---|---|---|
 | Format | pre-commit | `narness-rust-fmt.sh` | cheapest; catch drift before it is committed |
-| Compile / lint | pre-commit | `narness-rust-clippy.sh` | fast; `-D warnings` = compile + lint in one |
+| Lint | pre-commit | `narness-rust-clippy.sh --scope=changed` | fast; `-D warnings` on the changed crates only |
 | Invariants | pre-commit | `narness-rust-invariants.sh` | grep scan, fast |
 | Commit-message format | commit-msg | `narness-git-commit-msg.sh` | the message, not the code |
-| Full tests | pre-push | `narness-rust-test.sh` | too slow for every commit |
-| Coverage | pre-push | `narness-rust-test-unit.sh` | numeric threshold, heavy |
+| Unit tests | pre-push | `narness-rust-test-unit.sh --scope=changed` | changed crates only; the full suite is CI's job |
+| Full tests + coverage | CI | `test-unit --scope=full --coverage` + `test-integration --scope=full --coverage` | whole workspace, thresholds enforced |
+| e2e | CI | `narness-rust-test-e2e.sh` | always full; dep-heavy scenarios |
 | Dependency audit | pre-push / CI | `cargo audit` | lockfile, slow tier |
+
+**Changed vs full scope.** Lint and unit/integration test run *changed-scope* at the client-side hooks (fast, only the crates touched since the last push) and *full-scope* in CI (the place allowed to run long). e2e is always full — it has no changed form. The `--scope=changed`/`--scope=full` and `--coverage` flags are what let the same single-responsibility script serve both; the thin hooks just pass the right flag for their moment.
 
 The thin git-hook entrypoints (`githooks/pre-commit`, `commit-msg`, `pre-push`) hold no validation logic — they only resolve the repo and delegate to these single-responsibility scripts, exactly as `post-edit-gate.sh` does for the edit-time hook.
 
@@ -69,7 +72,7 @@ This copies the three thin hooks into the repo's `.githooks/` and runs `git conf
 |---|---|
 | "the agent will remember to format before committing" | pre-commit → `narness-rust-fmt.sh` |
 | WIP / unformatted commit messages | commit-msg → `narness-git-commit-msg.sh` |
-| pushing broken or untested code | pre-push → `narness-rust-test.sh` |
+| pushing broken or untested code | pre-push → `narness-rust-test-unit.sh --scope=changed` |
 | editing `.git/hooks/` directly (lost on clone) | `narness-git-install.sh` → `core.hooksPath .githooks` |
 | treating a git hook as unbypassable | server-side `pre-receive` or CI |
 

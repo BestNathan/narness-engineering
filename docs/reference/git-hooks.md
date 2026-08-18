@@ -93,15 +93,16 @@ bash plugins/narness-rust/scripts/narness-rust-fmt.sh
 bash plugins/narness-rust/scripts/narness-rust-clippy.sh
 ```
 
-**pre-push (heavy)** — full tests and coverage:
+**pre-push (heavy)** — changed-scope unit tests:
 
 ```bash
 #!/usr/bin/env bash
 # .githooks/pre-push
 set -euo pipefail
-bash plugins/narness-rust/scripts/narness-rust-test.sh
-cargo llvm-cov --fail-under-lines 80
+bash plugins/narness-rust/scripts/narness-rust-test-unit.sh --scope=changed
 ```
+
+The full unit/integration suites with coverage (`--scope=full --coverage`) and e2e run in CI — the place allowed to run long. Client-side hooks stay changed-scope; CI stays full-scope.
 
 ## 6. Caveats
 

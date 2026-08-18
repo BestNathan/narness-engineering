@@ -55,10 +55,10 @@ Adding a lint is a design decision, not a paste job. The discipline, in order:
 **Tier 1 — general (baseline, no source changes):**
 
 ```bash
-cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```
 
-`narness-rust-clippy.sh` does exactly this.
+`narness-rust-clippy.sh --scope=full` does exactly this; `--scope=changed` lints only the changed crates (`-p <crate>`).
 
 **Tier 2 — medium (+ pedantic):** opt into pedantic as warnings, then let `-D warnings` escalate them, and selectively allow the ones that don't fit:
 
@@ -83,7 +83,7 @@ The principle: **a tier is which groups you opt into + which level (`deny` vs `f
 
 ## 6. Design: narness-rust-clippy.sh single responsibility
 
-`scripts/narness-rust-clippy.sh` does only a lint check, with `-D warnings` built in:
+`scripts/narness-rust-clippy.sh` does only a lint check, with `-D warnings` built in. It is scope-aware: `--scope=changed` lints only the crates changed since the last push, `--scope=full` (default) lints the whole workspace.
 
 ```bash
 #!/usr/bin/env bash
@@ -91,10 +91,13 @@ The principle: **a tier is which groups you opt into + which level (`deny` vs `f
 set -euo pipefail
 PROJECT_DIR="${1:-.}"
 cd "$PROJECT_DIR"
-cargo clippy --all-targets --all-features -- -D warnings
+# --scope=changed → cargo clippy -p <crates…>; --scope=full → --workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```
 
-`--all-targets --all-features` covers tests, benches, examples and all features, so "the main lib passes but test code hides an unwrap" can't slip through.
+`--all-targets --all-features` covers tests, benches, examples and all features, so "the main lib passes but test code hides an unwrap" can't slip through. `--workspace` (full scope) reaches every member — without it, `cargo clippy` only lints the default package, silently skipping the rest of a monorepo.
+
+The changed-scope form (`-p <crate>`) lints the **whole crate**, not the changed file: Cargo lints at the compilation-unit level, so "changed file → changed crate" is the natural granularity. When the changed set can't be determined or a workspace-level file changed, it falls back to full — never under-lint.
 
 ## 7. The sink semantics of -D warnings
 
@@ -228,6 +231,8 @@ L0 prompt "don't use unwrap"
 
 | Script | Command | Meaning |
 |---|---|---|
-| `narness-rust-clippy.sh` | `cargo clippy --all-targets --all-features -- -D warnings` | lint gate, warnings escalated to errors |
+| `narness-rust-clippy.sh --scope=changed` | `cargo clippy -p <crates…> --all-targets --all-features -- -D warnings` | changed-crate lint gate (pre-commit fast gate) |
+| `narness-rust-clippy.sh --scope=full` | `cargo clippy --workspace --all-targets --all-features -- -D warnings` | whole-workspace lint gate (CI) |
 | `narness-rust-check.sh` | `cargo check` | compile check (the hard prerequisite for lint) |
 | `narness-rust-invariants.sh` | grep scan | the extension point for invariants clippy can't cover (e.g. ban async-trait) |
+| `narness-rust-changed-packages.sh` | git diff → cargo metadata → `-p <crate>` | helper: which crates changed since the last push |
