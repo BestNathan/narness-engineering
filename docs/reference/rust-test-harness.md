@@ -130,7 +130,8 @@ A test harness shouldn't have a single trigger time. Layer it by constraint ladd
 |---|---|---|---|
 | After edit (L3 hook) | PostToolUse hook | fast compile check (`cargo check`, not full tests) | immediate compile-error feedback |
 | **Every push** | git pre-push | `narness-rust-test-unit.sh --scope=changed` (changed crates, run-only) | fast logic gate before code leaves the machine |
-| CI | CI pipeline | `test-unit --scope=full --coverage` (≥95%) + `test-integration --scope=full --coverage` (≥80%) + e2e (补位) as separate jobs | full coverage + system-level regression |
+| CI | CI pipeline | `test-unit --scope=full --coverage` (≥95%) + `test-integration --scope=full --coverage` (≥80%) | full coverage + system-level regression (required gate) |
+| Dedicated e2e workflow | CI pipeline (optional) | e2e (补位, always full) | full-system scenarios on demand / nightly — not a merge blocker |
 
 **Why the hook stage runs only check, not full tests**: full tests are slow; running them on every edit drags down the edit loop and breaks the agent's flow. The hook does only the fastest compile check; full tests are left to pre-commit scripts and CI — the "fast hook + composable scripts" layering.
 

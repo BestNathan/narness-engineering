@@ -102,7 +102,7 @@ set -euo pipefail
 bash plugins/narness-rust/scripts/narness-rust-test-unit.sh --scope=changed
 ```
 
-The full unit/integration suites with coverage (`--scope=full --coverage`) and e2e run in CI — the place allowed to run long. Client-side hooks stay changed-scope; CI stays full-scope.
+The full unit/integration suites with coverage (`--scope=full --coverage`) run in CI — the place allowed to run long. Client-side hooks stay changed-scope; CI stays full-scope. e2e runs in a dedicated, optional workflow.
 
 ## 6. Caveats
 

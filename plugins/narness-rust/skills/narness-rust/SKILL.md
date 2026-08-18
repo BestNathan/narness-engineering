@@ -67,7 +67,7 @@ This is the shared prerequisite behind all three harness references; each refere
 | `scripts/narness-rust-clippy.sh [DIR] [--scope=changed\|full]` | lint check: cargo clippy -D warnings |
 | `scripts/narness-rust-test-unit.sh [DIR] [--scope=changed\|full] [--coverage]` | unit tests; `--coverage` = enforce ≥95% |
 | `scripts/narness-rust-test-integration.sh [DIR] [--scope=changed\|full] [--coverage]` | integration tests; `--coverage` = enforce ≥80% |
-| `scripts/narness-rust-test-e2e.sh [DIR]` | e2e scenarios, always full, no coverage (CI) |
+| `scripts/narness-rust-test-e2e.sh [DIR]` | e2e scenarios, always full, no coverage (dedicated optional workflow) |
 | `scripts/narness-rust-test.sh [DIR]` | full suite: cargo test --workspace |
 | `scripts/narness-rust-invariants.sh [DIR]` | invariants: ban unwrap/expect/panic!/unsafe without comment |
 | `scripts/narness-rust-test-discipline.sh [DIR]` | test discipline: a changed .rs must have a test |
@@ -84,7 +84,7 @@ Lint and test are **scope-aware**: they can run against only the crates you chan
 
 - `--scope=changed` maps every compile-relevant file changed since the last push (committed-ahead + staged + unstaged + untracked) to its owning workspace member, then lints/tests only those crates (`-p <crate>`). The unit of "changed" is the **crate** — Cargo's compilation unit — not the file: change one file in `crates/foo` and the whole `foo` crate is linted/tested.
 - `--scope=full` runs `--workspace` across the whole workspace — the CI / long-running form, and the safe default.
-- e2e has **no** `--scope` and **no** `--coverage`: e2e is scenario-driven, always full, never line-measured.
+- e2e has **no** `--scope` and **no** `--coverage`: e2e is scenario-driven, always full, never line-measured, and runs in a dedicated **optional** workflow (not a merge blocker).
 - `--coverage` is opt-in so the push path stays fast (run-only), while CI passes it to enforce the threshold. Default (absent) = run the tests without measuring coverage.
 
 **Fail-safe fallback:** when the changed set can't be determined (no upstream/base) or a workspace-level file changed (`Cargo.lock`, root `Cargo.toml`, `rust-toolchain.toml`), `--scope=changed` silently runs **full** rather than risk skipping a crate that should have been checked.
@@ -103,7 +103,7 @@ The harness design behind each validation script — how to sink a constraint an
 
 - Write tests before the implementation
 - A changed .rs under src/ must have a corresponding test file
-- pre-push runs unit tests on the changed crates (`--scope=changed`, run-only); CI runs the full unit/integration suites with coverage (`--scope=full --coverage`) plus e2e (补位)
+- pre-push runs unit tests on the changed crates (`--scope=changed`, run-only); CI runs the full unit/integration suites with coverage (`--scope=full --coverage`); e2e (补位) runs in its own dedicated, optional workflow
 - Run narness-rust-fmt.sh / narness-rust-clippy.sh / narness-rust-test-unit.sh as needed before pushing
 
 ## Common anti-patterns and their hard constraints

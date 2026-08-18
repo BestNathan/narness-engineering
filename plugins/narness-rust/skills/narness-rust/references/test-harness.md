@@ -18,7 +18,7 @@ Rust maps the three tiers directly onto Cargo's test targets:
 |---|---|---|---|---|
 | Unit | `#[cfg(test)] mod tests` in `src/` | a single function/module in isolation; everything external is mocked/doubled; pure in-process, no I/O | **≥ 95% lines** | every push (pre-push — changed crates) |
 | Integration | `tests/*.rs` (public API only) | the crate as an external consumer; module wiring across boundaries | **≥ 80% lines** | CI (full) |
-| E2E | feature-gated `e2e` target | the full running system: real/containerized deps, real I/O, cross-process flows | **none** (scenario-driven, 补位) | CI (slow stage — always full) |
+| E2E | feature-gated `e2e` target | the full running system: real/containerized deps, real I/O, cross-process flows | **none** (scenario-driven, 补位) | dedicated optional workflow (always full) |
 
 **Scope: changed vs full (增量 vs 全量).** Unit and integration are *scope-aware*; e2e is not. `--scope=changed` targets only the crates changed since the last push (the crate, not the file, is the unit of change); `--scope=full` runs the whole workspace. `--coverage` (opt-in) toggles the coverage gate on. e2e has neither flag — it is scenario-driven, always full, never line-measured. See §8 for the layered triggering.
 
@@ -58,7 +58,7 @@ Each tier is its own gate script, so each can be placed at a different trigger. 
 
 - `narness-rust-test-unit.sh` — unit gate (run + `--coverage` for ≥95%), pre-push `--scope=changed`
 - `narness-rust-test-integration.sh` — integration gate (run + `--coverage` for ≥80%), CI `--scope=full`
-- `narness-rust-test-e2e.sh` — e2e gate (run only, no coverage, always full), CI
+- `narness-rust-test-e2e.sh` — e2e gate (run only, no coverage, always full), dedicated optional workflow
 - `narness-rust-test-discipline.sh` — "a changed .rs must have a test" (a different question, unchanged)
 
 Coverage is a *flag* (`--coverage`) on each tier gate, not a separate script: llvm-cov runs tests + coverage in one pass, so a separate coverage script would re-run the suite (wasted time). Single-responsibility splits by *tier and checkpoint*; within one tier, "does it pass" and "is it covered enough" are answered by the same tool call — with `--coverage` absent, only "does it pass" runs.
@@ -102,14 +102,33 @@ The three tiers are an *efficiency* design, not just a coverage design:
 |---|---|---|---|
 | After edit (L3 hook) | PostToolUse | `cargo check` (compile only) | immediate compile-error feedback |
 | **Every push** | git pre-push | `narness-rust-test-unit.sh --scope=changed` (run-only) | fast logic gate on the changed crates before code leaves the machine |
-| CI | CI pipeline | `test-unit --scope=full --coverage` + `test-integration --scope=full --coverage` + e2e (补位), as separate jobs | full coverage + system-level regression |
-| CI (slow stage) | CI pipeline | e2e only | the slowest, dep-heavy scenarios last |
+| CI | CI pipeline | `clippy --scope=full` + `test-unit --scope=full --coverage` + `test-integration --scope=full --coverage` | full coverage + system-level regression (the required merge gate) |
+| Dedicated e2e workflow | CI pipeline (optional) | e2e only (always full) | 补位 scenarios, run on demand / nightly — not a merge blocker |
 
 ### Changed vs full scope (增量 vs 全量)
 
 `--scope=changed` computes the set of crates changed since the last push — committed-ahead + staged + unstaged + untracked, mapped to their owning workspace member — and runs only those (`-p <crate>`). The unit of change is the **crate**: one changed file in `crates/foo` means the whole `foo` crate is re-tested. `--scope=full` runs `--workspace`.
 
 The mapping is **fail-safe**: if the changed set can't be determined (no upstream/base) or a workspace-level file changed (`Cargo.lock`, root `Cargo.toml`, `rust-toolchain.toml`), it silently runs full rather than skip a crate. A gate must never under-check.
+
+### e2e: a dedicated, optional workflow
+
+e2e is **optional**, not part of the required CI gate. The required gate stops at `clippy --scope=full` + `test-unit --scope=full --coverage` + `test-integration --scope=full --coverage`; e2e (补位) is layered on top, always full, in its **own** workflow — triggered on demand (`workflow_dispatch`), on a schedule (nightly), or on release — never as a merge blocker on every change. It may be skipped when a change can't affect the running system.
+
+```yaml
+# .github/workflows/e2e.yml — dedicated, optional e2e workflow
+name: e2e
+on:
+  workflow_dispatch:          # manual
+  schedule:
+    - cron: '17 3 * * *'      # nightly
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash plugins/narness-rust/scripts/narness-rust-test-e2e.sh
+```
 
 The hook stage runs only `check` (compile), not tests: full tests are slow, and running them on every edit drags the edit loop. Unit tests are fast enough for pre-push; integration/e2e are not. This is the "fast hook + composable scripts" layering, applied to the test tiers.
 
@@ -140,7 +159,7 @@ nextest's structured output and llvm-cov's uncovered-line report naturally satis
 L0 prompt "remember to write tests"
   → L4 narness-rust-test-unit.sh (unit pass, pre-push --scope=changed)
   → L4 narness-rust-test-integration.sh (integration pass + ≥80% coverage, CI --scope=full --coverage)
-  → L4 narness-rust-test-e2e.sh (e2e scenarios, CI — always full)
+  → L4 narness-rust-test-e2e.sh (e2e scenarios, dedicated optional workflow — always full)
   → L4 narness-rust-test-discipline.sh (changed source must have a test)
   → CI gate (end state, regression protection)
 ```
@@ -152,7 +171,7 @@ L0 prompt "remember to write tests"
 | `narness-rust-test-unit.sh --scope=changed` | `cargo test -p <crates…> --lib` | none (run-only) | pre-push |
 | `narness-rust-test-unit.sh --scope=full --coverage` | `cargo llvm-cov --workspace --lib --fail-under-lines 95` | ≥95% | CI |
 | `narness-rust-test-integration.sh --scope=full --coverage` | `cargo llvm-cov --workspace --tests --fail-under-lines 80` | ≥80% | CI |
-| `narness-rust-test-e2e.sh` | `cargo test --features e2e` | none (补位, always full) | CI |
+| `narness-rust-test-e2e.sh` | `cargo test --features e2e` | none (补位, always full) | dedicated optional workflow |
 | `narness-rust-test.sh` | `cargo test --workspace` | none (dependency-free full run) | local |
 | `narness-rust-test-discipline.sh` | git diff → find test file | — | pre-commit |
 | `narness-rust-changed-packages.sh` | git diff → cargo metadata → `-p <crate>` | — | (helper) |

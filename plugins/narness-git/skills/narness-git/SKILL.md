@@ -47,7 +47,7 @@ Each checkpoint mounts on the earliest git hook that can still enforce it — ch
 | Commit-message format | commit-msg | `narness-git-commit-msg.sh` | the message, not the code |
 | Unit tests | pre-push | `narness-rust-test-unit.sh --scope=changed` | changed crates only; the full suite is CI's job |
 | Full tests + coverage | CI | `test-unit --scope=full --coverage` + `test-integration --scope=full --coverage` | whole workspace, thresholds enforced |
-| e2e | CI | `narness-rust-test-e2e.sh` | always full; dep-heavy scenarios |
+| e2e | dedicated workflow (optional) | `narness-rust-test-e2e.sh` | always full; dep-heavy scenarios; not a merge blocker |
 | Dependency audit | pre-push / CI | `cargo audit` | lockfile, slow tier |
 
 **Changed vs full scope.** Lint and unit/integration test run *changed-scope* at the client-side hooks (fast, only the crates touched since the last push) and *full-scope* in CI (the place allowed to run long). e2e is always full — it has no changed form. The `--scope=changed`/`--scope=full` and `--coverage` flags are what let the same single-responsibility script serve both; the thin hooks just pass the right flag for their moment.

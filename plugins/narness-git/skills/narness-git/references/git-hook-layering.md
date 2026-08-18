@@ -58,12 +58,17 @@ Why `git rev-parse --show-toplevel`: git runs hooks from the top of the working 
 
 - Changed-scope unit tests (`narness-rust-test-unit.sh --scope=changed`, run-only), dependency audit.
 - The fast checks already passed at pre-commit; pre-push adds only the changed crates' unit tests, so the push path stays seconds even in a large workspace.
-- The full unit/integration suites with coverage, plus e2e, run in CI — the place allowed to run long. Client-side hooks stay changed-scope; CI stays full-scope.
+- The full unit/integration suites with coverage run in CI — the place allowed to run long. Client-side hooks stay changed-scope; CI stays full-scope. e2e runs in its own dedicated, optional workflow.
 
 ### CI — the full-scope gate
 
-- `clippy --scope=full`, `test-unit --scope=full --coverage`, `test-integration --scope=full --coverage`, `test-e2e` (always full), as separate jobs.
+- `clippy --scope=full`, `test-unit --scope=full --coverage`, `test-integration --scope=full --coverage` — the required, merge-blocking checks.
 - This is the only place the coverage thresholds are enforced (`--coverage`) and the only place the whole workspace is re-checked. It backstops the client-side changed-scope hooks, which are fast *and* skippable via `--no-verify`.
+
+### Dedicated e2e workflow — optional
+
+- `narness-rust-test-e2e.sh` (always full, no coverage) runs in its **own** workflow, not in the required CI gate.
+- Trigger on demand (`workflow_dispatch`), on a schedule (nightly), or on release — never as a merge blocker on every change. e2e is 补位: it covers the full-system scenarios unit/integration can't, and may be skipped when a change can't affect the running system.
 
 ## 5. Sharing hooks: core.hooksPath
 
