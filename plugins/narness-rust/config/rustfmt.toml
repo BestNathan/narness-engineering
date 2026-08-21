@@ -1,0 +1,16 @@
+# rustfmt.toml — recommended format config (stable-only)
+# copy to: <workspace root>/rustfmt.toml
+#
+# Only the settings that differ from rustfmt's defaults are active; everything
+# else is commented out as a reminder of the default, so uncommenting is a
+# deliberate override, not a paste.
+
+edition = "2024"          # non-default (default 2015); must match Cargo.toml `edition`
+newline_style = "Unix"    # non-default (default Auto); force LF for cross-platform determinism
+
+# rustfmt defaults — uncomment only to override:
+# max_width = 100
+# tab_spaces = 4
+# hard_tabs = false
+# reorder_imports = true
+# reorder_modules = true

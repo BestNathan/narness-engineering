@@ -1,0 +1,15 @@
+# nextest.toml — test-runner profiles
+# copy to: <workspace root>/.config/nextest.toml
+#
+# Local runs (`cargo nextest run`) use nextest's built-in defaults, so only the
+# `ci` profile is configured here — retries, fail-fast, per-test timeouts, JUnit.
+
+[profile.ci]
+retries = 2
+fail-fast = true
+failure-output = "immediate-final"
+slow-timeout = { period = "60s", terminate-after = 2 }
+
+# emit JUnit XML for CI consumption
+[profile.ci.junit]
+path = "target/nextest/ci/junit.xml"

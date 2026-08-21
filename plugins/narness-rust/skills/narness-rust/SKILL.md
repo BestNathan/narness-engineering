@@ -38,10 +38,16 @@ components = ["rustfmt", "clippy"]
 Rules:
 
 - Pin a **specific version** (a stable release, or a dated nightly like `nightly-2026-08-01`) — never a rolling "latest", which changes over time and reintroduces drift.
-- List every component the scripts need (`rustfmt`, `clippy`) so each environment installs them for the pinned channel.
-- Keep tool config **stable-only** unless the whole team pins the same dated nightly: nightly-only options silently no-op on stable, making the gate nondeterministic.
+- List every component the scripts need (`rustfmt`, `clippy`, `llvm-tools-preview`) so each environment installs them for the pinned channel — `llvm-tools-preview` is easy to miss but `cargo llvm-cov` (the coverage gate) requires it.
+- Keep tool config **stable-only**: nightly-only options silently no-op on stable, making the gate nondeterministic. The shipped `config/` defaults to a **pinned stable** channel — strictness comes from the code-quality rules (`#![forbid]` restriction lints, `-D warnings`, `deny.toml`), which are all stable.
 
 This is the shared prerequisite behind all three harness references; each reference notes only what is specific to its own tool.
+
+## Recommended tool configs
+
+Every harness tool has one config surface — a file it auto-reads, or a flag the script already passes. The `config/` directory ships copyable templates for each (rustfmt.toml, clippy.toml, strict-lints.rs, nextest.toml, deny.toml, rust-toolchain.toml, .editorconfig, pre-commit, CI), and the consolidated map lives in [references/tool-config.md](references/tool-config.md).
+
+The configs ship in **strict mode** — the strongest *code-quality* control, not the newest toolchain: a pinned stable channel (stable operation), `#![forbid]` levels in `config/strict-lints.rs`, and `deny.toml` with everything denied. The defaults are **not arbitrary** — they encode the exact numbers the `narness-rust-*.sh` scripts were written against (coverage ≥95% / ≥80%, `-D warnings`, `--all -- --check`). Copy, then adapt the genuinely project-specific bits (disallowed lists, license allow-list) to your policy.
 
 ## When to use this skill
 
@@ -98,6 +104,7 @@ The harness design behind each validation script — how to sink a constraint an
 | `references/fmt-harness.md` | format harness: the `cargo fmt --all -- --check` gate — config-as-code, stable/nightly options, escape hatches, macro blind spots, editor vs gate |
 | `references/lint-harness.md` | lint harness: rule design, three strictness tiers (general/medium/strictest), `clippy.toml` vs lint levels, custom rules (ban async-trait) |
 | `references/test-harness.md` | test harness: three tiers (unit 95% / integration 80% / e2e 补位) + test discipline + layered triggering |
+| `references/tool-config.md` | recommended config for every harness tool: rustfmt.toml / clippy.toml / nextest.toml / deny.toml / rust-toolchain.toml / .editorconfig / pre-commit / CI |
 
 ## Test discipline
 

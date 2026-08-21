@@ -1,0 +1,18 @@
+# e2e.yml — dedicated, OPTIONAL e2e workflow (补位), never a merge blocker
+# copy to: <workspace root>/.github/workflows/e2e.yml
+#
+# e2e is scenario-driven, always full, never line-measured. It runs on demand
+# or nightly — not on every change. See references/test-harness.md §8.
+
+name: e2e
+on:
+  workflow_dispatch:          # manual
+  schedule:
+    - cron: '17 3 * * *'      # nightly
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+      - run: bash plugins/narness-rust/scripts/narness-rust-test-e2e.sh

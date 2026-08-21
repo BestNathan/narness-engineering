@@ -1,0 +1,33 @@
+# .pre-commit-config.yaml — declarative git hooks
+# copy to: <workspace root>/.pre-commit-config.yaml   (then: pre-commit install)
+#
+# STRICT MODE, but pre-commit must stay fast: format + invariant scan +
+# changed-scope lint + test-discipline. Heavy gates (full coverage, dependency
+# audit) live in CI. See docs/reference/git-hooks.md.
+
+repos:
+  - repo: local
+    hooks:
+      - id: narness-rust-fmt
+        name: cargo fmt --check
+        entry: bash plugins/narness-rust/scripts/narness-rust-fmt.sh
+        language: system
+        files: '\.rs$'
+
+      - id: narness-rust-invariants
+        name: invariant scan (unwrap/panic/unsafe)
+        entry: bash plugins/narness-rust/scripts/narness-rust-invariants.sh
+        language: system
+        files: '\.rs$'
+
+      - id: narness-rust-clippy
+        name: cargo clippy -D warnings (changed)
+        entry: bash plugins/narness-rust/scripts/narness-rust-clippy.sh --scope=changed
+        language: system
+        files: '\.rs$'
+
+      - id: narness-rust-test-discipline
+        name: changed source must have a test
+        entry: bash plugins/narness-rust/scripts/narness-rust-test-discipline.sh
+        language: system
+        files: '\.rs$'

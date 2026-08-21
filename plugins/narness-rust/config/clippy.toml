@@ -1,0 +1,35 @@
+# clippy.toml — lint PARAMETERS (thresholds + disallowed lists)
+# copy to: <workspace root>/clippy.toml
+#
+# This file holds *parameters* for lints that take config. It does NOT hold lint
+# *levels*: allow/warn/deny/forbid live in source attributes, not here. STRICT
+# mode sets those levels via `config/strict-lints.rs` (the #![forbid] header) —
+# paste it into each crate's lib.rs / main.rs.
+#
+# Only parameters that differ from clippy's defaults are active; the rest are
+# commented out as a reminder of the default.
+
+too-many-lines-threshold = 200   # default is 100 — this is a deliberate loosening; drop it to tighten
+
+# msrv: the floor you promise library *consumers*, NOT the dev toolchain.
+# It has no clippy default; must be >= 1.85 (edition 2024) and <= your channel.
+msrv = "1.85"
+
+# clippy defaults — uncomment only to override:
+# cognitive-complexity-threshold = 25
+# too-many-arguments-threshold = 7
+# type-complexity-threshold = 250
+
+# disallowed lists — inert until you enable the matching #![deny] in
+# strict-lints.rs. Start from your *observed* failure (lint-harness.md), not a
+# curated list; uncomment and adapt only when a real rule is behind it.
+# disallowed-methods = [
+#     { path = "std::vec::Vec::set_len", reason = "unsafe: can corrupt the length" },
+#     { path = "std::process::Command::new", reason = "use the safe runner wrapper" },
+# ]
+# disallowed-types = [
+#     { path = "std::sync::Mutex", reason = "use parking_lot::Mutex or tokio::sync::Mutex" },
+# ]
+# disallowed-macros = [
+#     { path = "std::dbg", reason = "use tracing::debug instead" },
+# ]

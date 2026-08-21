@@ -1,0 +1,30 @@
+# deny.toml — dependency audit via cargo-deny (advisories + bans + licenses + sources)
+# copy to: <workspace root>/deny.toml
+#
+# STRICT MODE: everything that defaults to `warn` is escalated to `deny` — a
+# vulnerable, yanked, unmaintained, multi-versioned, wildcard, or off-license
+# dependency fails the audit. Lines left at cargo-deny's default are commented
+# out as a reminder. The license allow-list is the one opinionated bit — adjust
+# it to your project's policy.
+
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+yanked = "deny"
+# notice = "warn"          # default
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+# highlight = "all"        # default
+# deny = ["async-trait"]   # e.g. ban a crate entirely (sinks the rule to L5)
+
+[licenses]
+allow = ["MIT", "Apache-2.0", "BSD-3-Clause"]
+copyleft = "deny"
+default = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

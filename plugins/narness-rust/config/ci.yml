@@ -1,0 +1,48 @@
+# ci.yml — the required merge gate (full scope + coverage + dependency audit)
+# copy to: <workspace root>/.github/workflows/ci.yml
+#
+# STRICT MODE required gate: format + invariant scan + lint + dependency audit +
+# unit/integration with coverage thresholds. Client-side hooks run --scope=changed
+# (fast); CI runs --scope=full --coverage. e2e is a separate, optional workflow
+# (see e2e.yml) — never a merge blocker here.
+
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # rust-toolchain.toml pins the stable channel; @master infers the channel
+      # from that file. List the components CI needs — llvm-tools-preview is
+      # required by cargo llvm-cov and easy to miss.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      # cargo-llvm-cov (coverage) + cargo-deny (dependency audit)
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,cargo-deny
+
+      - name: Format
+        run: bash plugins/narness-rust/scripts/narness-rust-fmt.sh
+
+      - name: Invariants
+        run: bash plugins/narness-rust/scripts/narness-rust-invariants.sh
+
+      - name: Lint (full)
+        run: bash plugins/narness-rust/scripts/narness-rust-clippy.sh --scope=full
+
+      - name: Dependency audit
+        run: cargo deny check
+
+      - name: Unit tests (coverage >= 95%)
+        run: bash plugins/narness-rust/scripts/narness-rust-test-unit.sh --scope=full --coverage
+
+      - name: Integration tests (coverage >= 80%)
+        run: bash plugins/narness-rust/scripts/narness-rust-test-integration.sh --scope=full --coverage

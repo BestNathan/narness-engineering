@@ -1,0 +1,17 @@
+# rust-toolchain.toml — pin the toolchain so every gate is deterministic
+# copy to: <workspace root>/rust-toolchain.toml
+#
+# STRICT MODE means *stable operation*, not the newest compiler: a specific,
+# pinned STABLE channel, so a gate can never pass locally and fail in CI. The
+# strictness lives in the code-quality rules (strict-lints.rs `#![forbid]`,
+# `-D warnings`, deny.toml) — all of those are stable. Nightly adds nothing for
+# them and only reintroduces drift, so it is deliberately not used.
+
+[toolchain]
+channel = "1.89.0"
+profile = "minimal"
+components = [
+    "rustfmt",              # format gate  → narness-rust-fmt.sh
+    "clippy",               # lint gate    → narness-rust-clippy.sh
+    "llvm-tools-preview",   # coverage gate → cargo llvm-cov (REQUIRED; aka `llvm-tools` on newer channels)
+]
