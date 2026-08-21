@@ -1,4 +1,4 @@
-# Git hook layering — the version-control constraint surface
+# Git hooks — the version-control layer of the harness
 
 ## 1. Where git hooks sit
 
@@ -12,7 +12,22 @@ edit time (CC/Codex hook) → commit time (git pre-commit / commit-msg)
 
 Each step rightward is *harder to bypass* and *coarser/slower to fix*. Mount each checkpoint at the earliest moment whose tool can still enforce it.
 
-## 2. The block-vs-feedback contract
+## 2. Client-side vs server-side, and the common client hooks
+
+Git runs same-named scripts around specific actions. **Client-side** hooks fire in the local repo (commit, push); **server-side** hooks fire on the remote (pre-receive, update, post-receive). Harness scripts mostly mount on client-side hooks — the goal is "intercept bad code before the agent commits it".
+
+| Hook | Timing | Use | Non-zero exit effect |
+|---|---|---|---|
+| `pre-commit` | before `git commit`, before the message editor opens | format, lint, fast tests | block the commit |
+| `commit-msg` | after editing the message | validate message format | block the commit |
+| `pre-push` | before `git push` | full tests, heavier gates | block the push |
+| `post-commit` | after the commit | notification, logging | doesn't block |
+| `pre-rebase` | before `git rebase` | block dangerous rebases | block |
+| `post-merge` / `post-checkout` | after merging/switching | trigger dependency updates | doesn't block |
+
+For a harness, the most useful are `pre-commit` (fast checks) and `pre-push` (heavy checks).
+
+## 3. The block-vs-feedback contract
 
 This is the single most important thing to get right about git hooks, because it is the *opposite* of edit-time hooks:
 
@@ -24,7 +39,7 @@ This is the single most important thing to get right about git hooks, because it
 
 Consequence: a git hook **cannot teach**. It cannot explain a mistake to the agent mid-task; it can only refuse. So git-hook diagnostics must be *self-contained* — a human or agent reading the blocked commit's output must know where / why / how-to-fix without any surrounding context. The single-responsibility scripts already print `where / why / how-to-fix` to stderr; the git hook just lets that text reach the committer.
 
-## 3. The thin entrypoint pattern
+## 4. The thin entrypoint pattern
 
 Git hooks follow the same "thin entrypoint" convention as edit-time hooks: judge the trigger, delegate to a single-responsibility script, never inline validation.
 
@@ -33,14 +48,14 @@ Git hooks follow the same "thin entrypoint" convention as edit-time hooks: judge
 # .githooks/pre-commit — thin entrypoint, no validation logic
 set -euo pipefail
 root="$(git rev-parse --show-toplevel)"
-narness="${NARNESS_RUST_SCRIPTS:-$root/plugins/narness-rust/scripts}"
+narness="${NARNESS_RUST_SCRIPTS:-$root/plugins/narness/scripts}"
 bash "$narness/narness-rust-fmt.sh" "$root"
 bash "$narness/narness-rust-clippy.sh" "$root"
 ```
 
-Why `git rev-parse --show-toplevel`: git runs hooks from the top of the working tree, but resolving the root explicitly keeps the path robust under submodules and unusual invocations. The `NARNESS_RUST_SCRIPTS` env override lets a consuming repo vendor narness-rust at a non-default path.
+Why `git rev-parse --show-toplevel`: git runs hooks from the top of the working tree, but resolving the root explicitly keeps the path robust under submodules and unusual invocations. The `NARNESS_RUST_SCRIPTS` env override lets a consuming repo vendor narness at a non-default path.
 
-## 4. Checkpoint placement
+## 5. Checkpoint placement
 
 ### pre-commit — the fast gate (runs on every commit)
 
@@ -70,17 +85,35 @@ Why `git rev-parse --show-toplevel`: git runs hooks from the top of the working 
 - `narness-rust-test-e2e.sh` (always full, no coverage) runs in its **own** workflow, not in the required CI gate.
 - Trigger on demand (`workflow_dispatch`), on a schedule (nightly), or on release — never as a merge blocker on every change. e2e is 补位: it covers the full-system scenarios unit/integration can't, and may be skipped when a change can't affect the running system.
 
-## 5. Sharing hooks: core.hooksPath
+## 6. Sharing hooks: core.hooksPath and the three config methods
 
-`.git/hooks/` is not tracked, so hooks written there are lost on clone. Instead:
+`.git/hooks/` is not tracked, so hooks written there are lost on clone. There are three ways to configure git hooks; only the latter two are shareable:
+
+1. **Write `.git/hooks/` directly** — works, but `.git/` isn't checked in, so the hooks are lost on a new machine / clone.
+2. **Point `core.hooksPath` at an in-repo directory** — put hooks in the repo (`.githooks/`) and set:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-puts the hooks in an in-repo directory — checked in, reviewable, shared. `narness-git-install.sh` does the copy + config in one step. Verify with `git config --list --local | grep hooksPath`.
+This puts the hooks in an in-repo directory — checked in, reviewable, shared. `narness-git-install.sh` does the copy + config in one step. Verify with `git config --list --local | grep hooksPath`.
 
-## 6. The bypass and the backstop
+3. **The pre-commit framework** — declarative management via `.pre-commit-config.yaml`, cross-language, auto-installed:
+
+```yaml
+repos:
+  - repo: local
+    hooks:
+      - id: narness-rust-fmt
+        name: cargo fmt --check
+        entry: bash plugins/narness/scripts/narness-rust-fmt.sh
+        language: system
+        files: '\.rs$'
+```
+
+It manages hook installation automatically and supports `files:` filtering (only fires on `.rs` changes).
+
+## 7. The bypass and the backstop
 
 `git commit --no-verify` / `git push --no-verify` skip client hooks entirely. Client hooks are therefore a *deterrent plus fast feedback*, not a guarantee. The guarantee is one step further right:
 
@@ -89,12 +122,12 @@ puts the hooks in an in-repo directory — checked in, reviewable, shared. `narn
 
 Rule of thumb: enforce *what must be universally true* server-side or in CI; use client hooks for *fast, cheap, early* checks that make the agent's life easy.
 
-## 7. Alternatives and adjacent tools
+## 8. Alternatives and adjacent tools
 
 - **pre-commit framework** (`.pre-commit-config.yaml`) — declarative, cross-language, auto-installs hooks and supports `files:` filtering. A good choice when the team already uses it; otherwise `core.hooksPath` is simpler and dependency-free.
 - **husky / lint-staged** — JS/TS staged-files-only; a JS analog, not a Rust default.
 - **gitleaks / trufflehog** — secret scanning on `pre-commit`; mount when the repo handles credentials.
 
-## 8. Platform caveat
+## 9. Platform caveat
 
 Git runs hook scripts with the shebang's interpreter. Keep the shebang `#!/usr/bin/env bash` and the body POSIX-friendly enough for macOS/Linux; Windows needs the pre-commit framework or a Git Bash environment.
