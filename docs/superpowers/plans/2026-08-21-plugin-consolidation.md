@@ -615,7 +615,80 @@ git commit -m "docs: single narness plugin in marketplace + CLAUDE.md structure"
 
 ---
 
-## Task 9: Delete emptied source trees and run the full verification
+## Task 9: Update README.md links and layout
+
+The root `README.md` (committed separately) still references `docs/theory/`, `docs/reference/`, and `plugins/narness-rust/` — all of which the moves break. Fix it.
+
+**Files:** Modify `README.md`.
+
+- [ ] **Step 1: Fix the two inline doc links**
+
+```bash
+sed -i '' \
+  -e 's#(docs/theory/harness-checkpoints.md)#(plugins/narness/skills/narness/references/harness-checkpoints.md)#' \
+  -e 's#(docs/reference/claude-code-hooks.md)#(plugins/narness/skills/narness/references/claude-code-hooks.md)#' \
+  README.md
+```
+
+- [ ] **Step 2: Replace the Layout section**
+
+Replace:
+
+```markdown
+## Layout
+
+- `docs/theory/` — theory and research docs
+- `docs/reference/` — harness-engineering references for specific tools
+- `plugins/narness-rust/` — the Rust harness-engineering plugin (skill + hook + scripts)
+- `cli/` — the narness environment checker (npm package)
+- `.claude-plugin/marketplace.json` — marketplace definition
+```
+
+with:
+
+```markdown
+## Layout
+
+- `plugins/narness/` — the harness-engineering plugin (skill + PostToolUse hook + `narness-rust-*` / `narness-git-*` scripts + git hooks + per-tool config templates)
+- `cli/` — the narness environment checker (npm package)
+- `.claude-plugin/marketplace.json` — marketplace definition
+```
+
+- [ ] **Step 3: Fix the Quick start (plugin name)**
+
+Replace `Install the \`narness-rust\` plugin after adding the marketplace:` with `Install the \`narness\` plugin after adding the marketplace:`, and `claude plugin install narness-rust` with `claude plugin install narness`.
+
+- [ ] **Step 4: Collapse "Theory docs" + "Reference docs" into one "Documentation" pointer**
+
+Replace the entire `## Theory docs` section through the end of the `## Reference docs` section (the 7 theory bullets + 4 reference bullets) with:
+
+```markdown
+## Documentation
+
+The consolidated `narness` skill is the single entry point: `plugins/narness/skills/narness/SKILL.md` states the design philosophy and indexes every reference — theory, per-tool, and per-platform — in a flat `references/` directory.
+
+- [SKILL.md](plugins/narness/skills/narness/SKILL.md) — the design philosophy + full reference index
+- [references/](plugins/narness/skills/narness/references/) — theory, git hooks, Claude Code / Codex hooks, Rust fmt / lint / test / config
+```
+
+- [ ] **Step 5: Verify**
+
+```bash
+grep -n 'docs/theory\|docs/reference\|narness-rust' README.md || echo "CLEAN"
+```
+
+Expected: `CLEAN` (the only `narness-rust` left would be the intentional `narness-rust-*` script-name mention in the Layout bullet — adjust the grep to `grep -n 'docs/theory\|docs/reference\|plugins/narness-rust'` if you want a pure path check).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add README.md
+git commit -m "docs: point README at the consolidated narness skill"
+```
+
+---
+
+## Task 10: Delete emptied source trees and run the full verification
 
 - [ ] **Step 1: Remove the last tracked files and confirm the source dirs are empty**
 
@@ -636,7 +709,7 @@ Expected: `source dirs empty`. The empty directories vanish from git on their ow
 - [ ] **Step 2: Full stale-path scan**
 
 ```bash
-grep -rn 'plugins/narness-rust\|plugins/narness-git\|docs/theory\|docs/reference' plugins docs cli .claude-plugin --include='*.md' --include='*.sh' --include='*.json' --include='*.yml' --include='*.yaml' --include='pre-commit' --include='pre-push' --include='commit-msg' 2>/dev/null | grep -v '^docs/superpowers' || echo "CLEAN"
+grep -rn 'plugins/narness-rust\|plugins/narness-git\|docs/theory\|docs/reference' README.md CLAUDE.md plugins docs cli .claude-plugin --include='*.md' --include='*.sh' --include='*.json' --include='*.yml' --include='*.yaml' --include='pre-commit' --include='pre-push' --include='commit-msg' 2>/dev/null | grep -v '^docs/superpowers' || echo "CLEAN"
 ```
 
 Expected: `CLEAN` (nothing outside `docs/superpowers/`, whose historical plans/specs are allowed to mention the old layout).
