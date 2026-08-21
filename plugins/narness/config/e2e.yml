@@ -15,4 +15,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
-      - run: bash plugins/narness-rust/scripts/narness-rust-test-e2e.sh
+      - run: bash plugins/narness/scripts/narness-rust-test-e2e.sh

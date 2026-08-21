@@ -7,7 +7,7 @@
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
-narness="${NARNESS_RUST_SCRIPTS:-$root/plugins/narness-rust/scripts}"
+narness="${NARNESS_RUST_SCRIPTS:-$root/plugins/narness/scripts}"
 
 # fast checkpoints only — heavy checks belong on pre-push
 bash "$narness/narness-rust-fmt.sh" "$root"

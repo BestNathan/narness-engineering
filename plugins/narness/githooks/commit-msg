@@ -5,7 +5,7 @@
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
-narness="${NARNESS_GIT_SCRIPTS:-$root/plugins/narness-git/scripts}"
+narness="${NARNESS_GIT_SCRIPTS:-$root/plugins/narness/scripts}"
 
 msg_file="$1"
 bash "$narness/narness-git-commit-msg.sh" "$msg_file"

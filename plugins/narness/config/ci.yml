@@ -30,19 +30,19 @@ jobs:
           tool: cargo-llvm-cov,cargo-deny
 
       - name: Format
-        run: bash plugins/narness-rust/scripts/narness-rust-fmt.sh
+        run: bash plugins/narness/scripts/narness-rust-fmt.sh
 
       - name: Invariants
-        run: bash plugins/narness-rust/scripts/narness-rust-invariants.sh
+        run: bash plugins/narness/scripts/narness-rust-invariants.sh
 
       - name: Lint (full)
-        run: bash plugins/narness-rust/scripts/narness-rust-clippy.sh --scope=full
+        run: bash plugins/narness/scripts/narness-rust-clippy.sh --scope=full
 
       - name: Dependency audit
         run: cargo deny check
 
       - name: Unit tests (coverage >= 95%)
-        run: bash plugins/narness-rust/scripts/narness-rust-test-unit.sh --scope=full --coverage
+        run: bash plugins/narness/scripts/narness-rust-test-unit.sh --scope=full --coverage
 
       - name: Integration tests (coverage >= 80%)
-        run: bash plugins/narness-rust/scripts/narness-rust-test-integration.sh --scope=full --coverage
+        run: bash plugins/narness/scripts/narness-rust-test-integration.sh --scope=full --coverage

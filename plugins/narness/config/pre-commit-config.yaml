@@ -10,24 +10,24 @@ repos:
     hooks:
       - id: narness-rust-fmt
         name: cargo fmt --check
-        entry: bash plugins/narness-rust/scripts/narness-rust-fmt.sh
+        entry: bash plugins/narness/scripts/narness-rust-fmt.sh
         language: system
         files: '\.rs$'
 
       - id: narness-rust-invariants
         name: invariant scan (unwrap/panic/unsafe)
-        entry: bash plugins/narness-rust/scripts/narness-rust-invariants.sh
+        entry: bash plugins/narness/scripts/narness-rust-invariants.sh
         language: system
         files: '\.rs$'
 
       - id: narness-rust-clippy
         name: cargo clippy -D warnings (changed)
-        entry: bash plugins/narness-rust/scripts/narness-rust-clippy.sh --scope=changed
+        entry: bash plugins/narness/scripts/narness-rust-clippy.sh --scope=changed
         language: system
         files: '\.rs$'
 
       - id: narness-rust-test-discipline
         name: changed source must have a test
-        entry: bash plugins/narness-rust/scripts/narness-rust-test-discipline.sh
+        entry: bash plugins/narness/scripts/narness-rust-test-discipline.sh
         language: system
         files: '\.rs$'
