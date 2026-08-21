@@ -49,7 +49,7 @@ The tool-hook layer isn't a single check — it's a set of distinct decision poi
 | `PreCompact` | re-inject constraints so they survive context compaction |
 | `PermissionRequest` | automated allow/deny policy for tool use |
 
-Two events carry most of the weight: `PreToolUse` (block) and `PostToolUse` (feedback — a failing hook's stderr is injected back into the agent's context). The rest extend the same principle to the other moments of the agent lifecycle. See [Claude Code hooks](docs/reference/claude-code-hooks.md) for the full event table and the exit-code contract.
+Two events carry most of the weight: `PreToolUse` (block) and `PostToolUse` (feedback — a failing hook's stderr is injected back into the agent's context). The rest extend the same principle to the other moments of the agent lifecycle. See [Claude Code hooks](plugins/narness/skills/narness/references/claude-code-hooks.md) for the full event table and the exit-code contract.
 
 ## Harness checkpoints
 
@@ -66,41 +66,29 @@ A harness is built from a small set of checkpoints — each one a yes/no questio
 | Test discipline | silently missing tests | VCS diff → test-file mapping |
 | Dependency audit | vulnerable dependencies | lockfile audit on the slow tier |
 
-See [harness checkpoints](docs/theory/harness-checkpoints.md) for the design rubric behind each.
+See [harness checkpoints](plugins/narness/skills/narness/references/harness-checkpoints.md) for the design rubric behind each.
 
 ## Layout
 
-- `docs/theory/` — theory and research docs
-- `docs/reference/` — harness-engineering references for specific tools
-- `plugins/narness-rust/` — the Rust harness-engineering plugin (skill + hook + scripts)
+- `plugins/narness/` — the harness-engineering plugin (skill + PostToolUse hook + `narness-rust-*` / `narness-git-*` scripts + git hooks + per-tool config templates)
 - `cli/` — the narness environment checker (npm package)
 - `.claude-plugin/marketplace.json` — marketplace definition
 
 ## Quick start
 
-Install the `narness-rust` plugin after adding the marketplace:
+Install the `narness` plugin after adding the marketplace:
 
 ```bash
 claude plugin marketplace add <this repo's URL>
-claude plugin install narness-rust
+claude plugin install narness
 ```
 
-## Theory docs
+## Documentation
 
-- [Why not just prompts](docs/theory/why-not-prompts.md)
-- [The constraint ladder](docs/theory/constraint-ladder.md)
-- [Decision guide](docs/theory/decision-guide.md)
-- [Correctness of long-running tasks](docs/theory/long-running-correctness.md)
-- [Harness checkpoints](docs/theory/harness-checkpoints.md) (the checkpoint taxonomy + script-design rubric)
-- [Tool checkpoints](docs/theory/tool-checkpoints.md) (what each tool can enforce: git, GitHub, GitLab, Claude Code, Codex)
-- [Command interception](docs/theory/command-interception.md) (replacing and normalizing agent commands via config + the narness CLI)
+The consolidated `narness` skill is the single entry point: `plugins/narness/skills/narness/SKILL.md` states the design philosophy and indexes every reference — theory, per-tool, and per-platform — in a flat `references/` directory.
 
-## Reference docs
-
-- [Rust test harness engineering](docs/reference/rust-test-harness.md) (nextest + llvm-cov + LLM feedback)
-- [Git hooks](docs/reference/git-hooks.md) (harness execution at commit/push time)
-- [Claude Code hooks](docs/reference/claude-code-hooks.md) (harness execution at agent tool-call time)
-- [Codex hooks](docs/reference/codex-hooks.md) (harness execution in the OpenAI Codex CLI)
+- [SKILL.md](plugins/narness/skills/narness/SKILL.md) — the design philosophy + full reference index
+- [references/](plugins/narness/skills/narness/references/) — theory, git hooks, Claude Code / Codex hooks, Rust fmt / lint / test / config
 
 ## Environment check
 
