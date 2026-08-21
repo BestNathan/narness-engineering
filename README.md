@@ -4,9 +4,52 @@ Narness is a "research + documentation + Claude Code tooling" project that artic
 
 > When code, hooks, or scripts can constrain an AI agent's behavior, prefer them over prompts. An agent will very likely not follow prompts; scripts and hooks let the agent discover that its implementation is wrong and guide it toward correct behavior, thereby guaranteeing correctness on long-running tasks.
 
-## Philosophy
+## The harness
 
-Prompts are soft constraints that an agent may ignore; scripts and hooks are hard constraints an agent cannot escape. Narness organizes its methodology around the **constraint ladder** (L0 prompts → L5 compile-time) and ships plugins that put constraints into code.
+A **harness** is everything that surrounds an AI agent and constrains what it does. The same rule can be implemented in two ways:
+
+- **Soft implementation** (软实现) — the rule lives in text the agent reads (a prompt, `CLAUDE.md`, a skill). It shapes intent, but the agent can ignore it.
+- **Hard implementation** (硬实现) — the rule lives in code that runs on an event (a hook, a script, a CI step). It fires whether or not the agent cooperates, returns a deterministic verdict, and feeds failure back so the agent has to fix it.
+
+Harness engineering is the practice of **sinking** a rule from a soft implementation toward a hard one. A prompt is soft; a script or hook is hard — an agent will very likely not follow the prompt, but it cannot escape the hook.
+
+### Layers
+
+The harness isn't a single thing — it's nested layers around the model. Moving outward, each layer guards a later decision point, and each can be built soft (text) or hard (code):
+
+```text
+model
+  └─ ReAct loop              think → act → observe — the runtime the harness hooks into
+       ├─ inner harness      soft   Prompt · Skill · CLAUDE.md · AGENTS.md
+       │                     hard   Tool hooks (PreToolUse / PostToolUse) — fire on every tool call
+       └─ outer harness      hard   git hooks · GitHub Actions / CI · code review — fire on commit/push/merge
+```
+
+| Layer | Soft | Hard | Fires | Escapable |
+|---|---|---|---|---|
+| Inner — context | prompt, `CLAUDE.md`, skill | — | when the agent reads it | yes |
+| Inner — tool call | — | tool hook | on every tool call | no |
+| Outer — VCS / CI | — | git hook, CI step | at commit / push / merge | no |
+
+The outer hooks are the last line of defense, but they fire late. The inner tool hooks give the same hard guarantee with a tight loop: the moment the agent's edit is wrong, a `PostToolUse` hook fails and its diagnostic is injected back into the agent's context. The two hard layers work together — fast inner feedback, thorough outer gating.
+
+This layer map is the *topology*; the **constraint ladder** (L0 prompts → L5 compile-time) is the *strength* axis behind it. Narness ships plugins that populate the hard layers with code.
+
+### Building harness logic on hooks
+
+The tool-hook layer isn't a single check — it's a set of distinct decision points, one per [hook event](https://code.claude.com/docs/en/hooks). Each event is a place to mount harness logic, from "block this call" to "feed this failure back to the agent":
+
+| Hook event | Harness logic it realizes |
+|---|---|
+| `PreToolUse` | block or rewrite a dangerous / out-of-scope tool call before it runs |
+| `PostToolUse` | validate an edit the moment it lands; feed the failure back to the agent |
+| `Stop` | don't let the agent declare "done" until the gate passes |
+| `UserPromptSubmit` | gate or inject user input before it reaches the model |
+| `SessionStart` | inject ground truth / env at session start |
+| `PreCompact` | re-inject constraints so they survive context compaction |
+| `PermissionRequest` | automated allow/deny policy for tool use |
+
+Two events carry most of the weight: `PreToolUse` (block) and `PostToolUse` (feedback — a failing hook's stderr is injected back into the agent's context). The rest extend the same principle to the other moments of the agent lifecycle. See [Claude Code hooks](docs/reference/claude-code-hooks.md) for the full event table and the exit-code contract.
 
 ## Harness checkpoints
 
