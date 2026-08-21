@@ -150,5 +150,6 @@ After the move, confirm:
    `grep -rn "narness-rust\|narness-git" plugins docs/reference docs/theory` returns nothing except
    script *names* (`narness-rust-fmt.sh` etc.), which are intentional.
 3. Every link in `SKILL.md` resolves to an existing file (spot-check the index table).
-4. `git status` shows only moves/renames plus the SKILL.md rewrite — no content diff in scripts,
-   githooks, or `config/`.
+4. `git status` shows moves/renames plus exactly three content edits — the `SKILL.md` rewrite and
+   the two merged references (`git-hooks.md`, `rust-test.md`). No content diff in `scripts/`,
+   `githooks/`, or `config/`.
