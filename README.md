@@ -1,98 +1,59 @@
 # Narness
 
-Narness is a "research + documentation + Claude Code tooling" project that articulates and puts into practice an engineering philosophy:
+Narness is research + tooling for **harness engineering** — constraining AI agents with code, hooks and scripts instead of prompts.
 
-> When code, hooks, or scripts can constrain an AI agent's behavior, prefer them over prompts. An agent will very likely not follow prompts; scripts and hooks let the agent discover that its implementation is wrong and guide it toward correct behavior, thereby guaranteeing correctness on long-running tasks.
+## Core idea
 
-## The harness
+> When code, hooks, or scripts can constrain an AI agent's behavior, prefer them over prompts. An agent will very likely not follow prompts; scripts and hooks let the agent *discover* that its implementation is wrong and guide it toward correct behavior.
 
-A **harness** is everything that surrounds an AI agent and constrains what it does. The same rule can be implemented in two ways:
+A rule can be implemented two ways:
 
-- **Soft implementation** (软实现) — the rule lives in text the agent reads (a prompt, `CLAUDE.md`, a skill). It shapes intent, but the agent can ignore it.
-- **Hard implementation** (硬实现) — the rule lives in code that runs on an event (a hook, a script, a CI step). It fires whether or not the agent cooperates, returns a deterministic verdict, and feeds failure back so the agent has to fix it.
+- **Soft** (软实现) — text the agent reads (a prompt, `CLAUDE.md`, a skill). It shapes intent, but the agent can ignore it.
+- **Hard** (硬实现) — code that runs on an event (a hook, a script, a CI step). It fires whether or not the agent cooperates, returns a deterministic verdict, and feeds the failure back so the agent has to fix it.
 
-Harness engineering is the practice of **sinking** a rule from a soft implementation toward a hard one. A prompt is soft; a script or hook is hard — an agent will very likely not follow the prompt, but it cannot escape the hook.
+Harness engineering is the practice of **sinking** a rule from soft toward hard: a prompt is soft, a hook or script is hard.
 
-### Layers
+## The problem, and how the harness solves it
 
-The harness isn't a single thing — it's nested layers around the model. Moving outward, each layer guards a later decision point, and each can be built soft (text) or hard (code):
+**The problem:** on long-running, autonomous tasks an agent will very likely not follow prompts — a rule written only as text is a rule that will silently break.
 
-```text
-model
-  └─ ReAct loop              think → act → observe — the runtime the harness hooks into
-       ├─ inner harness      soft   Prompt · Skill · CLAUDE.md · AGENTS.md
-       │                     hard   Tool hooks (PreToolUse / PostToolUse) — fire on every tool call
-       └─ outer harness      hard   git hooks · GitHub Actions / CI · code review — fire on commit/push/merge
-```
+**The solution:** express the rule as code that runs on an event, at the strongest level it can reach — the **constraint ladder**:
 
-| Layer | Soft | Hard | Fires | Escapable |
-|---|---|---|---|---|
-| Inner — context | prompt, `CLAUDE.md`, skill | — | when the agent reads it | yes |
-| Inner — tool call | — | tool hook | on every tool call | no |
-| Outer — VCS / CI | — | git hook, CI step | at commit / push / merge | no |
-
-The outer hooks are the last line of defense, but they fire late. The inner tool hooks give the same hard guarantee with a tight loop: the moment the agent's edit is wrong, a `PostToolUse` hook fails and its diagnostic is injected back into the agent's context. The two hard layers work together — fast inner feedback, thorough outer gating.
-
-This layer map is the *topology*; the **constraint ladder** (L0 prompts → L5 compile-time) is the *strength* axis behind it. Narness ships plugins that populate the hard layers with code.
-
-### Building harness logic on hooks
-
-The tool-hook layer isn't a single check — it's a set of distinct decision points, one per [hook event](https://code.claude.com/docs/en/hooks). Each event is a place to mount harness logic, from "block this call" to "feed this failure back to the agent":
-
-| Hook event | Harness logic it realizes |
-|---|---|
-| `PreToolUse` | block or rewrite a dangerous / out-of-scope tool call before it runs |
-| `PostToolUse` | validate an edit the moment it lands; feed the failure back to the agent |
-| `Stop` | don't let the agent declare "done" until the gate passes |
-| `UserPromptSubmit` | gate or inject user input before it reaches the model |
-| `SessionStart` | inject ground truth / env at session start |
-| `PreCompact` | re-inject constraints so they survive context compaction |
-| `PermissionRequest` | automated allow/deny policy for tool use |
-
-Two events carry most of the weight: `PreToolUse` (block) and `PostToolUse` (feedback — a failing hook's stderr is injected back into the agent's context). The rest extend the same principle to the other moments of the agent lifecycle. See [Claude Code hooks](plugins/narness/skills/narness/references/claude-code-hooks.md) for the full event table and the exit-code contract.
-
-## Harness checkpoints
-
-A harness is built from a small set of checkpoints — each one a yes/no question answered by one single-responsibility script:
-
-| Checkpoint | Guards against | Script design |
+| Level | Means | Strength |
 |---|---|---|
-| Format | style drift, diff noise | check-only gate; auto-fix on the hook tier; rules fixed in config |
-| Compile / type-check | broken builds | fastest check; immediate after-edit feedback |
-| Lint | code smells | warnings escalated to errors; sunk to `forbid` at compile time |
-| Invariants | project-specific rule violations | grep scan for what the linter can't express |
-| Test | wrong behavior | three tiers — unit (pre-push), integration + e2e (CI) — each a deterministic gate with localizable failures |
-| Coverage | untested critical paths | per-tier numeric threshold (unit ≥95%, integration ≥80%); uncovered lines fed back |
-| Test discipline | silently missing tests | VCS diff → test-file mapping |
-| Dependency audit | vulnerable dependencies | lockfile audit on the slow tier |
+| L0 Prompts | verbal / doc requirements | weakest |
+| L1 Project conventions | `CLAUDE.md` / `AGENTS.md` | weak |
+| L2 Skill | a skill the agent invokes | weak-medium |
+| L3 Hook | a tool hook / git hook | medium-strong |
+| L4 Scripts | `narness-*.sh` validation scripts | strong |
+| L5 Compile-time | `#![forbid]`, `-D warnings`, dependency removal | strongest |
 
-See [harness checkpoints](plugins/narness/skills/narness/references/harness-checkpoints.md) for the design rubric behind each.
+The goal is to sink every rule from L0–L2 down to L3–L5. The harness runs on two surfaces:
 
-## Layout
+- **Inner** — tool hooks (`PreToolUse` / `PostToolUse`) fire on every tool call and *feed failures back* into the agent's context the moment an edit is wrong — a tight, self-correcting loop.
+- **Outer** — git hooks and CI *block* at commit / push / merge, so bad code never enters history even if the agent ignores every edit-time warning.
 
-- `plugins/narness/` — the harness-engineering plugin (skill + PostToolUse hook + `narness-rust-*` / `narness-git-*` scripts + git hooks + per-tool config templates)
-- `cli/` — the narness environment checker (npm package)
-- `.claude-plugin/marketplace.json` — marketplace definition
+A harness is a sequence of **checkpoints**, each a yes/no question backed by one single-responsibility script: format, compile, lint, invariants, test, coverage, test discipline, and dependency audit.
 
-## Quick start
+## Tools
 
-Install the `narness` plugin after adding the marketplace:
+| Path | What it is |
+|---|---|
+| `plugins/narness/` | the harness-engineering plugin — a `narness` skill (design philosophy + reference index), a `PostToolUse` hook, validation scripts, git hooks, and copyable per-tool config templates |
+| `cli/` | `narness`, an npm environment checker for an agent's runtime prerequisites |
+
+## Usage
+
+**Install the plugin:**
 
 ```bash
 claude plugin marketplace add <this repo's URL>
 claude plugin install narness
 ```
 
-## Documentation
+**Adopt the Rust harness in a project** — the plugin ships copyable config templates (`rustfmt.toml`, `clippy.toml`, `deny.toml`, …) and a git-hook installer; the skill's `rust-tool-config.md` reference maps each tool to its checkpoint and copy target.
 
-The consolidated `narness` skill is the single entry point: `plugins/narness/skills/narness/SKILL.md` states the design philosophy and indexes every reference — theory, per-tool, and per-platform — in a flat `references/` directory.
-
-- [SKILL.md](plugins/narness/skills/narness/SKILL.md) — the design philosophy + full reference index
-- [references/](plugins/narness/skills/narness/references/) — theory, git hooks, Claude Code / Codex hooks, Rust fmt / lint / test / config
-
-## Environment check
-
-`cli/` is an npm package. Put a `.narness.toml` in the project root declaring the agent's runtime requirements, then check them with `npx narness`:
+**Check an agent's environment** — declare requirements in `.narness.toml`:
 
 ```toml
 [[checks]]
@@ -107,5 +68,9 @@ name = "rg"
 
 ```bash
 npx narness           # human report (failures include fix suggestions)
-npx narness --json    # structured output (for hooks/CI)
+npx narness --json    # structured output (for hooks / CI)
 ```
+
+## Documentation
+
+The `narness` skill is the single entry point: [SKILL.md](plugins/narness/skills/narness/SKILL.md) states the design philosophy and indexes every reference — theory, per-tool, per-platform — in a flat [references/](plugins/narness/skills/narness/references/) directory.
