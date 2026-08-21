@@ -2,7 +2,7 @@
 # copy to: <workspace root>/.github/workflows/e2e.yml
 #
 # e2e is scenario-driven, always full, never line-measured. It runs on demand
-# or nightly — not on every change. See references/test-harness.md §8.
+# or nightly — not on every change. See references/rust-test.md §9.
 
 name: e2e
 on:

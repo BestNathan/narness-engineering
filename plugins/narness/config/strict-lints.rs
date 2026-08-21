@@ -1,6 +1,6 @@
 // strict-lints.rs — paste into each crate's lib.rs / main.rs (STRICT tier)
 //
-// The strictest clippy tier (see references/lint-harness.md §5): `forbid` is
+// The strictest clippy tier (see references/rust-lint.md §5): `forbid` is
 // un-overridable downstream; `deny` makes the lint a compile error on every
 // build — the L5 control, no script invocation needed. These are the canonical
 // "feature bans" that make panicking error paths and unchecked arithmetic

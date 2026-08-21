@@ -3,7 +3,7 @@
 #
 # STRICT MODE, but pre-commit must stay fast: format + invariant scan +
 # changed-scope lint + test-discipline. Heavy gates (full coverage, dependency
-# audit) live in CI. See docs/reference/git-hooks.md.
+# audit) live in CI. See references/git-hooks.md.
 
 repos:
   - repo: local

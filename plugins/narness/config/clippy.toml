@@ -21,7 +21,7 @@ msrv = "1.85"
 # type-complexity-threshold = 250
 
 # disallowed lists — inert until you enable the matching #![deny] in
-# strict-lints.rs. Start from your *observed* failure (lint-harness.md), not a
+# strict-lints.rs. Start from your *observed* failure (rust-lint.md), not a
 # curated list; uncomment and adapt only when a real rule is behind it.
 # disallowed-methods = [
 #     { path = "std::vec::Vec::set_len", reason = "unsafe: can corrupt the length" },
