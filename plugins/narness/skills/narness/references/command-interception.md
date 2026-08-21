@@ -81,7 +81,7 @@ PreToolUse(Bash)
         └─ no match → passthrough, exit 0
 ```
 
-The `narness` CLI is already this project's fixed interpreter — it reads `.narness.toml` today for environment checks. Interception is a second command for the same interpreter, not a new tool. See [Claude Code hooks](../reference/claude-code-hooks.md) for the hook contract (`PreToolUse`, exit-2 blocks, stderr feedback) the CLI plugs into.
+The `narness` CLI is already this project's fixed interpreter — it reads `.narness.toml` today for environment checks. Interception is a second command for the same interpreter, not a new tool. See [Claude Code hooks](claude-code-hooks.md) for the hook contract (`PreToolUse`, exit-2 blocks, stderr feedback) the CLI plugs into.
 
 ## 6. Where it sits on the ladder
 
