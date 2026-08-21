@@ -25,6 +25,7 @@ names.
 | Script naming | Keep `narness-rust-*` / `narness-git-*` infixes, flat in one `scripts/` |
 | Reference organization | Flat directory, no subdirs; `SKILL.md` holds the topic → file index |
 | Skill count | One skill `narness` (was two: `narness-rust`, `narness-git`) |
+| Skill location | Inside `plugins/narness/skills/narness/` — NOT symlinked to a root `skills/` (symlinks break on cache-copy install, and splitting skill/scripts/config across top-level dirs reintroduces the cross-reference problem) |
 | Duplicate-topic merges | `git-hooks` and `rust-test` each collapse two files into one |
 | Language posture | Rust-only for now; no placeholder dirs for future languages |
 | `docs/superpowers/` | Untouched (design/plan artifacts, not harness material) |
