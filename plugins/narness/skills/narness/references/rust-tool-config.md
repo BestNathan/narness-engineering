@@ -4,7 +4,7 @@
 
 Each harness checkpoint is backed by one tool, and each tool reads one config surface. This doc is the consolidated map — **tool → checkpoint → config file → recommended default** — so a project can adopt the whole narness-rust harness by copying the files under `config/`.
 
-The configs ship in **strict mode**: the strongest *code-quality* control. They are **not arbitrary** — they encode the exact numbers the `narness-rust-*.sh` scripts were written against (coverage ≥95% / ≥80%, `-D warnings`, `--all -- --check`, `--all-targets --all-features`) plus the strictest tier of each tool (`#![forbid]` restriction lints, `deny.toml` with everything denied). Strict means *code style and stable operation*, not the newest compiler — everything here is stable-supported. Copy the file, then adapt the genuinely project-specific bits (disallowed lists, license allow-list) — per [lint-harness.md](lint-harness.md), start from your *observed* failure, not a curated list.
+The configs ship in **strict mode**: the strongest *code-quality* control. They are **not arbitrary** — they encode the exact numbers the `narness-rust-*.sh` scripts were written against (coverage ≥95% / ≥80%, `-D warnings`, `--all -- --check`, `--all-targets --all-features`) plus the strictest tier of each tool (`#![forbid]` restriction lints, `deny.toml` with everything denied). Strict means *code style and stable operation*, not the newest compiler — everything here is stable-supported. Copy the file, then adapt the genuinely project-specific bits (disallowed lists, license allow-list) — per [rust-lint.md](rust-lint.md), start from your *observed* failure, not a curated list.
 
 ## 2. Strict mode: the three invariants
 
@@ -43,13 +43,13 @@ A third discipline applies to the files themselves: **only set what differs from
 
 ## 5. Per-tool notes
 
-- **rustfmt** — `rustfmt.toml` holds the style rules (line width, imports). Stable-only keys, so the gate is deterministic on the pinned stable channel. Full design: [fmt-harness.md](fmt-harness.md) §6.
+- **rustfmt** — `rustfmt.toml` holds the style rules (line width, imports). Stable-only keys, so the gate is deterministic on the pinned stable channel. Full design: [rust-fmt.md](rust-fmt.md) §6.
 - **rust-toolchain.toml** — the shared prerequisite: a pinned stable channel + the full component list. `llvm-tools-preview` is the coverage gate's dependency and the usual omission. Full design: [SKILL.md](../SKILL.md) "Toolchain pinning".
-- **clippy** — `clippy.toml` sets *parameters* (thresholds, `msrv`, disallowed lists); the *levels* live in source. `strict-lints.rs` is the strictest tier's `#![forbid]` header (unsafe, unwrap/expect/panic, arithmetic overflow, unchecked indexing, reasonless `allow`) — paste it into each crate. Full design: [lint-harness.md](lint-harness.md) §5, §8.
-- **llvm-cov** — the coverage thresholds are **flags baked into the scripts** (`--fail-under-lines 95` unit / `80` integration); there is no file to copy. To change a threshold, edit the script (or add a `.llvm-cov.toml` / `--fail-under-regions` secondary axis — see `docs/reference/rust-test-harness.md` §3.3).
-- **nextest** — `.config/nextest.toml` defines `default` and `ci` profiles; `failure-output = "immediate"` is what makes failures feed back early. Full design: `docs/reference/rust-test-harness.md` §2.
-- **cargo-deny** — `deny.toml` enforces the dependency-audit checkpoint; in strict mode every advisory/ban/license/source check is `deny`. Full design: [lint-harness.md](lint-harness.md) §9.
-- **EditorConfig / pre-commit / CI** — the outer layers. EditorConfig is convenience (the gate is ground truth); pre-commit stays fast (`--scope=changed` + invariants); CI stays full (`--scope=full --coverage` + `cargo deny check`). Full design: `docs/reference/git-hooks.md` and [test-harness.md](test-harness.md) §8.
+- **clippy** — `clippy.toml` sets *parameters* (thresholds, `msrv`, disallowed lists); the *levels* live in source. `strict-lints.rs` is the strictest tier's `#![forbid]` header (unsafe, unwrap/expect/panic, arithmetic overflow, unchecked indexing, reasonless `allow`) — paste it into each crate. Full design: [rust-lint.md](rust-lint.md) §5, §8.
+- **llvm-cov** — the coverage thresholds are **flags baked into the scripts** (`--fail-under-lines 95` unit / `80` integration); there is no file to copy. To change a threshold, edit the script (or add a `.llvm-cov.toml` / `--fail-under-regions` secondary axis — see `rust-test.md` §3.3).
+- **nextest** — `.config/nextest.toml` defines `default` and `ci` profiles; `failure-output = "immediate"` is what makes failures feed back early. Full design: `rust-test.md` §2.
+- **cargo-deny** — `deny.toml` enforces the dependency-audit checkpoint; in strict mode every advisory/ban/license/source check is `deny`. Full design: [rust-lint.md](rust-lint.md) §9.
+- **EditorConfig / pre-commit / CI** — the outer layers. EditorConfig is convenience (the gate is ground truth); pre-commit stays fast (`--scope=changed` + invariants); CI stays full (`--scope=full --coverage` + `cargo deny check`). Full design: `git-hooks.md` and [rust-test.md](rust-test.md) §8.
 
 ## 6. Adoption order
 

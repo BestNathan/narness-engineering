@@ -170,7 +170,7 @@ These three tools are frequently confused; they are **separate checkpoints** (si
 | Tool | Question it answers |
 |---|---|
 | `rustfmt` | what the code *looks like* (layout, spacing, imports) |
-| `clippy` | whether the code is *idiomatic / suspect* (see [lint-harness.md](lint-harness.md)) |
+| `clippy` | whether the code is *idiomatic / suspect* (see [rust-lint.md](rust-lint.md)) |
 | `rust-analyzer` | how the IDE *understands* the code (completion, diagnostics, refactor) |
 
 rustfmt will not delete unused imports or do semantic fixes — that's `cargo fix` / `cargo clippy --fix` / `cargo machete` / `cargo udeps` territory. Keeping these as distinct gates is what makes each failure message precise.

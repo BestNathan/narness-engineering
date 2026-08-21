@@ -141,7 +141,7 @@ disallowed-macros = [
 ]
 
 # toolchain context
-msrv = "1.75"
+msrv = "1.85"
 ```
 
 The `disallowed-*` lists are **inert until you also enable their lint** — the list is the parameter, the level is the switch:
