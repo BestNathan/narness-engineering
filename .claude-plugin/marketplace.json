@@ -6,17 +6,10 @@
   "owner": { "name": "narness" },
   "plugins": [
     {
-      "name": "narness-rust",
-      "description": "Rust harness engineering skills, hooks and validation scripts",
+      "name": "narness",
+      "description": "Harness engineering — skills, hooks and validation scripts",
       "version": "0.1.0",
-      "source": "./plugins/narness-rust",
-      "author": { "name": "narness" }
-    },
-    {
-      "name": "narness-git",
-      "description": "Git harness engineering skills, git hooks and install script",
-      "version": "0.1.0",
-      "source": "./plugins/narness-git",
+      "source": "./plugins/narness",
       "author": { "name": "narness" }
     }
   ]

@@ -1,0 +1,8 @@
+{
+  "name": "narness",
+  "description": "Harness engineering: constrain AI agents with code, hooks and scripts instead of prompts — skills, validation scripts, git hooks and per-tool configs",
+  "version": "0.1.0",
+  "author": { "name": "narness" },
+  "license": "MIT",
+  "keywords": ["harness", "hooks", "rust", "clippy", "git", "engineering"]
+}

@@ -10,7 +10,7 @@ The constraint ladder: L0 prompts → L1 project conventions → L2 Skill → L3
 
 ## Project conventions (must follow)
 
-1. **Script naming**: every script this project provides starts with `narness-`. The Rust plugin ships `narness-rust-fmt.sh`, `narness-rust-check.sh`, `narness-rust-clippy.sh`, `narness-rust-test-unit.sh`, `narness-rust-test-integration.sh`, `narness-rust-test-e2e.sh`, `narness-rust-test.sh`, `narness-rust-invariants.sh`, `narness-rust-test-discipline.sh`, plus the `narness-rust-changed-packages.sh` helper (maps changed files → changed crates).
+1. **Script naming**: every script this project provides starts with `narness-`. The plugin ships `narness-rust-fmt.sh`, `narness-rust-check.sh`, `narness-rust-clippy.sh`, `narness-rust-test-unit.sh`, `narness-rust-test-integration.sh`, `narness-rust-test-e2e.sh`, `narness-rust-test.sh`, `narness-rust-invariants.sh`, `narness-rust-test-discipline.sh`, plus the `narness-rust-changed-packages.sh` helper (maps changed files → changed crates).
 2. **Single-responsibility scripts**: each validation script does exactly one thing. "Full-gate" god scripts that bundle fmt/lint/test together are forbidden — split each check into its own `narness-rust-*.sh`.
 3. **Thin hook entrypoint**: the hook script (`post-edit-gate.sh`) only "judges the trigger condition + delegates to a single-responsibility script"; it does not inline validation logic.
 4. **Feed failures back to the LLM**: on failure, scripts must write diagnostics to stderr (a PostToolUse hook exit code 2 injects stderr into the LLM context), so the agent can see its own mistakes and fix them.
@@ -39,13 +39,10 @@ Lint and unit/integration test are scope-aware. `--scope=changed` runs only the 
 
 ## Structure
 
-- `plugins/narness-rust/` — Rust harness-engineering plugin (skill + PostToolUse hook + 10 `narness-rust-*.sh` scripts: 9 checkpoints + 1 changed-packages helper)
-- `plugins/narness-git/` — Git harness-engineering plugin (skill + thin git hooks + `narness-git-install.sh` / `narness-git-commit-msg.sh`)
-- `docs/theory/` — theory docs (constraint ladder, decision guide, etc.)
-- `docs/reference/` — tool-practice references (e.g. the Rust test harness)
+- `plugins/narness/` — the harness-engineering plugin (skill + PostToolUse hook + `narness-rust-*` / `narness-git-*` scripts + git hooks + per-tool config templates)
 - `cli/` — the narness environment checker (npm package)
 - `.claude-plugin/marketplace.json` — the outer marketplace
 
 ## Initial scope
 
-Rust only, pure theory with no example projects. Later extensions: plugins for other languages (narness-python, etc.), example projects.
+Rust only, pure theory with no example projects. Later extensions: other languages (narness-python, etc.) as references + scripts inside this plugin, example projects.
