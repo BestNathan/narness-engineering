@@ -1273,7 +1273,370 @@ The intended responsibility split is:
 
 ---
 
-## 27. Conclusion
+## 27. Planning from actual change, not predicted change
+
+A key refinement is that Narness should not require an agent to predict its exact file changes before implementation.
+
+Before editing, the workspace can use task intent and repository knowledge to provide likely context and baseline guidance.
+
+But mandatory evidence should be derived from the **actual resulting ChangeSet**.
+
+```text
+Before change:
+Intent
+  -> candidate Surfaces
+  -> context / Skills / constraints
+
+After change:
+Actual ChangeSet
+  -> affected Surfaces
+  -> mandatory evidence
+```
+
+This avoids turning the agent's initial plan into repository authority.
+
+The agent may intend to touch one package and later discover that the correct solution crosses a protocol, schema, UI, or deployment boundary.
+
+The real diff is therefore the stronger post-change fact.
+
+> **Plans guide work. Changes determine proof obligations.**
+
+This creates a deliberate asymmetry:
+
+- pre-change Surface resolution may be heuristic or model-assisted;
+- post-change Surface resolution should become deterministic wherever practical.
+
+---
+
+## 28. Evidence Obligation vs Evidence Record
+
+The planner currently describes required evidence. The next conceptual distinction is between an **Evidence Obligation** and an **Evidence Record**.
+
+### Evidence Obligation
+
+An obligation states what must be proven.
+
+Conceptually:
+
+```text
+EvidenceObligation {
+    id
+    surface
+    invariant
+    required_level
+    reason
+    provenance
+}
+```
+
+Example:
+
+```text
+id:
+  websocket-contract
+
+surface:
+  websocket-contract
+
+invariant:
+  server and web client remain protocol-compatible
+
+reason:
+  protocol source changed
+```
+
+### Evidence Record
+
+A record states that a specific producer actually attempted or produced the proof for a specific repository state.
+
+Conceptually:
+
+```text
+EvidenceRecord {
+    obligation_id
+    producer
+    scope
+    change_fingerprint
+    status
+    started_at
+    completed_at
+    provenance
+    artifact_refs
+}
+```
+
+Possible statuses:
+
+```text
+missing
+running
+passed
+failed
+stale
+unavailable
+waived
+```
+
+A checklist written by the agent is not an Evidence Record.
+
+The record should be produced by the mechanism that actually performed the proof.
+
+> **Evidence must be observed, not self-attested.**
+
+---
+
+## 29. Evidence Producers
+
+Evidence should be separated from the command or environment that produces it.
+
+```text
+Evidence Obligation
+       ↓
+Evidence Producer
+       ↓
+Evidence Record
+```
+
+A producer may be:
+
+- a compiler;
+- a linter;
+- a unit-test runner;
+- a contract-test script;
+- a browser runner;
+- a migration validator;
+- a deployment smoke test;
+- a CI job;
+- a release verification system.
+
+The same semantic evidence can have different producers at different lifecycle stages.
+
+Example:
+
+```text
+Evidence:
+  websocket-contract
+
+Local producer:
+  scripts/check-websocket-contract --changed
+
+CI producer:
+  scripts/check-websocket-contract --full
+```
+
+This preserves the distinction:
+
+```text
+what must be proven
+!=
+how it is executed here
+```
+
+It also allows local and CI workflows to share a proof model without requiring identical execution cost.
+
+---
+
+## 30. Evidence freshness and ChangeSet binding
+
+A passed check is only useful if it still corresponds to the repository state being admitted.
+
+For example:
+
+```text
+1. run protocol tests -> pass
+2. modify protocol file again
+3. push
+```
+
+The previous result must not silently satisfy the current obligation.
+
+Evidence therefore needs a freshness model.
+
+A simple conceptual binding is:
+
+```text
+Evidence Record
+  -> Change Fingerprint
+```
+
+The fingerprint may eventually include some combination of:
+
+- comparison base;
+- head commit;
+- relevant changed paths;
+- relevant content hashes;
+- Surface-specific inputs;
+- tool/configuration versions;
+- generated artifacts;
+- environment identity where required.
+
+The exact fingerprint strategy is an implementation research question.
+
+The invariant is more important:
+
+> **If facts relevant to the proof change, the proof becomes stale.**
+
+This does not necessarily mean every repository edit invalidates every Evidence Record.
+
+A richer future model may invalidate only evidence whose dependency inputs changed.
+
+The progression could be:
+
+```text
+Stage 1:
+any diff change -> local evidence stale
+
+Stage 2:
+Surface change -> Surface evidence stale
+
+Stage 3:
+proof dependency change -> only dependent evidence stale
+```
+
+Narness should prefer correctness before optimizing reuse.
+
+---
+
+## 31. Pre-push as an evidence completeness gate
+
+A pre-push hook can become more than a script that runs a fixed test list.
+
+Its conceptual role is:
+
+```text
+Outgoing ChangeSet
+        ↓
+Evidence Planner
+        ↓
+Required Evidence Set
+        ↓
+Evidence State
+        ↓
+Complete and fresh?
+   yes /      \ no
+ allow       reject
+```
+
+A useful interaction is:
+
+```text
+$ git push
+
+Narness:
+  affected surfaces:
+    - websocket-contract
+    - web-client
+
+  required evidence:
+    [passed] server-compile
+    [passed] web-typecheck
+    [missing] websocket-contract
+    [stale] protocol-fixture-compatibility
+
+  push rejected
+
+  next actions:
+    ./scripts/check-websocket-contract
+    ./scripts/check-protocol-fixtures
+```
+
+The hook should not require the agent to understand every policy in advance.
+
+It should tell the agent exactly what evidence is missing and how that evidence can be produced.
+
+This gives a mechanical repair loop:
+
+```text
+push
+  -> missing proof
+  -> execute producer
+  -> observe result
+  -> repair if failed
+  -> push again
+```
+
+This is stronger than "please remember to run the relevant tests."
+
+---
+
+## 32. Evidence reuse across local, CI, and release
+
+Local evidence and repository authority should remain separate.
+
+A local Evidence Record can improve efficiency and explainability, but local Git hooks are bypassable.
+
+Therefore:
+
+```text
+Local Evidence
+  -> useful development proof
+
+CI Evidence
+  -> authoritative repository admission proof
+
+Release Evidence
+  -> artifact / environment transition proof
+```
+
+The semantic obligation may be shared while authority differs.
+
+Conceptually:
+
+```text
+EvidenceObligation:
+  websocket-contract
+
+records:
+  local:
+    passed against change X
+
+  CI:
+    passed against commit Y
+    authority = repository
+
+  release:
+    not required
+```
+
+Future Narness design may allow safe evidence reuse or artifact promotion, but it should not weaken the repository authority boundary.
+
+### Guide / Guard / Verify relationship
+
+Change-to-Evidence is primarily the **Verify** side of the broader Harness Engineering model.
+
+```text
+Guide
+  -> tell the agent which procedure is appropriate
+
+Guard
+  -> prevent known invalid actions / transitions
+
+Verify
+  -> require produced evidence for the resulting state
+```
+
+The three roles share Engineering Surfaces as a candidate semantic anchor.
+
+For a protocol Surface:
+
+```text
+Guide:
+  load protocol Skill and compatibility rules
+
+Guard:
+  prevent unsynchronized generated schema state
+
+Verify:
+  require cross-client compatibility evidence
+```
+
+This reinforces the broader Narness responsibility split:
+
+> The agent may choose how to implement and repair. The workspace owns enforceable boundaries and proof obligations.
+
+---
+
+## 33. Conclusion
 
 The underlying problem is not that repositories lack tests.
 
