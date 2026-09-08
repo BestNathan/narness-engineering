@@ -118,6 +118,22 @@ Invariant
 + Failure Feedback
 ```
 
+## Topics
+
+Narness keeps long-lived research and design questions under [`docs/topics/`](docs/topics/README.md).
+
+Topics are intentionally different from canonical architecture documents. They are places to accumulate investigation, reference implementations, competing designs, experiments, and evolving conclusions. When a conclusion becomes stable, it should graduate into the main architecture, adoption guides, Skills, scripts, examples, or CI.
+
+Current topics:
+
+| Topic | Focus |
+|---|---|
+| [AI Workspace](docs/topics/ai-workspace/README.md) | The repository as an agent execution environment: context, capabilities, constraints, evidence, and lifecycle orchestration. |
+| [Harness Engineering](docs/topics/harness-engineering/README.md) | How instructions, Skills, hooks, deterministic checks, Git, CI, and repository rules shape reliable agent behavior. |
+| [Change-to-Evidence Planning](docs/topics/change-to-evidence-planning/README.md) | How a repository change becomes an explainable plan of affected surfaces and required proof. |
+
+This structure is expected to grow as Narness research expands into areas such as progressive context disclosure, capability architecture, evidence architecture, quality gates, and agent observability.
+
 ## Repository layout
 
 ```text
@@ -126,7 +142,12 @@ Invariant
 ├── CLAUDE.md
 ├── docs/
 │   ├── architecture.md
-│   └── adoption.md
+│   ├── adoption.md
+│   └── topics/
+│       ├── README.md
+│       ├── ai-workspace/
+│       ├── harness-engineering/
+│       └── change-to-evidence-planning/
 ├── examples/
 │   └── rust-workspace/
 ├── plugins/
@@ -223,6 +244,10 @@ Start with [docs/adoption.md](docs/adoption.md):
 
 ## Documentation
 
+- [Topics](docs/topics/README.md)
+- [AI Workspace topic](docs/topics/ai-workspace/README.md)
+- [Harness Engineering topic](docs/topics/harness-engineering/README.md)
+- [Change-to-Evidence Planning topic](docs/topics/change-to-evidence-planning/README.md)
 - [AI Workspace architecture](docs/architecture.md)
 - [Adoption guide](docs/adoption.md)
 - [Runnable Rust example](examples/rust-workspace/README.md)
