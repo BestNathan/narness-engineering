@@ -53,7 +53,9 @@ Topics do not need to move through these stages linearly. They may remain open r
 |---|---|---|
 | [AI Workspace](ai-workspace/README.md) | The repository as an execution environment for AI agents: context, capabilities, constraints, evidence, and lifecycle orchestration. | Active |
 | [Harness Engineering](harness-engineering/README.md) | How agent behavior is shaped and made reliable through instructions, Skills, hooks, deterministic checks, Git gates, CI, and repository authority. | Active |
-| [Change-to-Evidence Planning](change-to-evidence-planning/README.md) | How repository changes are mapped to affected behavioral surfaces and the evidence required to validate them. | Research / preliminary design |
+| [Engineering Surfaces](engineering-surfaces/README.md) | The semantic model connecting intent, context, constraints, change impact, and evidence. | Active research |
+| [Agent-Native Repository Architecture](agent-native-repository-architecture/README.md) | How repository structure and projections should evolve for agent-first consumability with human-auditable fallback. | Active research |
+| [Change-to-Evidence Planning](change-to-evidence-planning/README.md) | How repository changes are mapped to affected Surfaces, evidence obligations, produced evidence records, and authoritative proof. | Research / preliminary design |
 
 ## Candidate future topics
 
