@@ -64,6 +64,25 @@ Discover
 → Release
 ```
 
+## Surface as a working semantic spine
+
+A current Narness research hypothesis is that **Engineering Surface** can connect the major AI Workspace concerns without collapsing them into one implementation mechanism.
+
+```text
+Before change:
+Intent -> Surface -> Context
+
+During change:
+Surface -> applicable constraints / guards
+
+After change:
+ChangeSet -> Surface -> Evidence
+```
+
+This would make Surface a common semantic vocabulary while preserving separate systems for context disclosure, enforcement, and verification.
+
+The hypothesis is intentionally being developed in the [Engineering Surfaces](../engineering-surfaces/README.md) topic before becoming a canonical architecture contract.
+
 ## Canonical documents
 
 - [AI Workspace architecture](../../architecture.md)
@@ -73,6 +92,8 @@ Discover
 ## Related topics
 
 - [Harness Engineering](../harness-engineering/README.md)
+- [Engineering Surfaces](../engineering-surfaces/README.md)
+- [Agent-Native Repository Architecture](../agent-native-repository-architecture/README.md)
 - [Change-to-Evidence Planning](../change-to-evidence-planning/README.md)
 
 ## Open research directions
