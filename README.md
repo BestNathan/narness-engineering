@@ -130,7 +130,9 @@ Current topics:
 |---|---|
 | [AI Workspace](docs/topics/ai-workspace/README.md) | The repository as an agent execution environment: context, capabilities, constraints, evidence, and lifecycle orchestration. |
 | [Harness Engineering](docs/topics/harness-engineering/README.md) | How instructions, Skills, hooks, deterministic checks, Git, CI, and repository rules shape reliable agent behavior. |
-| [Change-to-Evidence Planning](docs/topics/change-to-evidence-planning/README.md) | How a repository change becomes an explainable plan of affected surfaces and required proof. |
+| [Engineering Surfaces](docs/topics/engineering-surfaces/README.md) | How one semantic model can route context before a change and derive constraints and evidence after a change. |
+| [Agent-Native Repository Architecture](docs/topics/agent-native-repository-architecture/README.md) | How repositories can optimize for agent-first consumability while preserving human auditability and one canonical source of truth. |
+| [Change-to-Evidence Planning](docs/topics/change-to-evidence-planning/README.md) | How a repository change becomes an explainable set of affected Surfaces, evidence obligations, evidence records, and proof gates. |
 
 This structure is expected to grow as Narness research expands into areas such as progressive context disclosure, capability architecture, evidence architecture, quality gates, and agent observability.
 
@@ -147,6 +149,8 @@ This structure is expected to grow as Narness research expands into areas such a
 │       ├── README.md
 │       ├── ai-workspace/
 │       ├── harness-engineering/
+│       ├── engineering-surfaces/
+│       ├── agent-native-repository-architecture/
 │       └── change-to-evidence-planning/
 ├── examples/
 │   └── rust-workspace/
@@ -247,6 +251,8 @@ Start with [docs/adoption.md](docs/adoption.md):
 - [Topics](docs/topics/README.md)
 - [AI Workspace topic](docs/topics/ai-workspace/README.md)
 - [Harness Engineering topic](docs/topics/harness-engineering/README.md)
+- [Engineering Surfaces topic](docs/topics/engineering-surfaces/README.md)
+- [Agent-Native Repository Architecture topic](docs/topics/agent-native-repository-architecture/README.md)
 - [Change-to-Evidence Planning topic](docs/topics/change-to-evidence-planning/README.md)
 - [AI Workspace architecture](docs/architecture.md)
 - [Adoption guide](docs/adoption.md)
