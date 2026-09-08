@@ -18,8 +18,9 @@ for arg in "$@"; do
     *) PROJECT_DIR="$arg" ;;
   esac
 done
-cd "$PROJECT_DIR"
+
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$PROJECT_DIR"
 
 selector="--workspace"
 if [[ "$SCOPE" == "changed" ]]; then
@@ -29,7 +30,9 @@ if [[ "$SCOPE" == "changed" ]]; then
     exit 0
   fi
   if [[ "$pkgs" != "WORKSPACE" ]]; then
-    selector="$(printf '%s\n' "$pkgs" | sed 's/^/-p /' | tr '\n' ' ' | sed 's/ $//')"
+    selector="$(printf '%s
+' "$pkgs" | sed 's/^/-p /' | tr '
+' ' ' | sed 's/ $//')"
   fi
 fi
 
