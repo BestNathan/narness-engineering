@@ -59,4 +59,4 @@ Copy in this order — each file makes the next meaningful:
 2. `rustfmt.toml` + `clippy.toml` + `strict-lints.rs` — the code-quality gates' parameters and the L5 `#![forbid]` levels.
 3. `.config/nextest.toml` + `deny.toml` — the test runner and the dependency audit.
 4. `.pre-commit-config.yaml` — local fast gate (commit time).
-5. `ci.yml` (+ optional `e2e.yml`) — the required merge gate and the 补位 tier.
+5. `ci.yml` (+ optional `e2e.yml`) — the required merge gate and the gap-filling tier.

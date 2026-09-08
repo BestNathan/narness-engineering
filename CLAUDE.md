@@ -1,48 +1,110 @@
 # Narness
 
-Narness is a "research + documentation + Claude Code tooling" project that articulates and puts into practice the idea of **harness engineering**.
+Narness is an AI Workspace Engineering project. It researches and implements repository-level structures that help AI coding agents understand a codebase progressively, discover task procedures on demand, receive deterministic feedback, produce evidence, and keep unproven states out of authoritative history.
 
-## Core idea
+Read [docs/architecture.md](docs/architecture.md) before changing the workspace model.
 
-When code, hooks, or scripts can constrain an AI agent's behavior, prefer them over prompts. An agent will very likely not follow prompts; scripts and hooks let the agent *discover* that its implementation is wrong and guide it toward correct behavior, thereby guaranteeing correctness on long-running tasks.
+## Core principles
 
-The constraint ladder: L0 prompts → L1 project conventions → L2 Skill → L3 Hook → L4 script validation → L5 compile-time. The goal is to sink constraints from L0–L2 down to L3–L5.
+1. **Prefer hard constraints over prompt-only constraints.** If code, hooks, scripts, a compiler, Git, or CI can enforce a rule, sink the rule into that layer.
+2. **Treat root instructions as a contract and router.** Keep global invariants here. Put task procedures in Skills and detailed design reasoning in docs.
+3. **Keep discovery cheap.** Skill names and descriptions should make selection precise. Load the selected Skill fully, then load only references required by the task.
+4. **Keep executable primitives single-responsibility.** Validation logic belongs in scripts or tool-native configuration. Hooks and CI orchestrate those primitives; they do not duplicate their logic.
+5. **Require evidence that matches the behavioral surface.** A code change is complete only when the proof is appropriate for what changed.
+6. **Fail loud and actionable.** Deterministic checks must return non-zero on failure and explain where, why, and how to fix the problem.
+7. **Use English for repository-authored content.** Documentation, source comments, configuration comments, Skill content, examples, and scripts must not contain Chinese text.
 
-## Project conventions (must follow)
+## Constraint ladder
 
-1. **Script naming**: every script this project provides starts with `narness-`. The plugin ships `narness-rust-fmt.sh`, `narness-rust-check.sh`, `narness-rust-clippy.sh`, `narness-rust-test-unit.sh`, `narness-rust-test-integration.sh`, `narness-rust-test-e2e.sh`, `narness-rust-test.sh`, `narness-rust-invariants.sh`, `narness-rust-test-discipline.sh`, plus the `narness-rust-changed-packages.sh` helper (maps changed files → changed crates).
-2. **Single-responsibility scripts**: each validation script does exactly one thing. "Full-gate" god scripts that bundle fmt/lint/test together are forbidden — split each check into its own `narness-rust-*.sh`.
-3. **Thin hook entrypoint**: the hook script (`post-edit-gate.sh`) only "judges the trigger condition + delegates to a single-responsibility script"; it does not inline validation logic.
-4. **Feed failures back to the LLM**: on failure, scripts must write diagnostics to stderr (a PostToolUse hook exit code 2 injects stderr into the LLM context), so the agent can see its own mistakes and fix them.
-5. **Develop directly on `main`**: this project commits straight to `main` — no feature branches or pull requests. Commit working changes to `main` as they land.
+```text
+L0 Prompt
+L1 AGENTS / project convention
+L2 Skill
+L3 Agent hook
+L4 Deterministic script
+L5 Language / tool-native rule
+L6 Git lifecycle gate
+L7 Server-side CI / repository ruleset
+```
 
-## Checkpoint taxonomy
+The goal is to place each rule at the lowest practical level that can express it correctly.
 
-A harness is a sequence of checkpoints — each asks one yes/no question and is backed by one single-responsibility script. When you add or extend a check, pick the right checkpoint and follow its script-design rule.
+## Knowledge ownership
 
-| Checkpoint | Question to answer | Script design |
-|---|---|---|
-| Format | conforms to the fixed style? | `--check` (gate) vs auto-fix (hook); fix style in config, not prompts |
-| Compile / type-check | compiles? | the fastest full check; the after-edit hook's default |
-| Lint | written badly (compiles but shouldn't)? | escalate warnings to errors; sink to a source-level forbid |
-| Invariants | obeys project rules a linter can't express? | grep scan; only for the linter's gaps, never to duplicate it |
-| Test | does the right thing? | full gate; localizable failure output |
-| Coverage | tested *enough*? | numeric threshold; feed uncovered lines back |
-| Test discipline | changed source has a test? | VCS diff → map to a matching test file |
-| Dependency audit | vulnerable deps? | audit the lockfile; slow tier only (pre-commit/CI) |
+| Knowledge | Owner |
+|---|---|
+| Global invariants and routing | root `CLAUDE.md` / `AGENTS.md` |
+| Subtree-specific standing rules | scoped `AGENTS.md` / `CLAUDE.md` |
+| Task procedures | Skills |
+| Detailed task knowledge | Skill references |
+| Deterministic repeated operations | scripts |
+| Historical design reasoning | architecture docs, ADRs, design notes |
+| Authoritative repository acceptance | CI and repository rules |
 
-Every script obeys the same six rules: one script = one checkpoint; a deterministic verdict via exit code (`0` pass / `1` fail / `2` hook-feedback); diagnostics to stderr; failure output states where / why / how-to-fix; a fast form for the hook and a full form for the gate; sink the check to its lowest reachable level (prefer compile-time over script, tool-native over grep).
+## Checkpoint model
 
-## Changed vs full scope (增量 vs 全量)
+```text
+Checkpoint = invariant + scope + evidence + executor + failure feedback
+```
 
-Lint and unit/integration test are scope-aware. `--scope=changed` runs only the crates changed since the last push (the **crate** is the unit of change, not the file); `--scope=full` runs the whole workspace. e2e is always full — it has no changed form. `--coverage` (opt-in) enforces the coverage threshold; without it the tests just run. Client-side git hooks run `--scope=changed` (fast); CI runs `--scope=full --coverage`. When the changed set can't be determined, or a workspace-level file changed (`Cargo.lock`, root `Cargo.toml`, `rust-toolchain.toml`), it fails safe to full — a gate never under-checks.
+Each executable validation script still answers one narrow yes/no question. Do not introduce a god script that bundles format, lint, test, and policy checks together.
 
-## Structure
+## Script conventions
 
-- `plugins/narness/` — the harness-engineering plugin (skill + PostToolUse hook + `narness-rust-*` / `narness-git-*` scripts + git hooks + per-tool config templates)
-- `cli/` — the narness environment checker (npm package)
-- `.claude-plugin/marketplace.json` — the outer marketplace
+1. Every script provided by this project starts with `narness-`.
+2. Each validation script has one responsibility.
+3. Hook entrypoints are thin: evaluate the trigger, then delegate.
+4. Failures write actionable diagnostics to stderr.
+5. Prefer a tool-native rule over a custom scan, and a language-native rule over a script where possible.
+6. Fast local forms may use changed scope; authoritative CI forms use the required full scope.
 
-## Initial scope
+## Local proof vs repository authority
 
-Rust only, pure theory with no example projects. Later extensions: other languages (narness-python, etc.) as references + scripts inside this plugin, example projects.
+Local execution should seek the **smallest sufficient proof** for the outgoing change. CI should provide **authoritative proof** for repository acceptance.
+
+- Edit time: format, compile/type-check, cheap invariants.
+- Pre-commit: changed-scope fast checks and commit policy.
+- Pre-push: focused tests for the outgoing diff.
+- Pull request / push CI: authoritative checks, full relevant matrix, security, coverage, and architecture invariants.
+- Release: artifact verification and deployment or live proof where applicable.
+
+Client hooks are bypassable. Never treat them as repository authority.
+
+## Repository language gate
+
+Run this before committing documentation or comment-heavy changes:
+
+```bash
+bash scripts/narness-repo-english.sh
+```
+
+The CI workflow also runs this gate.
+
+## Repository structure
+
+- `docs/architecture.md` — canonical AI Workspace architecture.
+- `docs/adoption.md` — step-by-step adoption guide.
+- `examples/rust-workspace/` — runnable reference workspace.
+- `plugins/narness/` — Claude plugin, Skill, references, hooks, scripts, Git hooks, and config templates.
+- `cli/` — environment checker.
+- `narness-policy/` — policy engine prototype.
+- `scripts/` — repository-specific deterministic checks.
+
+## Development workflow
+
+This repository currently develops directly on `main`. Preserve unrelated changes and commit coherent, working changes as they land.
+
+Before claiming a non-trivial change is complete, run evidence that matches the changed surface. At minimum:
+
+```bash
+bash scripts/narness-repo-english.sh
+(cd cli && npm test)
+cargo test --manifest-path narness-policy/Cargo.toml
+cargo test --manifest-path examples/rust-workspace/Cargo.toml
+```
+
+Do not run unrelated expensive checks merely for ceremony.
+
+## Current scope
+
+The shipped language harness is Rust-first. The AI Workspace model is language-independent. Future language support should reuse the same contracts, evidence model, lifecycle semantics, and single-responsibility execution pattern.

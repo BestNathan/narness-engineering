@@ -1,4 +1,4 @@
-# e2e.yml — dedicated, OPTIONAL e2e workflow (补位), never a merge blocker
+# e2e.yml — dedicated, OPTIONAL e2e workflow (gap-filling), never a merge blocker
 # copy to: <workspace root>/.github/workflows/e2e.yml
 #
 # e2e is scenario-driven, always full, never line-measured. It runs on demand

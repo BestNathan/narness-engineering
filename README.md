@@ -1,59 +1,171 @@
 # Narness
 
-Narness is research + tooling for **harness engineering** — constraining AI agents with code, hooks and scripts instead of prompts.
+Narness is an **AI Workspace Engineering** framework for making AI coding agents work inside repositories that are understandable, progressively discoverable, deterministic, and provable.
 
-## Core idea
+The project started from a simple harness-engineering principle:
 
-> When code, hooks, or scripts can constrain an AI agent's behavior, prefer them over prompts. An agent will very likely not follow prompts; scripts and hooks let the agent *discover* that its implementation is wrong and guide it toward correct behavior.
+> If a rule can be enforced by code, hooks, scripts, a compiler, Git, or CI, do not leave that rule only in a prompt.
 
-A rule can be implemented two ways:
+That principle remains the Enforcement Plane of Narness. The broader goal is to design the entire repository as an execution environment for agents.
 
-- **Soft** (软实现) — text the agent reads (a prompt, `CLAUDE.md`, a skill). It shapes intent, but the agent can ignore it.
-- **Hard** (硬实现) — code that runs on an event (a hook, a script, a CI step). It fires whether or not the agent cooperates, returns a deterministic verdict, and feeds the failure back so the agent has to fix it.
+## The AI Workspace model
 
-Harness engineering is the practice of **sinking** a rule from soft toward hard: a prompt is soft, a hook or script is hard.
+```text
+AI Workspace
+=
+Context Architecture
++ Capability Architecture
++ Constraint Architecture
++ Evidence Architecture
++ Lifecycle Orchestration
+```
 
-## The problem, and how the harness solves it
+A good workspace does not depend on an agent remembering everything. It provides the right context at the right time, exposes procedures as discoverable capabilities, turns important rules into deterministic checks, derives the proof required for a change, and blocks unproven states from authoritative history.
 
-**The problem:** on long-running, autonomous tasks an agent will very likely not follow prompts — a rule written only as text is a rule that will silently break.
+```text
+                         AI WORKSPACE
+                              |
+        +---------------------+----------------------+
+        |                     |                      |
+  Instructions           Capabilities            Evidence
+        |                     |                      |
+ AGENTS / scoped        Skills / tools        Tests / checks
+ Rules / approval       Scripts / assets      Snapshots / E2E
+        |                     |                      |
+        +---------------------+----------------------+
+                              |
+                         Orchestration
+                              |
+             Hooks -> Git hooks -> CI -> Review -> Release
+                              |
+                              v
+                     Authoritative Repository
+```
 
-**The solution:** express the rule as code that runs on an event, at the strongest level it can reach — the **constraint ladder**:
+See [docs/architecture.md](docs/architecture.md) for the complete model.
 
-| Level | Means | Strength |
-|---|---|---|
-| L0 Prompts | verbal / doc requirements | weakest |
-| L1 Project conventions | `CLAUDE.md` / `AGENTS.md` | weak |
-| L2 Skill | a skill the agent invokes | weak-medium |
-| L3 Hook | a tool hook / git hook | medium-strong |
-| L4 Scripts | `narness-*.sh` validation scripts | strong |
-| L5 Compile-time | `#![forbid]`, `-D warnings`, dependency removal | strongest |
+## Three orthogonal axes
 
-The goal is to sink every rule from L0–L2 down to L3–L5. The harness runs on two surfaces:
+Narness treats an AI workspace as three independent design problems.
 
-- **Inner** — tool hooks (`PreToolUse` / `PostToolUse`) fire on every tool call and *feed failures back* into the agent's context the moment an edit is wrong — a tight, self-correcting loop.
-- **Outer** — git hooks and CI *block* at commit / push / merge, so bad code never enters history even if the agent ignores every edit-time warning.
+### Context disclosure
 
-A harness is a sequence of **checkpoints**, each a yes/no question backed by one single-responsibility script: format, compile, lint, invariants, test, coverage, test discipline, and dependency audit.
+```text
+Root instructions
+  -> scoped instructions
+  -> skill metadata
+  -> SKILL.md
+  -> task-relevant references / scripts / assets
+```
 
-## Tools
+The question is: **what should the agent know now?**
 
-| Path | What it is |
+Root `AGENTS.md` / `CLAUDE.md` files are contracts and routers, not encyclopedias. Procedures belong in Skills. Historical design reasoning belongs in ADRs or design notes.
+
+### Constraint sinking
+
+```text
+L0 Prompt
+L1 AGENTS / convention
+L2 Skill
+L3 Agent hook
+L4 Deterministic script
+L5 Language / tool-native rule
+L6 Git lifecycle gate
+L7 Server-side CI / repository ruleset
+```
+
+The question is: **where should this rule be guaranteed?**
+
+### Task lifecycle
+
+```text
+Discover
+  -> Understand
+  -> Change
+  -> Fast feedback
+  -> Pre-push proof
+  -> PR evidence
+  -> Review
+  -> Land
+  -> Release
+```
+
+The question is: **when should the workspace intervene?**
+
+Edit-time hooks should be fast and corrective. Local Git hooks should provide the smallest sufficient proof. CI is the repository authority and owns authoritative proof.
+
+## Core concepts
+
+| Concept | Responsibility |
 |---|---|
-| `plugins/narness/` | the harness-engineering plugin — a `narness` skill (design philosophy + reference index), a `PostToolUse` hook, validation scripts, git hooks, and copyable per-tool config templates |
-| `cli/` | `narness`, an npm environment checker for an agent's runtime prerequisites |
+| Workspace Contract | Global invariants, approval boundaries, project structure, and routing |
+| Knowledge Plane | Separates standing rules, procedures, and design decisions |
+| Capability Plane | Packages procedures as discoverable Skills with progressive disclosure |
+| Enforcement Plane | Sinks rules from prompts into hooks, scripts, native rules, Git, and CI |
+| Evidence Architecture | Defines what proves a change correct for its behavioral surface |
+| Lifecycle Orchestration | Runs the right evidence at edit, commit, push, CI, review, and release time |
 
-## Usage
+A checkpoint is not just a command:
 
-**Install the plugin:**
+```text
+Checkpoint
+=
+Invariant
++ Scope
++ Evidence
++ Executor
++ Failure Feedback
+```
+
+## Repository layout
+
+```text
+.
+├── README.md
+├── CLAUDE.md
+├── docs/
+│   ├── architecture.md
+│   └── adoption.md
+├── examples/
+│   └── rust-workspace/
+├── plugins/
+│   └── narness/
+├── cli/
+├── narness-policy/
+└── scripts/
+    └── narness-repo-english.sh
+```
+
+## What exists today
+
+Narness currently ships:
+
+- a Claude Code plugin with a `narness` Skill and progressive reference material;
+- edit-time `PostToolUse` feedback for Rust compilation;
+- single-responsibility Rust validation scripts;
+- shared Git hook entrypoints for commit, commit-message, and push gates;
+- copyable Rust tool and GitHub Actions configuration;
+- a CLI that validates runtime prerequisites from `.narness.toml`;
+- a policy engine prototype;
+- a runnable Rust workspace example showing the AI Workspace pattern.
+
+The current implementation is Rust-first. The architecture is language-independent.
+
+`narness plan` is the next architectural direction, not a shipped command yet. Its proposed contract is documented in [docs/architecture.md](docs/architecture.md): change set -> affected surfaces -> required evidence -> execution plan.
+
+## Quick start
+
+### Install the Claude Code plugin
 
 ```bash
-claude plugin marketplace add <this repo's URL>
+claude plugin marketplace add https://github.com/BestNathan/narness-engineering
 claude plugin install narness
 ```
 
-**Adopt the Rust harness in a project** — the plugin ships copyable config templates (`rustfmt.toml`, `clippy.toml`, `deny.toml`, …) and a git-hook installer; the skill's `rust-tool-config.md` reference maps each tool to its checkpoint and copy target.
+### Check an agent runtime environment
 
-**Check an agent's environment** — declare requirements in `.narness.toml`:
+Declare requirements in `.narness.toml`:
 
 ```toml
 [[checks]]
@@ -66,11 +178,54 @@ type = "exists"
 name = "rg"
 ```
 
+Then run:
+
 ```bash
-npx narness           # human report (failures include fix suggestions)
-npx narness --json    # structured output (for hooks / CI)
+npx narness
+npx narness --json
 ```
+
+### Run the example
+
+```bash
+cargo test --manifest-path examples/rust-workspace/Cargo.toml
+
+bash plugins/narness/scripts/narness-rust-fmt.sh examples/rust-workspace
+bash plugins/narness/scripts/narness-rust-check.sh examples/rust-workspace
+bash plugins/narness/scripts/narness-rust-test-unit.sh examples/rust-workspace --scope=full
+bash plugins/narness/scripts/narness-rust-test-integration.sh examples/rust-workspace --scope=full
+```
+
+The example contains a root workspace contract, a task Skill with progressive disclosure, unit and integration evidence, an environment declaration, and a stable CI required gate.
+
+## Adopt Narness
+
+Start with [docs/adoption.md](docs/adoption.md):
+
+1. write a small root Workspace Contract;
+2. move task procedures into Skills;
+3. express checks as single-responsibility executable primitives;
+4. mount fast checks in agent and Git hooks;
+5. map change surfaces to required evidence;
+6. make CI the authoritative full-scope gate;
+7. expose one stable required status to repository rules.
+
+## Design rules
+
+- Prefer deterministic enforcement over prompt-only requirements.
+- Keep root instructions small and route to scoped knowledge.
+- Load Skill metadata broadly, Skill instructions selectively, and supporting detail lazily.
+- Keep executable validation primitives single-responsibility.
+- Put validation logic in scripts or native tools; orchestration layers only decide when and at what scope to run them.
+- Optimize local proof for relevance and speed; optimize CI proof for authority.
+- Fail loud. A failed check must say where, why, and how to fix it.
+- Keep repository-authored content in English.
 
 ## Documentation
 
-The `narness` skill is the single entry point: [SKILL.md](plugins/narness/skills/narness/SKILL.md) states the design philosophy and indexes every reference — theory, per-tool, per-platform — in a flat [references/](plugins/narness/skills/narness/references/) directory.
+- [AI Workspace architecture](docs/architecture.md)
+- [Adoption guide](docs/adoption.md)
+- [Runnable Rust example](examples/rust-workspace/README.md)
+- [Narness Skill](plugins/narness/skills/narness/SKILL.md)
+- [Constraint ladder](plugins/narness/skills/narness/references/constraint-ladder.md)
+- [Harness checkpoints](plugins/narness/skills/narness/references/harness-checkpoints.md)

@@ -18,7 +18,7 @@ Rust maps the three tiers directly onto Cargo's test targets:
 |---|---|---|---|---|
 | Unit | `#[cfg(test)] mod tests` in `src/` | a single function/module in isolation; mocked; in-process, no I/O | **≥ 95% lines** | every push (pre-push — changed crates) |
 | Integration | `tests/*.rs` (public API only) | the crate as an external consumer; module wiring across boundaries | **≥ 80% lines** | CI (full) |
-| E2E | feature-gated `e2e` target | the full running system: real deps, real I/O, cross-process | **none** (scenario-driven, 补位) | dedicated optional workflow (always full) |
+| E2E | feature-gated `e2e` target | the full running system: real deps, real I/O, cross-process | **none** (scenario-driven, gap-filling) | dedicated optional workflow (always full) |
 
 **Scope: changed vs full.** Unit and integration are *scope-aware*; e2e is not. `--scope=changed` targets only the crates changed since the last push (the crate, not the file, is the unit of change); `--scope=full` runs the whole workspace. `--coverage` (opt-in) toggles the coverage gate on. e2e has neither flag.
 
@@ -26,9 +26,9 @@ Rust maps the three tiers directly onto Cargo's test targets:
 
 - **Unit 95%** — unit tests can reach private internals, so they *should* exercise nearly every branch.
 - **Integration 80%** — integration tests only reach the `pub` surface. The ~15% they can't touch (private defensive clauses, rarely-hit error branches) is exactly what unit tests own.
-- **E2E none** — e2e is *补位* (gap-filling): sufficiency is measured by **scenario completeness**, not line coverage.
+- **E2E none** — e2e is *gap-filling* (gap-filling): sufficiency is measured by **scenario completeness**, not line coverage.
 
-## 3. What each tier covers (and why e2e is 补位)
+## 3. What each tier covers (and why e2e is gap-filling)
 
 | | Unit | Integration | E2E |
 |---|---|---|---|
@@ -38,7 +38,7 @@ Rust maps the three tiers directly onto Cargo's test targets:
 | Verifies an external contract | no | partial | yes |
 | Verifies deploy / runtime | no | no | yes |
 
-E2E's role is **补位**: it fills the gap from "the pieces work in isolation" (unit) and "the pieces work together through the public API" (integration) up to "the system actually runs end-to-end". You don't chase coverage here; you enumerate the scenarios unit + integration cannot express.
+E2E's role is **gap-filling**: it fills the gap from "the pieces work in isolation" (unit) and "the pieces work together through the public API" (integration) up to "the system actually runs end-to-end". You don't chase coverage here; you enumerate the scenarios unit + integration cannot express.
 
 ## 4. Tools: cargo test / nextest / llvm-cov
 
@@ -127,7 +127,7 @@ cargo llvm-cov --lcov --output-path lcov.info   # for Codecov / VS Code Coverage
 |---|---|---|
 | Unit | `cargo llvm-cov --lib --fail-under-lines 95` | unit reaches private internals, so it should cover nearly every branch |
 | Integration | `cargo llvm-cov --tests --fail-under-lines 80` | integration only reaches the pub surface; the ~15% it can't touch is what unit owns |
-| E2E | `cargo test --features e2e` (no threshold) | e2e is 补位: scenario-driven, not line-driven |
+| E2E | `cargo test --features e2e` (no threshold) | e2e is gap-filling: scenario-driven, not line-driven |
 
 Add `--fail-under-regions` / `--fail-under-functions` as secondary axes:
 
@@ -179,7 +179,7 @@ cargo llvm-cov --lib --fail-under-lines 95
 | After edit (L3 hook) | PostToolUse | `cargo check` (compile only) | immediate compile-error feedback |
 | **Every push** | git pre-push | `narness-rust-test-unit.sh --scope=changed` (run-only) | fast logic gate on the changed crates |
 | CI | CI pipeline | `clippy --scope=full` + `test-unit --scope=full --coverage` + `test-integration --scope=full --coverage` | full coverage + system-level regression (required merge gate) |
-| Dedicated e2e workflow | CI pipeline (optional) | e2e only (always full) | 补位 scenarios, on demand / nightly — not a merge blocker |
+| Dedicated e2e workflow | CI pipeline (optional) | e2e only (always full) | gap-filling scenarios, on demand / nightly — not a merge blocker |
 
 ### Changed vs full scope
 
@@ -247,7 +247,7 @@ L0 prompt "remember to write tests"
 | `narness-rust-test-unit.sh --scope=changed` | `cargo test -p <crates…> --lib` | none (run-only) | pre-push |
 | `narness-rust-test-unit.sh --scope=full --coverage` | `cargo llvm-cov --workspace --lib --fail-under-lines 95` | ≥95% | CI |
 | `narness-rust-test-integration.sh --scope=full --coverage` | `cargo llvm-cov --workspace --tests --fail-under-lines 80` | ≥80% | CI |
-| `narness-rust-test-e2e.sh` | `cargo test --features e2e` | none (补位, always full) | dedicated optional workflow |
+| `narness-rust-test-e2e.sh` | `cargo test --features e2e` | none (gap-filling, always full) | dedicated optional workflow |
 | `narness-rust-test.sh` | `cargo test --workspace` | none | local |
 | `narness-rust-test-discipline.sh` | git diff → find test file | — | pre-commit |
 | `narness-rust-changed-packages.sh` | git diff → cargo metadata → `-p <crate>` | — | (helper) |

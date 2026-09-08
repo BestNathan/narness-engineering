@@ -48,9 +48,9 @@ Adding a lint is a design decision, not a paste job. The discipline, in order:
 
 | Tier | Enable | What it denies | When |
 |---|---|---|---|
-| **一般严格** (general) | `-D warnings` | `clippy::all` — correctness + style + complexity + perf + suspicious | every project's baseline |
-| **中等严格** (medium) | `+ #![warn(clippy::pedantic)]` | the above + opinionated "better way" lints | libraries, shared code |
-| **最严格** (strictest) | `+ #![deny]`/`#![forbid]` restriction lints | the above + entire feature bans (unwrap, panic, unsafe, arithmetic overflow) | safety- / security-critical code |
+| **General** | `-D warnings` | `clippy::all` — correctness + style + complexity + perf + suspicious | every project's baseline |
+| **Medium** | `+ #![warn(clippy::pedantic)]` | the above + opinionated "better way" lints | libraries, shared code |
+| **Strictest** | `+ #![deny]`/`#![forbid]` restriction lints | the above + entire feature bans (unwrap, panic, unsafe, arithmetic overflow) | safety- / security-critical code |
 
 **Tier 1 — general (baseline, no source changes):**
 

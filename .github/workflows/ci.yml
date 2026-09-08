@@ -1,0 +1,78 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  english:
+    name: Repository language
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce English repository content
+        run: bash scripts/narness-repo-english.sh
+
+  cli:
+    name: CLI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cli/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  policy:
+    name: Policy engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --manifest-path narness-policy/Cargo.toml
+
+  example:
+    name: Rust workspace example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Format
+        run: bash plugins/narness/scripts/narness-rust-fmt.sh examples/rust-workspace
+      - name: Compile
+        run: bash plugins/narness/scripts/narness-rust-check.sh examples/rust-workspace
+      - name: Unit tests
+        run: bash plugins/narness/scripts/narness-rust-test-unit.sh examples/rust-workspace --scope=full
+      - name: Integration tests
+        run: bash plugins/narness/scripts/narness-rust-test-integration.sh examples/rust-workspace --scope=full
+
+  required:
+    name: required
+    if: always()
+    needs:
+      - english
+      - cli
+      - policy
+      - example
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required jobs
+        env:
+          ENGLISH: ${{ needs.english.result }}
+          CLI: ${{ needs.cli.result }}
+          POLICY: ${{ needs.policy.result }}
+          EXAMPLE: ${{ needs.example.result }}
+        run: |
+          test "$ENGLISH" = "success"
+          test "$CLI" = "success"
+          test "$POLICY" = "success"
+          test "$EXAMPLE" = "success"

@@ -1,48 +1,97 @@
-# ci.yml — the required merge gate (full scope + coverage + dependency audit)
-# copy to: <workspace root>/.github/workflows/ci.yml
+# ci.yml — copyable authoritative Rust merge gate.
+# Copy to: <workspace root>/.github/workflows/ci.yml
 #
-# STRICT MODE required gate: format + invariant scan + lint + dependency audit +
-# unit/integration with coverage thresholds. Client-side hooks run --scope=changed
-# (fast); CI runs --scope=full --coverage. e2e is a separate, optional workflow
-# (see e2e.yml) — never a merge blocker here.
+# Validation logic stays in deterministic scripts. This workflow only
+# orchestrates full-scope evidence and exposes one stable "required" status.
 
 name: ci
+
 on:
   push:
   pull_request:
 
 jobs:
-  gate:
+  format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # rust-toolchain.toml pins the stable channel; @master infers the channel
-      # from that file. List the components CI needs — llvm-tools-preview is
-      # required by cargo llvm-cov and easy to miss.
       - uses: dtolnay/rust-toolchain@master
         with:
-          components: rustfmt, clippy, llvm-tools-preview
+          components: rustfmt
+      - run: bash plugins/narness/scripts/narness-rust-fmt.sh
 
-      # cargo-llvm-cov (coverage) + cargo-deny (dependency audit)
+  invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash plugins/narness/scripts/narness-rust-invariants.sh
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          components: clippy
+      - run: bash plugins/narness/scripts/narness-rust-clippy.sh --scope=full
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-llvm-cov,cargo-deny
+          tool: cargo-deny
+      - run: cargo deny check
 
-      - name: Format
-        run: bash plugins/narness/scripts/narness-rust-fmt.sh
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - run: bash plugins/narness/scripts/narness-rust-test-unit.sh --scope=full --coverage
 
-      - name: Invariants
-        run: bash plugins/narness/scripts/narness-rust-invariants.sh
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - run: bash plugins/narness/scripts/narness-rust-test-integration.sh --scope=full --coverage
 
-      - name: Lint (full)
-        run: bash plugins/narness/scripts/narness-rust-clippy.sh --scope=full
-
-      - name: Dependency audit
-        run: cargo deny check
-
-      - name: Unit tests (coverage >= 95%)
-        run: bash plugins/narness/scripts/narness-rust-test-unit.sh --scope=full --coverage
-
-      - name: Integration tests (coverage >= 80%)
-        run: bash plugins/narness/scripts/narness-rust-test-integration.sh --scope=full --coverage
+  required:
+    name: required
+    if: always()
+    needs:
+      - format
+      - invariants
+      - lint
+      - dependency-audit
+      - unit
+      - integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required evidence
+        env:
+          FORMAT: ${{ needs.format.result }}
+          INVARIANTS: ${{ needs.invariants.result }}
+          LINT: ${{ needs.lint.result }}
+          AUDIT: ${{ needs.dependency-audit.result }}
+          UNIT: ${{ needs.unit.result }}
+          INTEGRATION: ${{ needs.integration.result }}
+        run: |
+          test "$FORMAT" = "success"
+          test "$INVARIANTS" = "success"
+          test "$LINT" = "success"
+          test "$AUDIT" = "success"
+          test "$UNIT" = "success"
+          test "$INTEGRATION" = "success"

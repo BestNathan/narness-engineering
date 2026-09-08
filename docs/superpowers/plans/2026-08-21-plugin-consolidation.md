@@ -449,7 +449,7 @@ git commit -m "docs(skill): merge git-hooks + git-hook-layering into one referen
 
 1. **Positioning** — `test-harness.md` §1 (unchanged).
 2. **The three-tier test design** — `test-harness.md` §2 (unchanged).
-3. **What each tier covers (and why e2e is 补位)** — `test-harness.md` §3 (unchanged).
+3. **What each tier covers (and why e2e is gap-filling)** — `test-harness.md` §3 (unchanged).
 4. **Tools: cargo test / nextest / llvm-cov** — `test-harness.md` §4, with the deferred sentence "For the full nextest / llvm-cov design see `docs/reference/rust-test-harness.md`" **removed** (it is now this file).
 5. **The nextest runner** — NEW: `rust-test-harness.md` §2 (why nextest, install/usage, `nextest.toml`, the single-responsibility wrapper).
 6. **Coverage with llvm-cov** — NEW: `rust-test-harness.md` §3 (why coverage, install/usage, per-tier thresholds, secondary axes).

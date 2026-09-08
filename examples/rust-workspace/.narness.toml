@@ -1,0 +1,10 @@
+[[checks]]
+type = "version"
+name = "cargo"
+min = "1.85"
+fix = "Install a Rust toolchain that supports edition 2024."
+
+[[checks]]
+type = "exists"
+name = "rg"
+fix = "Install ripgrep for repository text and invariant checks."

@@ -88,7 +88,7 @@ Each target file's provenance is listed; **one concept → one file**.
   live in one file; the shorter repo-doc's unique bits (if any) are folded in, and the redundant
   rest is dropped.
 - **`rust-test.md`** merges the skill's `test-harness.md` with `docs/reference/rust-test-harness.md`.
-  One file for the three tiers (unit ≥95% / integration ≥80% / e2e 补位), test discipline, and the
+  One file for the three tiers (unit ≥95% / integration ≥80% / e2e gap-filling), test discipline, and the
   layered triggering model.
 - **Renames** (flat dir needs a `rust-` prefix to disambiguate): `fmt-harness.md` → `rust-fmt.md`,
   `lint-harness.md` → `rust-lint.md`, `tool-config.md` → `rust-tool-config.md`.

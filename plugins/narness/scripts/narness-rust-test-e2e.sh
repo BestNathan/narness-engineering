@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# narness-rust-test-e2e.sh — e2e-test gate (tier 3): full-system scenarios, gap-filling (补位)
+# narness-rust-test-e2e.sh — e2e-test gate (tier 3): full-system scenarios, gap-filling (gap-filling)
 # runs e2e tests (feature-gated behind `e2e`); no coverage threshold — e2e is scenario-driven, not line-driven.
 # usage: narness-rust-test-e2e.sh [PROJECT_DIR]
 # trigger: CI (slowest, separate stage) — e2e needs real/containerized dependencies and env setup.

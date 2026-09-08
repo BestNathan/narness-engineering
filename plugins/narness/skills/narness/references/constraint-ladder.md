@@ -1,54 +1,69 @@
 # The constraint ladder
 
-## 1. Model overview
+## Model overview
 
-| Level | Name | Essence | Strength | Failure consequence |
+| Level | Name | Essence | Main role | Failure consequence |
 |---|---|---|---|---|
-| L0 | Prompts | natural-language instructions | weakest | the agent may simply ignore it |
-| L1 | Project conventions | CLAUDE.md / AGENTS.md | weak | relies on the agent reading them voluntarily |
-| L2 | Skill | workflow that can be invoked on demand | weak-medium | the agent may not invoke it |
-| L3 | Hook | event-driven enforced script | medium-strong | runs automatically; failure is fed back |
-| L4 | Script validation | cargo check/test/clippy | strong | deterministic pass/fail |
-| L5 | Compile-time | the language and type system | strongest | violating it won't compile |
+| L0 | Prompt | natural-language intent | suggest | the agent may ignore or forget it |
+| L1 | AGENTS / project convention | standing repository instruction | orient | depends on instruction discovery and compliance |
+| L2 | Skill | on-demand task procedure | guide | may not be selected or invoked |
+| L3 | Agent hook | event-driven feedback | teach | runs automatically on matched events and feeds failure back |
+| L4 | Deterministic script | executable validation | prove | returns a reproducible pass/fail verdict when invoked |
+| L5 | Language / tool-native rule | compiler, linter, schema, policy | prevent | invalid states are rejected by the owning tool |
+| L6 | Git lifecycle gate | pre-commit, commit-msg, pre-push | check | blocks the local lifecycle action but may be bypassed |
+| L7 | CI / repository ruleset | server-side required status or policy | block | invalid states cannot enter authoritative history through the normal path |
 
-## 2. Layer details
+## Layer details
 
-### L0 Prompts
+### L0 Prompt
 
-- What it can constrain: expressing intent, directional suggestions
-- What it misses: anything that must be "always obeyed"
-- When to use: always as a starting point, never as the endpoint
+Use for intent, desired outcomes, and task-specific requests. Never rely on it for an invariant that must always hold.
 
-### L1 Project conventions (CLAUDE.md)
+### L1 AGENTS / project convention
 
-- What it can constrain: project background, conventions, habits
-- What it misses: depends on the agent reading and obeying voluntarily
-- When to use: to write "background" and "why", not "must"
+Use for global or scoped standing rules, project structure, safety boundaries, and routing. Keep it small enough to be discovered and understood cheaply.
 
 ### L2 Skill
 
-- What it can constrain: step-by-step guidance for complex workflows
-- What it misses: the agent may not trigger the skill
-- When to use: to capture "how to do it" as a reusable workflow
+Use for reusable procedures: review, testing, release, deployment, diagnosis, migration, and other multi-step task classes. Skills are capabilities, not authority.
 
-### L3 Hook
+### L3 Agent hook
 
-- What it can constrain: automatic checks at event time
-- What it misses: covers only the triggered events, not proactive decisions
-- When to use: immediate validation after a change, immediate failure feedback
+Use for cheap event-driven feedback close to the edit. A good hook teaches by returning actionable diagnostics into the agent loop.
 
-### L4 Script validation
+### L4 Deterministic script
 
-- What it can constrain: independently verifiable deterministic rules
-- What it misses: needs the agent/CI to invoke it
-- When to use: compile, test, format, invariants
+Use for independently reproducible checks such as format, compile, test, invariant scans, coverage, and repository sanity.
 
-### L5 Compile-time
+### L5 Language / tool-native rule
 
-- What it can constrain: constraints that are physically impossible to violate at the language level
-- What it misses: only what the type system can express
-- When to use: any invariant expressible with types
+Prefer this when the owning language or tool can express the invariant directly. Examples include type constraints, source-level lint forbids, schema validation, and package policy.
 
-## 3. Core proposition
+### L6 Git lifecycle gate
 
-The higher the level, the more it depends on the agent's goodwill; the lower the level, the more it guarantees long-running correctness. The goal: **sink constraints from L0–L2 down to L3–L5.**
+Use for local commit and push checkpoints. These are early and useful but bypassable, so they are not repository authority.
+
+### L7 CI / repository ruleset
+
+Use for universally required repository acceptance. Required CI, server-side policy, and repository rules are the final block before authoritative history.
+
+## Teach, check, block
+
+The ladder has three operational roles:
+
+```text
+Teach: L0-L3
+Prove/prevent: L4-L5
+Check locally: L6
+Block authoritatively: L7
+```
+
+The boundaries overlap intentionally. For example, a deterministic L4 script may be mounted by both an L3 agent hook and an L7 CI job.
+
+## Core proposition
+
+The goal is not "move everything to L7." The goal is:
+
+> Place each invariant at the lowest practical layer that can express it correctly, then mount the same deterministic primitive at the lifecycle stages that need it.
+
+A workflow procedure may correctly remain a Skill. A type invariant should not remain a prompt. A universal merge requirement should not rely only on a local Git hook.

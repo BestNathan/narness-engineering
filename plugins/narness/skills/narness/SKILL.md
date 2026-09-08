@@ -1,101 +1,187 @@
 ---
 name: narness
-description: "Harness engineering — constrain AI agents with code, hooks and scripts instead of prompts. Use when establishing constraints for any project, or when sinking a rule that keeps failing under prompt-only constraint into code."
+description: "AI Workspace and harness engineering — design repository contracts, Skills, deterministic constraints, evidence, hooks, Git gates, and CI authority. Use when establishing an AI coding workspace or sinking a repeatedly violated rule into stronger enforcement."
 ---
 
-# Narness — harness engineering
+# Narness — AI Workspace Engineering
 
-Sink constraints on an AI agent from "prompts" down to "code, hooks, scripts", guaranteeing correctness on long-running tasks.
+Narness designs the repository around the agent rather than relying on the agent to remember a long prompt.
 
-## Core idea
+## The workspace model
 
-When code, hooks, or scripts can constrain an agent, prefer them over prompts. Prompts are soft constraints an agent may ignore; scripts are hard constraints an agent cannot escape. See [references/why-not-prompts.md](references/why-not-prompts.md).
+```text
+AI Workspace
+=
+Context Architecture
++ Capability Architecture
++ Constraint Architecture
++ Evidence Architecture
++ Lifecycle Orchestration
+```
 
-## The constraint ladder
+The goal is a workspace that progressively reveals the right context, exposes task procedures as capabilities, gives deterministic feedback during work, requires evidence appropriate to the change, and blocks unproven states from authoritative history.
 
-| Level | Means | Strength |
+## Progressive disclosure
+
+Use four stages:
+
+1. **Metadata** — Skill name and description are available for cheap selection.
+2. **Procedure** — read the selected `SKILL.md` completely.
+3. **Detail** — read only task-relevant references.
+4. **Execution** — prefer deterministic scripts and assets for repeated operations.
+
+> Load metadata broadly, instructions selectively, detail lazily, execution deterministically.
+
+A Skill description is a routing interface. It must distinguish when the Skill applies and when it does not.
+
+## Knowledge ownership
+
+| Knowledge | Owner |
+|---|---|
+| Global standing rules | root AGENTS / CLAUDE |
+| Scoped standing rules | subtree AGENTS / CLAUDE |
+| Task procedures | Skills |
+| Detailed task knowledge | Skill references |
+| Repeated deterministic operations | scripts |
+| Historical design reasoning | ADRs / design notes |
+| Repository acceptance | CI / repository rules |
+
+## Constraint ladder
+
+| Level | Means | Primary role |
 |---|---|---|
-| L0 Prompts | verbal/doc requirements | weakest |
-| L1 Project conventions | CLAUDE.md / AGENTS.md | weak |
-| L2 Skill | this skill | weak-medium |
-| L3 Hook | edit-time hook (feeds back) / git hook (blocks) | medium-strong |
-| L4 Scripts | `narness-*.sh` validation scripts | strong |
-| L5 Compile-time | `#![forbid]`, `-D warnings`, dependency removal | strongest |
+| L0 Prompt | natural-language request | intent |
+| L1 AGENTS / convention | standing repository instruction | orientation |
+| L2 Skill | on-demand procedure | capability |
+| L3 Agent hook | event-driven feedback | teach |
+| L4 Deterministic script | executable pass/fail | prove |
+| L5 Language / tool-native rule | compiler, linter, schema, policy | prevent |
+| L6 Git lifecycle gate | pre-commit / commit-msg / pre-push | check |
+| L7 CI / repository ruleset | server-side required status | block |
 
-Full treatment: [references/constraint-ladder.md](references/constraint-ladder.md).
+See [references/constraint-ladder.md](references/constraint-ladder.md).
 
-## Harness checkpoints
+The goal is to place each invariant at the lowest practical layer that can express it correctly, not to force every rule into CI.
 
-A harness is a sequence of checkpoints — each asks one yes/no question and is backed by one single-responsibility script. Eight checkpoints: Format, Compile, Lint, Invariants, Test, Coverage, Test discipline, Dependency audit. See [references/harness-checkpoints.md](references/harness-checkpoints.md).
+## Evidence-first checkpoints
 
-## The two surfaces
+A checkpoint is not just a command:
 
-Edit-time hooks (Claude Code / Codex) **feed back** a failure into the agent's context; git hooks and CI **block**. A git hook cannot teach — it only refuses — so its diagnostics must be self-contained. See [references/claude-code-hooks.md](references/claude-code-hooks.md), [references/codex-hooks.md](references/codex-hooks.md), [references/git-hooks.md](references/git-hooks.md).
+```text
+Checkpoint
+=
+Invariant
++ Scope
++ Evidence
++ Executor
++ Failure Feedback
+```
+
+See [references/harness-checkpoints.md](references/harness-checkpoints.md).
+
+Evidence should match the behavioral surface:
+
+- pure logic -> focused unit evidence;
+- public API/protocol -> contract + integration evidence;
+- UI -> snapshot/screenshot/interaction proof;
+- model-visible prompt/tool schema -> transcript/schema snapshot;
+- database -> migration/invariant proof;
+- concurrency -> deterministic lifecycle regression;
+- deployment -> manifest/policy + health proof;
+- release -> artifact and live proof.
+
+## Lifecycle semantics
+
+### Edit time
+
+Run cheap corrective checks. Agent hooks teach by feeding failure diagnostics back into context.
+
+### Git lifecycle
+
+Run the smallest sufficient proof for the outgoing change. Client hooks are fast and bypassable.
+
+### CI
+
+Run authoritative proof. CI and repository rules are the source of truth for whether a state may enter shared history.
+
+### Release
+
+Add artifact, deployment, package, and live-system proof where applicable.
 
 ## Changed vs full scope
 
-Lint and unit/integration test are scope-aware: `--scope=changed` runs only the crates changed since the last push (the crate is the unit of change), `--scope=full` runs the whole workspace; `--coverage` toggles the coverage threshold. When the changed set can't be determined, it fails safe to full — a gate never under-checks. See [references/rust-test.md](references/rust-test.md).
+Rust lint and unit/integration tests are scope-aware:
+
+- `--scope=changed` targets affected crates for fast local proof.
+- `--scope=full` checks the whole workspace.
+- e2e is always full and scenario-driven.
+- `--coverage` enables coverage thresholds.
+- unknown scope or root workspace changes fail safe to full.
+
+The future evidence planner generalizes this from "changed crates" to "changed surfaces -> required evidence". The proposed `narness plan` interface is architectural direction and is not shipped yet.
 
 ## Config minimalism
 
-Only set what differs from a tool's default; comment out the rest. Every *active* config line is a deliberate override; every commented line is a documented default. See [references/rust-tool-config.md](references/rust-tool-config.md).
+Only set what differs from a tool's default. Every active config line should represent a deliberate override.
+
+See [references/rust-tool-config.md](references/rust-tool-config.md).
 
 ## Steps to sink a constraint
 
-1. **Identify** — which rule does the agent repeatedly violate?
-2. **Locate the level** — which of L3–L5 does this rule best fit?
-3. **Implement** — L3 configure a hook → L4 call a validation script → L5 add a lint / `#![forbid]` / trait bound.
+1. **Observe** — identify a real failure or repeatedly violated rule.
+2. **Name the invariant** — state what must remain true.
+3. **Choose the layer** — find the lowest practical L3-L7 enforcement point.
+4. **Choose evidence** — define what proves the invariant.
+5. **Implement one deterministic primitive** — keep it single-responsibility.
+6. **Mount it** — agent hook, Git hook, CI, or native tool as appropriate.
+7. **Fail actionable** — diagnostics must say where, why, and how to fix.
 
-## Index
+## Reference index
 
 | Topic | Reference |
 |---|---|
 | Why not just prompts | [references/why-not-prompts.md](references/why-not-prompts.md) |
-| The constraint ladder | [references/constraint-ladder.md](references/constraint-ladder.md) |
-| Checkpoints + script design | [references/harness-checkpoints.md](references/harness-checkpoints.md) |
-| What each tool can enforce | [references/tool-checkpoints.md](references/tool-checkpoints.md) |
+| Constraint ladder | [references/constraint-ladder.md](references/constraint-ladder.md) |
+| Checkpoints and evidence | [references/harness-checkpoints.md](references/harness-checkpoints.md) |
+| Tool enforcement map | [references/tool-checkpoints.md](references/tool-checkpoints.md) |
 | Command interception | [references/command-interception.md](references/command-interception.md) |
-| When to sink a constraint | [references/decision-guide.md](references/decision-guide.md) |
+| Decision guide | [references/decision-guide.md](references/decision-guide.md) |
 | Long-running correctness | [references/long-running-correctness.md](references/long-running-correctness.md) |
 | Claude Code hooks | [references/claude-code-hooks.md](references/claude-code-hooks.md) |
 | Codex hooks | [references/codex-hooks.md](references/codex-hooks.md) |
 | Git hooks | [references/git-hooks.md](references/git-hooks.md) |
-| Rust: format harness | [references/rust-fmt.md](references/rust-fmt.md) |
-| Rust: lint harness | [references/rust-lint.md](references/rust-lint.md) |
-| Rust: test harness | [references/rust-test.md](references/rust-test.md) |
-| Rust: recommended tool configs | [references/rust-tool-config.md](references/rust-tool-config.md) |
+| Rust format | [references/rust-fmt.md](references/rust-fmt.md) |
+| Rust lint | [references/rust-lint.md](references/rust-lint.md) |
+| Rust test | [references/rust-test.md](references/rust-test.md) |
+| Rust tool config | [references/rust-tool-config.md](references/rust-tool-config.md) |
 
-## Scripts
+## Shipped scripts
 
-All scripts live in `../../scripts/` and start with `narness-`. Rust gates keep the `narness-rust-*` name; the git hook machinery keeps `narness-git-*`.
+All plugin scripts live in `../../scripts/` and start with `narness-`.
 
 | Script | Purpose |
 |---|---|
-| `narness-rust-fmt.sh [DIR]` | format check: `cargo fmt --all -- --check` |
-| `narness-rust-check.sh [DIR]` | compile check: `cargo check` |
-| `narness-rust-clippy.sh [DIR] [--scope=changed\|full]` | lint check: `cargo clippy -D warnings` |
-| `narness-rust-test-unit.sh [DIR] [--scope=changed\|full] [--coverage]` | unit tests; `--coverage` = enforce ≥95% |
-| `narness-rust-test-integration.sh [DIR] [--scope=changed\|full] [--coverage]` | integration tests; `--coverage` = enforce ≥80% |
-| `narness-rust-test-e2e.sh [DIR]` | e2e scenarios, always full, no coverage |
-| `narness-rust-test.sh [DIR]` | full suite: `cargo test --workspace` |
-| `narness-rust-invariants.sh [DIR]` | invariants: ban unwrap/expect/panic!/unsafe without comment |
-| `narness-rust-test-discipline.sh [DIR]` | test discipline: a changed .rs must have a test |
-| `narness-rust-changed-packages.sh [DIR]` | helper: crates changed since last push (backs `--scope=changed`) |
-| `narness-git-commit-msg.sh <msg-file>` | commit-message format gate |
-| `narness-git-install.sh [REPO]` | install the three git hooks + `core.hooksPath` |
+| `narness-rust-fmt.sh [DIR]` | format check |
+| `narness-rust-check.sh [DIR]` | compile check |
+| `narness-rust-clippy.sh [DIR] [--scope=changed\|full]` | lint check |
+| `narness-rust-test-unit.sh [DIR] [--scope=changed\|full] [--coverage]` | unit evidence |
+| `narness-rust-test-integration.sh [DIR] [--scope=changed\|full] [--coverage]` | integration evidence |
+| `narness-rust-test-e2e.sh [DIR]` | full scenario evidence |
+| `narness-rust-invariants.sh [DIR]` | project invariants |
+| `narness-rust-test-discipline.sh [DIR]` | changed source has test evidence |
+| `narness-rust-changed-packages.sh [DIR]` | changed crate resolver |
+| `narness-git-commit-msg.sh <msg-file>` | commit-message gate |
+| `narness-git-install.sh [REPO]` | install Git lifecycle hooks |
 
-## Config templates
+## Anti-patterns
 
-Copyable per-tool config templates live in `../../config/` (rustfmt.toml, clippy.toml, deny.toml, nextest.toml, rust-toolchain.toml, strict-lints.rs, .editorconfig, pre-commit, CI). The map is in [references/rust-tool-config.md](references/rust-tool-config.md).
-
-## Common anti-patterns and their hard constraints
-
-| Anti-pattern | Hard constraint |
+| Anti-pattern | Better workspace mechanism |
 |---|---|
-| `unwrap()` everywhere | `clippy::unwrap_used` + `narness-rust-invariants.sh` |
-| bare `panic!` | `clippy::panic` + thiserror/anyhow |
-| forgetting tests | `narness-rust-test-discipline.sh` + hook |
-| format drift | `cargo fmt --all -- --check` gate |
-| "the agent will remember to format before committing" | pre-commit → `narness-rust-fmt.sh` |
-| pushing broken or untested code | pre-push → `narness-rust-test-unit.sh --scope=changed` |
-| treating a git hook as unbypassable | server-side `pre-receive` or CI |
+| "The agent will remember" | deterministic hook or gate |
+| Giant root instruction file | root router + scoped instructions + Skills |
+| Skill that contains every detail | progressive references |
+| CI-only validation logic | reusable executable primitive |
+| One god validation script | single-responsibility checkpoints |
+| Full suite after every edit | lifecycle-aware evidence |
+| Local hook treated as authority | server-side required CI |
+| Running many tests without rationale | change-surface evidence selection |

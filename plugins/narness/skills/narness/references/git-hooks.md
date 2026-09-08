@@ -83,7 +83,7 @@ Why `git rev-parse --show-toplevel`: git runs hooks from the top of the working 
 ### Dedicated e2e workflow — optional
 
 - `narness-rust-test-e2e.sh` (always full, no coverage) runs in its **own** workflow, not in the required CI gate.
-- Trigger on demand (`workflow_dispatch`), on a schedule (nightly), or on release — never as a merge blocker on every change. e2e is 补位: it covers the full-system scenarios unit/integration can't, and may be skipped when a change can't affect the running system.
+- Trigger on demand (`workflow_dispatch`), on a schedule (nightly), or on release — never as a merge blocker on every change. e2e is gap-filling: it covers the full-system scenarios unit/integration can't, and may be skipped when a change can't affect the running system.
 
 ## 6. Sharing hooks: core.hooksPath and the three config methods
 

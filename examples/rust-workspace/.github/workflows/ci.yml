@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: bash plugins/narness/scripts/narness-rust-fmt.sh
+
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: bash plugins/narness/scripts/narness-rust-check.sh
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: bash plugins/narness/scripts/narness-rust-test-unit.sh --scope=full
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: bash plugins/narness/scripts/narness-rust-test-integration.sh --scope=full
+
+  required:
+    name: required
+    if: always()
+    needs:
+      - format
+      - compile
+      - unit
+      - integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required evidence
+        env:
+          FORMAT: ${{ needs.format.result }}
+          COMPILE: ${{ needs.compile.result }}
+          UNIT: ${{ needs.unit.result }}
+          INTEGRATION: ${{ needs.integration.result }}
+        run: |
+          test "$FORMAT" = "success"
+          test "$COMPILE" = "success"
+          test "$UNIT" = "success"
+          test "$INTEGRATION" = "success"
