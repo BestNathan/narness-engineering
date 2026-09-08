@@ -33,6 +33,233 @@ It is:
 
 > At which layer should each invariant live so that it is visible enough to guide the agent and strong enough to be trusted?
 
+## Guide, Guard, Verify
+
+The constraint ladder describes **where** a rule can live. Narness also needs a second model describing **what role** that mechanism plays in agent behavior.
+
+The working model is:
+
+```text
+Guide
+  -> help the agent choose correctly
+
+Guard
+  -> prevent invalid actions or state transitions
+
+Verify
+  -> require evidence before trust or admission
+```
+
+These roles are complementary rather than mutually exclusive.
+
+A critical invariant may intentionally appear at several layers:
+
+```text
+AGENTS.md
+  -> explain the rule
+
+Skill
+  -> teach the correct procedure
+
+Hook / native rule
+  -> reject an invalid action
+
+Evidence gate
+  -> prove the resulting state is acceptable
+```
+
+### Guide: soft constraints and routing
+
+Guide mechanisms improve the probability that the agent chooses the right path before a hard failure is necessary.
+
+Typical mechanisms:
+
+- root and scoped instructions;
+- Skill routing and procedures;
+- architecture references;
+- Engineering Surface context;
+- examples;
+- warnings;
+- recommended commands.
+
+Guide is appropriate when:
+
+- judgment is genuinely required;
+- several valid implementation strategies exist;
+- the rule is explanatory rather than mechanically decidable;
+- the agent needs context before acting.
+
+Guide is not repository authority.
+
+A model can misunderstand, forget, truncate, or rationalize around guidance.
+
+Therefore:
+
+> Important correctness or safety invariants should not stop at Guide when a lower deterministic layer can express them.
+
+### Guard: action and transition enforcement
+
+A Guard acts at the point where an invalid action or state transition would occur.
+
+Examples:
+
+```text
+attempt destructive migration
+  -> require explicit approval
+
+write generated file manually
+  -> reject and route to generator
+
+push change with forbidden secret
+  -> reject
+
+modify protocol without synchronized schema
+  -> block lifecycle transition
+
+publish artifact outside protected release environment
+  -> deny
+```
+
+A Guard answers:
+
+> **May this action or transition happen?**
+
+Potential Guard locations include:
+
+- tool-call policy;
+- sandbox/filesystem policy;
+- agent hooks;
+- deterministic scripts;
+- compiler or type-system rules;
+- Git hooks;
+- repository permissions;
+- protected environments.
+
+Guards should be:
+
+- deterministic where practical;
+- close to the invalid action;
+- explicit about the violated invariant;
+- repair-oriented in their failure feedback;
+- narrow enough not to suppress legitimate exploration unnecessarily.
+
+### Verify: evidence-based admission
+
+Verify happens after or alongside the work and asks a different question:
+
+> **What evidence proves that the resulting state is acceptable?**
+
+Examples:
+
+```text
+protocol change
+  -> compatibility evidence
+
+UI change
+  -> visual / interaction evidence
+
+database change
+  -> migration + compatibility evidence
+
+runtime lifecycle change
+  -> regression + teardown evidence
+```
+
+Verify should depend on produced evidence, not agent self-report.
+
+The relevant architecture is:
+
+```text
+ChangeSet
+  -> Affected Surfaces
+  -> Evidence Obligations
+  -> Evidence Producers
+  -> Evidence Records
+  -> Gate
+```
+
+### Why all three are needed
+
+Guide alone is probabilistic.
+
+Guard alone can prevent known invalid actions but cannot prove that the final behavior is correct.
+
+Verify alone detects problems late and can make the repair loop unnecessarily expensive.
+
+Together:
+
+```text
+Guide
+  reduces wrong paths
+
+Guard
+  blocks prohibited paths
+
+Verify
+  proves accepted outcomes
+```
+
+This can also be viewed as:
+
+```text
+Before action  -> Guide
+At boundary    -> Guard
+Before trust   -> Verify
+```
+
+### Sinking an invariant through the roles
+
+A useful design exercise is to take one important invariant and ask how far it should sink.
+
+Example:
+
+```text
+Invariant:
+  public protocol changes must remain client-compatible
+
+Guide:
+  AGENTS explains compatibility policy
+  protocol Skill explains the change workflow
+
+Guard:
+  schema generation cannot be bypassed
+  incompatible schema form is rejected mechanically
+
+Verify:
+  cross-client contract evidence is mandatory before push / merge
+```
+
+The goal is not to duplicate every rule everywhere.
+
+The goal is to ensure that high-value invariants have the appropriate combination of explanation, enforcement, and proof.
+
+### Failure semantics
+
+Guide, Guard, and Verify should fail differently.
+
+```text
+Guide failure
+  -> agent chose a weak path
+  -> provide better context / procedure
+
+Guard failure
+  -> action is rejected
+  -> explain the violated boundary and allowed repair
+
+Verify failure
+  -> state cannot advance
+  -> report missing / failed / stale evidence
+```
+
+This distinction is important for observability because "the agent failed" is too coarse. Narness should eventually be able to identify whether the failure was:
+
+- context/routing;
+- prohibited action;
+- missing proof;
+- failed proof;
+- stale proof;
+- repository authority rejection.
+
 ## Major areas
 
 ### Instructions
