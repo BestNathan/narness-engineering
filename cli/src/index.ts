@@ -1,11 +1,38 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readFileSync, existsSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { accessSync, constants, readFileSync, existsSync } from "node:fs";
+import { delimiter, dirname, isAbsolute, join, resolve } from "node:path";
 import { findConfig, loadConfig } from "./config.js";
 import { runChecks } from "./engine.js";
 import { reportHuman, reportJson } from "./report.js";
 import type { Context } from "./checks/check.js";
+
+function commandExists(cmd: string): boolean {
+  const executable = process.platform === "win32" ? constants.F_OK : constants.X_OK;
+
+  const canExecute = (candidate: string) => {
+    try {
+      accessSync(candidate, executable);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (isAbsolute(cmd) || cmd.includes("/") || cmd.includes("\\")) {
+    return canExecute(cmd);
+  }
+
+  const pathEntries = (process.env.PATH ?? "").split(delimiter).filter(Boolean);
+  const extensions =
+    process.platform === "win32"
+      ? (process.env.PATHEXT ?? ".EXE;.CMD;.BAT;.COM").split(";").filter(Boolean)
+      : [""];
+
+  return pathEntries.some((entry) =>
+    extensions.some((extension) => canExecute(join(entry, cmd + extension))),
+  );
+}
 
 function realContext(cwd: string): Context {
   return {
@@ -20,12 +47,7 @@ function realContext(cwd: string): Context {
       }
     },
     which(cmd) {
-      try {
-        execFileSync("command", ["-v", cmd], { stdio: "ignore" });
-        return true;
-      } catch {
-        return false;
-      }
+      return commandExists(cmd);
     },
     readMcpServers() {
       let dir = cwd;
