@@ -509,6 +509,25 @@ Tests named and grouped by the behavior they prove, not only by package location
 
 Repository knowledge represented in formats that can be consumed without full prose parsing.
 
+### Generational source architecture
+
+A new research branch explores whether AI-authored behavior should evolve as immutable semantic generations over a stable Runtime Kernel instead of being repeatedly mutated in place.
+
+The working split is:
+
+```text
+Generational Units
+  evolving behavior / policy / externally meaningful operations
+        ↓ depend on / compose
+
+Runtime Kernel
+  stable transport / storage / scheduling / execution mechanisms
+```
+
+Contract versions, implementation generations, and persistence schema versions remain separate axes. Historical generations are repository memory, not automatically executable code.
+
+See [Generational Source Architecture](design/generational-source-architecture.md) for the working model, Unit-vs-Kernel boundary, lineage model, runtime observability implications, risks, and prototype questions.
+
 ## 18. Anti-patterns
 
 ### Giant root instruction files
