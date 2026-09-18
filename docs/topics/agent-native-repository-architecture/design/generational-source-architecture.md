@@ -141,6 +141,12 @@ unit://api.workspace.list
 
 A Unit should represent behavior that can be understood, changed, validated, and evolved as one semantic concern.
 
+A stronger working definition is:
+
+> **A Unit is a Provider whose consumer-visible semantics form an independently evolvable contract.**
+
+This reframes "external" as a relationship, not a process boundary. An HTTP operation, a layout provider, a scheduling policy, a context selector, or a protocol method can all be Providers when some Consumer relies on their semantics.
+
 Conceptually:
 
 ```text
@@ -258,6 +264,208 @@ Some externally reachable mechanisms are stable enough to remain Kernel infrastr
 The deeper distinction is:
 
 > **Does this code express evolving semantic behavior, or does it provide a stable mechanism used by many behaviors?**
+
+## 5.1 Provider / Consumer as the semantic boundary
+
+The Provider / Consumer relationship is a more fundamental test than "public API" or "external process."
+
+If something is consumed, some Provider supplies the semantics being consumed.
+
+```text
+Consumer
+   ↓ depends on
+Contract
+   ↓ provided by
+Provider
+```
+
+A process boundary is not required.
+
+Examples:
+
+```text
+API consumer
+  -> session.attach contract
+  -> session.attach Provider
+
+Terminal surface
+  -> workspace.layout contract
+  -> workspace.layout Provider
+
+Agent loop
+  -> tool-routing contract
+  -> agent.tool-routing Provider
+
+Scheduler runtime
+  -> scheduling-policy contract
+  -> scheduler.policy Provider
+```
+
+This means a front-end layout can be as legitimate a Provider as an HTTP API.
+
+A layout may provide stable semantics such as:
+
+```text
+regions
+slots
+placement
+visibility rules
+responsive behavior
+composition constraints
+```
+
+Its implementations can then evolve independently:
+
+```text
+provider://workspace.layout
+
+contract v1
+  ├── g0001 fixed toolbar layout
+  ├── g0002 contextual capability layout
+  └── g0003 adaptive contextual layout
+```
+
+The important rule is:
+
+> **"External" is relative to a Consumer, not relative to a process.**
+
+A Provider becomes a strong Unit candidate when its Consumer-visible semantics need an independent evolution history.
+
+### Consumer dependency law
+
+Consumers should depend on Contracts, never on concrete Generations.
+
+Avoid:
+
+```text
+terminal
+  -> workspace.layout@g0008
+```
+
+Prefer:
+
+```text
+terminal
+  -> workspace.layout/v1
+  -> Provider Resolver
+  -> workspace.layout@g0008
+```
+
+Generation identity belongs to Provider evolution and composition. It should not leak into ordinary Consumer dependencies.
+
+This yields a general dependency law:
+
+> **Consumer -> Contract -> Provider -> Generation**
+
+A Unit may itself be both Consumer and Provider.
+
+For example:
+
+```text
+session.attach Unit
+
+consumes:
+  stream contract
+  session-store contract
+  clock contract
+
+provides:
+  session.attach contract
+```
+
+That makes the semantic graph richer than a normal import graph:
+
+```text
+import graph:
+  file A -> module B
+
+semantic graph:
+  Consumer -> Contract -> Provider
+```
+
+The semantic graph is a stronger basis for context routing, compatibility analysis, change impact, and evidence planning.
+
+### Unit-to-Unit dependency
+
+One Unit Generation should not depend directly on another Unit Generation.
+
+Avoid:
+
+```text
+session.attach@g0043
+  -> session.resolve@g0021
+```
+
+Prefer:
+
+```text
+session.attach@g0043
+  -> session.resolve/v1
+  -> Provider Resolver
+  -> session.resolve@g0021
+```
+
+The Composition Root or release manifest resolves Contract identities to concrete Generations.
+
+This keeps succession local to the Provider and prevents generation coupling from spreading through the repository.
+
+### Provider role and evolution model are orthogonal
+
+Provider / Consumer role alone does not decide Unit versus Kernel because the Kernel is also a Provider.
+
+A better model uses two dimensions:
+
+| Semantic role | Generational evolution | Convergent evolution |
+|---|---|---|
+| Provider | Unit | Kernel Capability |
+| Consumer | Consumes Contract | Consumes Contract |
+
+A **Generational Provider** evolves by succession:
+
+```text
+Provider
+  ├── g1
+  ├── g2
+  └── g3
+```
+
+Its goals are compatibility, rollback, coexistence, and semantic traceability.
+
+A **Convergent Provider** evolves toward one current implementation:
+
+```text
+Provider
+  -> current implementation
+  -> repaired / improved in place
+```
+
+Its goals are global fix propagation, shared correctness, and minimal duplication.
+
+This gives a sharper distinction:
+
+> **Unit evolves by succession. Kernel evolves by convergence.**
+
+For example:
+
+```text
+session.attach          -> Generational Provider -> Unit
+workspace.layout        -> Generational Provider -> Unit
+scheduler.policy        -> Generational Provider -> Unit
+
+transport.stream        -> Convergent Provider   -> Kernel Capability
+database.transaction    -> Convergent Provider   -> Kernel Capability
+ui.popover              -> Convergent Provider   -> UI Kernel Capability
+```
+
+A useful architectural interpretation is:
+
+```text
+semantic evolution boundary
+  -> Unit
+
+shared correctness boundary
+  -> Kernel
+```
 
 ## 6. A practical Unit vs Kernel decision model
 
@@ -1200,19 +1408,25 @@ A useful prototype should answer:
 The current working principles are:
 
 1. **Repository is memory.**
-2. **Semantic Unit is the evolution boundary.**
-3. **Published generations are immutable.**
-4. **Change by succession, not mutation.**
-5. **Contract version and implementation generation are separate.**
-6. **Persistence schema is an independent evolution axis.**
-7. **Unit carries behavior; Kernel carries mechanism.**
-8. **Unit depends on Kernel; Kernel does not depend on Unit.**
-9. **Reuse infrastructure; version behavior.**
-10. **Memory is not executability.**
-11. **Historical generations are deferred context.**
-12. **Runtime events should be source-addressable by Unit and generation.**
-13. **Evidence should be local enough to validate a successor before activation.**
-14. **Generation should reduce ambiguity, not become a new source of ceremony.**
+2. **Every meaningful consumed semantic has a Provider.**
+3. **Every meaningful Provider exposes a Contract.**
+4. **Consumers depend on Contracts, never concrete Generations.**
+5. **A Provider whose semantics evolve independently becomes a Unit.**
+6. **Semantic Unit is the evolution boundary.**
+7. **Published generations are immutable.**
+8. **Change by succession, not mutation.**
+9. **Contract version and implementation generation are separate.**
+10. **Persistence schema is an independent evolution axis.**
+11. **Unit carries behavior; Kernel carries mechanism.**
+12. **Unit evolves by succession; Kernel evolves by convergence.**
+13. **Unit Generations may consume other Unit Contracts, not concrete Unit Generations.**
+14. **Unit depends on Kernel capabilities; Kernel does not depend on Unit Generations.**
+15. **Reuse infrastructure; version behavior.**
+16. **Memory is not executability.**
+17. **Historical generations are deferred context.**
+18. **Runtime events should be source-addressable by Provider, Contract, Unit, and Generation where applicable.**
+19. **Evidence should be local enough to validate a successor before activation.**
+20. **Generation should reduce ambiguity, not become a new source of ceremony.**
 
 ## 30. Open questions
 
@@ -1222,7 +1436,7 @@ The current working principles are:
 - When is a contract change required versus only a new generation?
 - How should Kernel compatibility be recorded for historical reproducibility?
 - How many supported generations should remain executable?
-- Should a Unit be able to depend directly on another Unit generation, or only on stable Unit contracts?
+- How should Contract resolution and dependency injection remain explicit without making composition metadata too expensive?
 - How should cyclic Unit dependencies be prevented?
 - How should cross-Unit transactions work without collapsing Units back into one mutable implementation?
 - How should generation garbage collection work while preserving repository memory?
@@ -1255,11 +1469,15 @@ Repository as memory
         +
 semantic context routing
         +
+Provider / Consumer graph
+        +
+stable Contracts
+        +
 stable invariants
         +
-generational behavior Units
+generational Provider Units
         +
-stable Runtime Kernel
+convergent Runtime Kernel Providers
         +
 evidence-driven activation
 ```
