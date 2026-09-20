@@ -528,6 +528,19 @@ Contract versions, implementation generations, and persistence schema versions r
 
 See [Generational Source Architecture](design/generational-source-architecture.md) for the working model, Unit-vs-Kernel boundary, lineage model, runtime observability implications, risks, and prototype questions.
 
+
+### AI-native code shape and empirical validation
+
+A second research branch asks a more operational question:
+
+> What kind of codebase lets an AI agent add and modify software with less search, less ambiguity, less context, fewer retries, and more reliable verification?
+
+The working model emphasizes stable semantic addresses, one canonical owner per concept, behavioral locality, explicit dependencies, executable invariants, repository indexes, unit-oriented operations, and change-plus-evidence as the completion object.
+
+Crucially, this branch is not intended to graduate on intuition. It defines a controlled A/B/C experiment comparing a baseline repository, a semantic-index treatment, and an agent-native structural treatment using the same model and task set. The experiment must record the full process and end with an explicit supported / partially supported / not supported / inconclusive conclusion for each hypothesis.
+
+See [AI-Native Codebase: Code Shape, Retrieval, and Productivity Experiment](research/ai-native-codebase-and-productivity-experiment.md).
+
 ## 18. Anti-patterns
 
 ### Giant root instruction files
