@@ -110,6 +110,38 @@ They MUST NOT be merged into `staging` as part of normal feature delivery.
 
 Any conclusion that later graduates into Nession or Narness requires a separate design decision and a normal implementation change.
 
+## Task fixture layer
+
+Pilot 0 showed that a benchmark task is invalid if the frozen treatment base already satisfies the requested behavior.
+
+Formal runs therefore use:
+
+```text
+Treatment base
+    ↓
+Task fixture / controlled mutation
+    ↓
+Fresh agent session
+    ↓
+Task execution
+    ↓
+Acceptance evidence
+```
+
+Each formal task must carry a fixture manifest proving that the requested change is absent before the run.
+
+For bug tasks, the fixture introduces a controlled observable defect.
+
+For feature tasks, the fixture may be the unmodified treatment base, but pre-run evidence must prove that the requested capability is absent.
+
+For refactors, the fixture is normally unchanged code plus a structural acceptance predicate.
+
+For verification tasks, the fixture must prove the requested evidence/invariant test is absent before the run.
+
+Treatment A/B fixture patches may be physically identical where the implementation topology is identical. Treatment C may require a semantically equivalent mutation because its physical code shape can differ.
+
+Pilot runs are not admissible in the final A/B/C comparison. See [Pilot 0](pilot-0.md).
+
 ## Controlled variables
 
 For every comparable run keep fixed:
