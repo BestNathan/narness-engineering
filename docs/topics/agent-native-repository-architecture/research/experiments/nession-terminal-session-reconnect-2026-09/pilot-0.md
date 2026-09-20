@@ -86,9 +86,12 @@ The first workflow run is:
 ```text
 AI Native Research Validation
 run: 35524635219
+status: success
+started: 2026-09-20T17:03:18Z
+completed: 2026-09-20T17:05:32Z
 ```
 
-This validates the task branch with:
+The run completed successfully and validates the task branch with:
 
 ```text
 npm ci
