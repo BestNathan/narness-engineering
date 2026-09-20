@@ -6,7 +6,15 @@
 >
 > Gold ownership and likely affected artifacts are stored separately under `gold/` and must not be supplied to the coding agent.
 
-The first experiment uses 24 independent tasks across the terminal/session reconnect slice.
+The first experiment uses 24 independent task intents across the terminal/session reconnect slice.
+
+## Benchmark status
+
+These 24 task intents remain the candidate task pool, but they are **not yet formal benchmark instances**.
+
+Pilot 0 found that several bug intents are already satisfied by the frozen source. Before a task becomes admissible for A/B/C comparison it must have a task fixture manifest that makes the requested condition observably absent or broken.
+
+See [Pilot 0](../pilot-0.md) and the experiment protocol's task-fixture layer.
 
 ## Bug-fix tasks
 
