@@ -1119,6 +1119,19 @@ The present conclusion is only methodological:
 
 > **"Repository architecture is part of the agent harness" is a testable hypothesis, not a design truth. Narness should build the experiment, collect evidence, and let the measured coding process decide which agent-native repository ideas graduate into architecture.**
 
+## Active experiment
+
+The first concrete experiment is now frozen against Nession:
+
+- [Nession Terminal / Session Reconnect Experiment Protocol](experiments/nession-terminal-session-reconnect-2026-09/protocol.md)
+- [Frozen Task Set](experiments/nession-terminal-session-reconnect-2026-09/tasks/README.md)
+- [Hidden Semantic Gold Set](experiments/nession-terminal-session-reconnect-2026-09/gold/README.md)
+- [Runs](experiments/nession-terminal-session-reconnect-2026-09/runs/README.md)
+- [Results](experiments/nession-terminal-session-reconnect-2026-09/results.md)
+- [Conclusion](experiments/nession-terminal-session-reconnect-2026-09/conclusion.md)
+
+The Nession source snapshot is pinned at `0dc28d5e768f3a0421cb17ebc2a88f0e6a84d664`. Three isolated research branches represent baseline, semantic-index, and agent-native-structure treatments.
+
 ## Related work
 
 - [Agent-Native Repository Architecture](../README.md)
