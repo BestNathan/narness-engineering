@@ -51,17 +51,49 @@ def unwrap_shell(command: str) -> str:
     return command
 
 
-def first_simple_command(command: str) -> tuple[str | None, list[str]]:
+def simple_segments(command: str) -> list[tuple[str, list[str], str]]:
+    """Return (tool, args, cwd_prefix) tuples for simple shell segments.
+
+    This is intentionally conservative. It recognizes leading `cd dir && ...`
+    so navigation inside `web/` is still scored against repository-relative
+    paths, but it does not attempt to implement a shell parser.
+    """
     inner = unwrap_shell(command)
-    # Classification only: use the first shell segment and avoid executing/parsing shell grammar.
-    segment = re.split(r"\s*(?:&&|\|\||;|\|)\s*", inner, maxsplit=1)[0]
-    try:
-        parts = shlex.split(segment)
-    except ValueError:
-        return None, []
-    if not parts:
-        return None, []
-    return Path(parts[0]).name, parts[1:]
+    raw_segments = re.split(r"\s*(?:&&|\|\||;|\|)\s*", inner)
+    cwd_prefix = ""
+    out: list[tuple[str, list[str], str]] = []
+    for segment in raw_segments:
+        try:
+            parts = shlex.split(segment)
+        except ValueError:
+            continue
+        if not parts:
+            continue
+        tool = Path(parts[0]).name
+        args = parts[1:]
+        if tool == "cd" and args:
+            target = args[0]
+            if target == "-":
+                continue
+            if target.startswith("/"):
+                cwd_prefix = target
+            else:
+                cwd_prefix = str(Path(cwd_prefix) / target) if cwd_prefix else target
+            continue
+        out.append((tool, args, cwd_prefix))
+    return out
+
+
+def normalize_repo_path(path: str, cwd_prefix: str) -> str:
+    if path.startswith("/") or path.startswith("~"):
+        try:
+            worktree = Path.cwd().resolve()
+            resolved = Path(path).expanduser().resolve()
+            return str(resolved.relative_to(worktree))
+        except (ValueError, OSError):
+            return path
+    combined = Path(cwd_prefix) / path if cwd_prefix else Path(path)
+    return combined.as_posix().lstrip("./")
 
 
 def non_option_args(args: Iterable[str]) -> list[str]:
@@ -81,20 +113,42 @@ def non_option_args(args: Iterable[str]) -> list[str]:
 
 
 def infer_read_paths(command: str) -> list[str]:
-    tool, args = first_simple_command(command)
-    if not tool:
-        return []
-    if tool in READ_TOOLS:
-        return non_option_args(args)
-    if tool == "sed":
-        vals = non_option_args(args)
-        # sed's first non-option is normally the script; remaining values are files.
-        return vals[1:] if len(vals) > 1 else []
-    if tool == "git" and len(args) >= 2 and args[0] == "show":
-        candidate = args[-1]
-        if ":" in candidate and not candidate.startswith(":"):
-            return [candidate.split(":", 1)[1]]
-    return []
+    paths: list[str] = []
+    for tool, args, cwd_prefix in simple_segments(command):
+        if tool in READ_TOOLS:
+            for value in non_option_args(args):
+                paths.append(normalize_repo_path(value, cwd_prefix))
+            continue
+
+        if tool == "sed":
+            # Common forms:
+            #   sed -n '1,120p' file
+            #   sed -e 's/x/y/' file
+            script_seen = False
+            skip_script_arg = False
+            for value in args:
+                if skip_script_arg:
+                    skip_script_arg = False
+                    script_seen = True
+                    continue
+                if value in {"-n", "-E", "-r"}:
+                    continue
+                if value in {"-e", "--expression"}:
+                    skip_script_arg = True
+                    continue
+                if value.startswith("-"):
+                    continue
+                if not script_seen:
+                    script_seen = True
+                    continue
+                paths.append(normalize_repo_path(value, cwd_prefix))
+            continue
+
+        if tool == "git" and len(args) >= 2 and args[0] == "show":
+            candidate = args[-1]
+            if ":" in candidate and not candidate.startswith(":"):
+                paths.append(candidate.split(":", 1)[1].lstrip("./"))
+    return sorted(set(paths))
 
 
 def classify_command(command: str) -> str | None:
@@ -104,19 +158,19 @@ def classify_command(command: str) -> str | None:
     if any(re.search(pattern, inner) for pattern in VALIDATION_PATTERNS):
         return "validation"
 
-    tool, args = first_simple_command(command)
-    if tool in SEARCH_TOOLS:
-        if tool == "rg" and "--files" in args:
+    for tool, args, _ in simple_segments(command):
+        if tool in SEARCH_TOOLS:
+            if tool == "rg" and "--files" in args:
+                return "glob"
+            return "search"
+        if tool in GLOB_TOOLS:
             return "glob"
-        return "search"
-    if tool in GLOB_TOOLS:
-        return "glob"
-    if tool == "git" and args and args[0] in {"grep"}:
-        return "search"
-    if tool == "git" and args and args[0] in {"ls-files"}:
-        return "glob"
-    if tool == "ls":
-        return "glob"
+        if tool == "git" and args and args[0] == "grep":
+            return "search"
+        if tool == "git" and args and args[0] == "ls-files":
+            return "glob"
+        if tool == "ls":
+            return "glob"
     return None
 
 
@@ -222,6 +276,11 @@ def main() -> int:
     ap.add_argument("--effort", default=os.environ.get("NARNESS_CODEX_EFFORT", "high"))
     ap.add_argument("--codex-bin", default=os.environ.get("NARNESS_CODEX_BIN", "codex"))
     ap.add_argument("--network", action="store_true")
+    ap.add_argument(
+        "--replay-jsonl",
+        type=Path,
+        help="Translate an existing Codex JSONL stream instead of launching Codex.",
+    )
     args = ap.parse_args()
 
     run_dir = Path(os.environ["NARNESS_RUN_DIR"]).resolve()
@@ -234,6 +293,31 @@ def main() -> int:
     trace.parent.mkdir(parents=True, exist_ok=True)
     trace.write_text("", encoding="utf-8")
     raw.write_text("", encoding="utf-8")
+
+    origin = time.monotonic()
+
+    if args.replay_jsonl:
+        append_jsonl(
+            trace,
+            {
+                "type": "agent-config",
+                "ts_ms": 0,
+                "agent": "codex-cli-replay",
+                "model": args.model,
+                "reasoning_effort": args.effort,
+                "network": args.network,
+            },
+        )
+        for line in args.replay_jsonl.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            with raw.open("a", encoding="utf-8") as raw_fh:
+                raw_fh.write(line + "\n")
+            event = json.loads(line)
+            if isinstance(event, dict):
+                process_codex_event(event, trace, origin)
+        append_jsonl(trace, {"type": "agent-exit", "ts_ms": now_ms(origin), "exit_code": 0})
+        return 0
 
     cmd = [
         args.codex_bin,
@@ -257,7 +341,6 @@ def main() -> int:
         cmd.extend(["--config", "sandbox_workspace_write.network_access=false"])
     cmd.append(prompt)
 
-    origin = time.monotonic()
     append_jsonl(
         trace,
         {
