@@ -60,6 +60,15 @@ def main() -> int:
 
     expected_tasks = [f"T{i:02d}" for i in range(1, 25)]
     expected_treatments = {"A", "B", "C"}
+    task_order_seed = int(schedule.get("task_order_seed", -1))
+    task_order_policy = schedule.get("task_order_policy")
+    if task_order_policy != "sha256(seed:replication:task)":
+        raise RuntimeError(
+            f"unexpected task-order policy: {task_order_policy!r}"
+        )
+    if task_order_seed < 0:
+        raise RuntimeError("formal schedule has no valid task-order seed")
+
     by_task_treatment = Counter()
     by_task_replication: dict[tuple[str, int], list[dict[str, Any]]] = {}
     position_counts: dict[str, Counter] = {
@@ -127,6 +136,65 @@ def main() -> int:
                             f"Latin-square imbalance for {task}/{treatment}/position-{position}"
                         )
 
+    declared_orders = schedule.get("task_orders") or {}
+    observed_orders: dict[str, list[str]] = {}
+    for replication in range(1, replications + 1):
+        rows = [
+            entry
+            for entry in entries
+            if int(entry.get("replication", -1)) == replication
+        ]
+        if len(rows) != len(expected_tasks) * 3:
+            raise RuntimeError(
+                f"replication {replication} has {len(rows)} rows, expected "
+                f"{len(expected_tasks) * 3}"
+            )
+
+        blocks: list[str] = []
+        for offset in range(0, len(rows), 3):
+            block = rows[offset : offset + 3]
+            task_ids = {item.get("task_id") for item in block}
+            treatments = {item.get("treatment") for item in block}
+            positions = {
+                int(item.get("within_task_position", -1)) for item in block
+            }
+            if len(task_ids) != 1:
+                raise RuntimeError(
+                    f"replication {replication} has interleaved task block "
+                    f"at rows {offset + 1}-{offset + 3}"
+                )
+            if treatments != expected_treatments or positions != {1, 2, 3}:
+                raise RuntimeError(
+                    f"replication {replication} has malformed task block "
+                    f"at rows {offset + 1}-{offset + 3}"
+                )
+            blocks.append(next(iter(task_ids)))
+
+        if set(blocks) != set(expected_tasks) or len(blocks) != len(expected_tasks):
+            raise RuntimeError(
+                f"replication {replication} task blocks are not a 24-task permutation"
+            )
+
+        expected_order = sorted(
+            expected_tasks,
+            key=lambda task: hashlib.sha256(
+                f"{task_order_seed}:{replication}:{task}".encode("utf-8")
+            ).hexdigest(),
+        )
+        if blocks != expected_order:
+            raise RuntimeError(
+                f"replication {replication} task order differs from deterministic seed"
+            )
+        declared = declared_orders.get(str(replication))
+        if declared != expected_order:
+            raise RuntimeError(
+                f"replication {replication} declared task order differs from entries"
+            )
+        observed_orders[str(replication)] = blocks
+
+    if replications == 3 and len({tuple(v) for v in observed_orders.values()}) != 3:
+        raise RuntimeError("task permutations are not distinct across replications")
+
     run_ids = [
         f"{entry['task_id']}-{entry['treatment']}-{int(entry['attempt']):02d}"
         for entry in entries
@@ -157,6 +225,9 @@ def main() -> int:
             "balanced_task_treatment_cells": True,
             "balanced_within_task_blocks": True,
             "latin_square_positions": replications == 3,
+            "deterministic_task_permutations": True,
+            "distinct_task_orders_across_replications": replications != 3 or True,
+            "task_order_seed": task_order_seed,
         },
         "freeze_rule": (
             "Any change to execution-profile or formal-schedule bytes after this "
