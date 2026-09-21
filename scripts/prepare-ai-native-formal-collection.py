@@ -259,7 +259,6 @@ def main() -> int:
         "schedule_sha256": sha256_file(schedule_path),
         "scheduled_run_count": int(schedule["run_count"]),
         "narness_repository_sha": head,
-        "nession_source_checkout_sha": source_head,
         "environment": env,
         "codex_version": codex_version,
         "tooling": current_tooling,
@@ -284,6 +283,14 @@ def main() -> int:
         "status": "frozen-at-first-formal-run",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "critical": critical,
+        "observed": {
+            "nession_source_checkout_sha_at_start": source_head,
+            "note": (
+                "The source checkout HEAD is not a causal input. Formal worktrees "
+                "are detached at frozen Treatment A/B/C SHAs, so resume validity "
+                "depends on those objects remaining available, not on source HEAD."
+            ),
+        },
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
