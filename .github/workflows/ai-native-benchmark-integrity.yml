@@ -111,7 +111,7 @@ jobs:
             'schema_version':1,
             'experiment_id':'nession-terminal-session-reconnect-2026-09',
             'benchmark_revision':1,
-            'analysis_revision':1,
+            'analysis_revision':2,
             'hypotheses':{
               key:{'classification':'Inconclusive','rationale':'synthetic CI rationale'}
               for key in ('H1','H2','H3','H4','H5')
