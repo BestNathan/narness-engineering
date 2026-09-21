@@ -24,6 +24,9 @@ jobs:
         run: |
           python -m py_compile             scripts/ai-native-repo-experiment.py             scripts/score-ai-native-run.py             scripts/validate-ai-native-benchmark.py
 
+      - name: Run isolated runner/scorer selftest
+        run: python scripts/selftest-ai-native-runner.py
+
       - name: Validate pilot shell syntax
         run: bash -n scripts/run-ai-native-codex-pilots.sh
 
