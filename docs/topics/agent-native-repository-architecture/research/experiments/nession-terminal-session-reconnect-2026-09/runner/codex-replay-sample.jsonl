@@ -1,5 +1,6 @@
 {"type":"thread.started","thread_id":"pilot-replay"}
 {"type":"turn.started"}
+{"type":"item.completed","item":{"id":"cmd0","type":"command_execution","command":"bash -lc \"node .ai-native/resolve.mjs 'terminal reconnect'\"","exit_code":0,"status":"completed"}}
 {"type":"item.completed","item":{"id":"cmd1","type":"command_execution","command":"bash -lc \"cd web && rg 'reconnect' src/platform\"","exit_code":0,"status":"completed"}}
 {"type":"item.completed","item":{"id":"cmd2","type":"command_execution","command":"bash -lc \"cd web && sed -n '1,120p' src/platform/socket/WebSocketService.ts\"","exit_code":0,"status":"completed"}}
 {"type":"item.completed","item":{"id":"edit1","type":"file_change","changes":[{"path":"web/src/platform/socket/WebSocketService.ts","kind":"update"}],"status":"completed"}}
