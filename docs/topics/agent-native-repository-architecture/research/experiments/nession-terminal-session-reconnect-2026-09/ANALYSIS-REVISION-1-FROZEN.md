@@ -1,6 +1,6 @@
-# Analysis Revision 1 — Frozen
+# Analysis Revision 1 — Superseded Before Formal Collection
 
-Formal outcome data has not been collected yet. The interpretation plan is now frozen before reportable runs.
+Formal outcome data had not been collected when this revision was frozen. It was superseded by analysis revision 2 before any reportable formal run because the paired-effects implementation did not include every metric declared by the pre-registered plan.
 
 ```text
 analysis revision:      1
@@ -37,3 +37,11 @@ Numeric repetitions use the median. Boolean outcomes use the task-level success 
 Changing primary metrics, task strata, practical-effect thresholds, paired reduction rules, bootstrap procedure, treatment attribution rules, or the paired-effects implementation creates analysis revision 2.
 
 Presentation tooling may evolve without changing the analysis revision. The report generator therefore consumes, but does not redefine, the frozen analysis artifacts.
+
+## Supersession
+
+Revision 1 remains as an audit artifact. No reportable result was analyzed under it.
+
+The discovered implementation gap included `important_artifacts_missed_count`, which is a primary H2 metric, plus several pre-registered secondary metrics.
+
+Analysis revision 2 fixes the implementation without changing the underlying hypotheses, thresholds, treatment contrasts, task strata, or outcome data.
