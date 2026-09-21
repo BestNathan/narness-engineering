@@ -160,10 +160,16 @@ def main() -> int:
                         task_oracle = data.get("oracle")
                         if task_oracle:
                             for item in task_oracle.get("files", []):
-                                parent = (wt / item["destination"]).parent
+                                destination = wt / item["destination"]
+                                parent = destination.parent
                                 require(
                                     parent.exists(),
                                     f"{task_id}/{treatment}: oracle destination parent missing: {parent.relative_to(wt)}",
+                                    errors,
+                                )
+                                require(
+                                    not destination.exists(),
+                                    f"{task_id}/{treatment}: hidden oracle destination already exists: {item['destination']}",
                                     errors,
                                 )
 
