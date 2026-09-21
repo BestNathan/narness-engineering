@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "execution_prepilot_revision": 2,
+  "execution_prepilot_revision": 3,
   "status": "frozen-before-real-pilots",
-  "branch": "research/ai-native-execution-prepilot-r2",
-  "repository_sha": "6072a096e2ea8899930056d876c4b4679421c9b3",
+  "branch": "research/ai-native-execution-prepilot-r3",
+  "repository_sha": "1519adcb31bc66d5741e4cd0e67e54c79b19eef1",
   "benchmark_revision": 2,
   "benchmark_definition_sha": "194bf5dc1a28f4e4c10491d7326891ba157d325b",
   "analysis_revision": 2,
@@ -29,15 +29,15 @@
     }
   ],
   "integrity": {
-    "benchmark_workflow_run_id": 35628400123,
+    "benchmark_workflow_run_id": 35629539218,
     "benchmark_workflow_conclusion": "success",
-    "general_ci_run_id": 35628400116,
+    "general_ci_run_id": 35629539165,
     "general_ci_conclusion": "success"
   },
   "supersedes": {
-    "execution_prepilot_revision": 1,
-    "repository_sha": "b6a71b25efac50bb11c8363cc908c1b7f42ab236",
-    "reason": "Stored Codex auth verification, secret-free pilot environment, and trusted self-hosted execution path were added before any real pilot."
+    "execution_prepilot_revision": 2,
+    "repository_sha": "6072a096e2ea8899930056d876c4b4679421c9b3",
+    "reason": "Codex execution isolation was strengthened before any real pilot: custom workspace-only permissions deny filesystem root and temp roots outside the workspace, shell-command environment is allowlisted, and the self-hosted workflow is pinned to Revision 3."
   },
-  "promotion_rule": "A pilot handoff is promotable only if all three pilot run records and the generated execution profile identify repository_sha 6072a096e2ea8899930056d876c4b4679421c9b3 and the profile/schedule/formal-plan identities agree."
+  "promotion_rule": "A pilot handoff is promotable only if all three pilot run records and the generated execution profile identify repository_sha 1519adcb31bc66d5741e4cd0e67e54c79b19eef1, the profile records the narness-research permission profile with workspace-only filesystem scope, and the profile/schedule/formal-plan identities agree."
 }
