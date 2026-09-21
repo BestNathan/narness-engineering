@@ -80,6 +80,7 @@ def main() -> int:
     ap.add_argument("--results-dir", required=True, type=Path)
     ap.add_argument("--output", required=True, type=Path)
     ap.add_argument("--experiment-root", type=Path, default=DEFAULT_EXPERIMENT)
+    ap.add_argument("--conclusions", type=Path)
     args = ap.parse_args()
 
     experiment = args.experiment_root.resolve()
@@ -92,6 +93,7 @@ def main() -> int:
     effects = load(results / "paired-effects.json")
     failure_path = results / "failure-summary.json"
     failures = load(failure_path) if failure_path.exists() else None
+    conclusions = load(args.conclusions.resolve()) if args.conclusions else None
 
     total_runs = sum(int(summary.get(t, {}).get("n", 0) or 0) for t in ("A", "B", "C"))
 
@@ -199,7 +201,11 @@ def main() -> int:
             f"{contrast}:{metric}={effect_cell(effects, contrast, metric)}"
             for contrast, metric in refs
         )
-        lines.append(f"| {hypothesis} | {evidence} | **REVIEW REQUIRED** |")
+        hypothesis_id = hypothesis.split(" ", 1)[0]
+        classification = "**REVIEW REQUIRED**"
+        if conclusions is not None:
+            classification = conclusions["hypotheses"][hypothesis_id]["classification"]
+        lines.append(f"| {hypothesis} | {evidence} | {classification} |")
 
     lines.extend([
         "",
@@ -251,8 +257,44 @@ def main() -> int:
         "",
         "## Conclusion",
         "",
-        "No conclusion is inserted mechanically. Complete H1–H5 classifications against the frozen analysis plan, record negative and mixed findings, then state which repository ideas have enough evidence to graduate into canonical Narness architecture and which remain experimental.",
-        "",
+    ])
+
+    if conclusions is None:
+        lines.extend([
+            "No conclusion is inserted mechanically. Complete H1–H5 classifications against the frozen analysis plan, record negative and mixed findings, then state which repository ideas have enough evidence to graduate into canonical Narness architecture and which remain experimental.",
+            "",
+        ])
+    else:
+        lines.extend([
+            conclusions.get("overall_summary", ""),
+            "",
+            "### Hypothesis rationales",
+            "",
+        ])
+        for key in ("H1", "H2", "H3", "H4", "H5"):
+            item = conclusions["hypotheses"][key]
+            lines.extend([
+                f"#### {key} — {item['classification']}",
+                "",
+                item["rationale"],
+                "",
+            ])
+        lines.extend([
+            "### Architecture decisions",
+            "",
+        ])
+        for item in conclusions.get("architecture_decisions", []):
+            lines.append(
+                f"- **{item['idea']} — {item['decision']}**: {item['rationale']}"
+            )
+        lines.append("")
+        if conclusions.get("limitations"):
+            lines.extend(["### Additional limitations", ""])
+            for limitation in conclusions["limitations"]:
+                lines.append(f"- {limitation}")
+            lines.append("")
+
+    lines.extend([
         "## Reproducibility",
         "",
         "The benchmark, treatment SHAs, hidden oracle, analysis definition, raw run data, paired effects, and execution profile together define the reproducible research artifact.",
