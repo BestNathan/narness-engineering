@@ -32,6 +32,18 @@ VALIDATION_PATTERNS = (
 )
 
 
+def adapter_repo_head() -> str | None:
+    root = Path(__file__).resolve().parents[1]
+    proc = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
 def now_ms(origin: float) -> int:
     return round((time.monotonic() - origin) * 1000)
 
@@ -361,6 +373,7 @@ def main() -> int:
             "type": "agent-config",
             "ts_ms": 0,
             "agent": "codex-cli",
+            "adapter_repository_sha": adapter_repo_head(),
             "model": args.model,
             "reasoning_effort": args.effort,
             "network": args.network,
