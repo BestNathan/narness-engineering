@@ -87,7 +87,7 @@ jobs:
           PY
 
       - name: Clone frozen subject repository
-        run: git clone --no-checkout https://github.com/BestNathan/nession.git /tmp/nession
+        run: git clone https://github.com/BestNathan/nession.git /tmp/nession
 
       - name: Validate benchmark manifests, fixtures, mutations, and oracle
         run: |
