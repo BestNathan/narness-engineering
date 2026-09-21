@@ -7,6 +7,7 @@ This adapter is pilot instrumentation. It does not define benchmark semantics.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -30,6 +31,10 @@ VALIDATION_PATTERNS = (
     r"\bcargo\s+(?:test|check|clippy)\b",
     r"\bgo\s+test\b",
 )
+
+
+def adapter_file_sha256() -> str:
+    return hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
 
 
 def adapter_repo_head() -> str | None:
@@ -374,6 +379,7 @@ def main() -> int:
             "ts_ms": 0,
             "agent": "codex-cli",
             "adapter_repository_sha": adapter_repo_head(),
+            "adapter_file_sha256": adapter_file_sha256(),
             "model": args.model,
             "reasoning_effort": args.effort,
             "network": args.network,
