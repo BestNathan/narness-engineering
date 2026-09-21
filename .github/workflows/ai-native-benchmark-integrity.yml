@@ -24,6 +24,28 @@ jobs:
         run: |
           python -m py_compile             scripts/ai-native-repo-experiment.py             scripts/score-ai-native-run.py             scripts/validate-ai-native-benchmark.py
 
+      - name: Replay synthetic Codex JSONL instrumentation
+        run: |
+          mkdir -p /tmp/ai-native-adapter
+          printf 'synthetic pilot prompt\n' > /tmp/ai-native-adapter/prompt.txt
+          NARNESS_RUN_DIR=/tmp/ai-native-adapter \
+          NARNESS_PROMPT_FILE=/tmp/ai-native-adapter/prompt.txt \
+          NARNESS_TRACE_FILE=/tmp/ai-native-adapter/trace.jsonl \
+          python scripts/ai-native-codex-adapter.py \
+            --replay-jsonl docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/codex-replay-sample.jsonl
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          events=[json.loads(x) for x in Path('/tmp/ai-native-adapter/trace.jsonl').read_text().splitlines()]
+          types=[e['type'] for e in events]
+          assert 'search' in types, types
+          assert any(e.get('type') == 'read' and e.get('path') == 'web/src/platform/socket/WebSocketService.ts' for e in events), events
+          assert 'edit' in types, types
+          assert 'validation' in types, types
+          assert 'usage' in types, types
+          PY
+
       - name: Clone frozen subject repository
         run: git clone --no-checkout https://github.com/BestNathan/nession.git /tmp/nession
 
