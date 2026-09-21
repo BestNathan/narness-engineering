@@ -299,7 +299,7 @@ def main() -> int:
     lines.extend([
         "## Reproducibility",
         "",
-        "The benchmark, treatment SHAs, hidden oracle, analysis definition, raw run data, paired effects, and execution profile together define the reproducible research artifact.",
+        "The benchmark, treatment SHAs, hidden oracle, analysis definition, raw run data, paired effects, and execution profile together define the reproducible research artifact. Finalization additionally writes `research-artifact-manifest.json`, which content-addresses the research inputs and generated outputs without claiming a cryptographic signature.",
         "",
     ])
 
