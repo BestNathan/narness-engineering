@@ -263,6 +263,29 @@ def main() -> int:
         for raw in trace_path.read_text(encoding="utf-8").splitlines()
         if raw.strip()
     ]
+    forbidden_evaluation_fragments = (
+        "runner/gold.json",
+        "runner/oracle.json",
+        "BENCHMARK-LOCK.json",
+        "ANALYSIS-LOCK.json",
+        "__research_",
+        ".research/ai-native/acceptance",
+    )
+    for event in trace_events:
+        if event.get("type") not in {"command", "search", "glob", "read"}:
+            continue
+        serialized = json.dumps(event, sort_keys=True)
+        leaked = [
+            fragment
+            for fragment in forbidden_evaluation_fragments
+            if fragment in serialized
+        ]
+        if leaked:
+            errors.append(
+                "coding-agent trace accessed hidden evaluation infrastructure: "
+                + ", ".join(leaked)
+            )
+            break
     agent_config = next((e for e in trace_events if e.get("type") == "agent-config"), None)
     if not agent_config:
         errors.append("agent-config trace event missing")
@@ -274,6 +297,7 @@ def main() -> int:
             "network",
             "subagents_enabled",
             "web_search",
+            "harness_environment_scrubbed",
             "codex_version",
             "adapter_file_sha256",
         ):
