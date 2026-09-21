@@ -33,6 +33,72 @@ VALIDATION_PATTERNS = (
 )
 
 
+PERMISSION_PROFILE = "narness-research"
+SHELL_ENV_ALLOWLIST = [
+    "PATH",
+    "HOME",
+    "TMPDIR",
+    "TMP",
+    "TEMP",
+    "LANG",
+    "LC_*",
+    "SHELL",
+    "USER",
+]
+
+
+def build_codex_command(
+    *,
+    codex_bin: str,
+    model: str,
+    effort: str,
+    network: bool,
+    prompt: str,
+) -> list[str]:
+    """Build the exact non-interactive Codex invocation used by the study."""
+    return [
+        codex_bin,
+        "exec",
+        "--ephemeral",
+        "--json",
+        "--ask-for-approval",
+        "never",
+        "--ignore-user-config",
+        "--ignore-rules",
+        "--model",
+        model,
+        "--config",
+        f'model_reasoning_effort="{effort}"',
+        "--config",
+        "agents.enabled=false",
+        "--config",
+        'web_search="disabled"',
+        "--config",
+        "allow_login_shell=false",
+        "--config",
+        f'default_permissions="{PERMISSION_PROFILE}"',
+        "--config",
+        f'permissions.{PERMISSION_PROFILE}.extends=":workspace"',
+        "--config",
+        (
+            f'permissions.{PERMISSION_PROFILE}.filesystem='
+            '{":root"="deny",":minimal"="read",'
+            '":tmpdir"="deny",":slash_tmp"="deny"}'
+        ),
+        "--config",
+        (
+            f'permissions.{PERMISSION_PROFILE}.network='
+            f'{{enabled={str(network).lower()}}}'
+        ),
+        "--config",
+        (
+            "shell_environment_policy.include_only="
+            + json.dumps(SHELL_ENV_ALLOWLIST, separators=(",", ":"))
+        ),
+        prompt,
+    ]
+
+
 def adapter_file_sha256() -> str:
     return hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
 
@@ -374,11 +440,40 @@ def main() -> int:
     ap.add_argument("--codex-bin", default=os.environ.get("NARNESS_CODEX_BIN", "codex"))
     ap.add_argument("--network", action="store_true")
     ap.add_argument(
+        "--print-exec-config",
+        action="store_true",
+        help="Print the exact Codex argv/isolation contract without launching Codex.",
+    )
+    ap.add_argument(
         "--replay-jsonl",
         type=Path,
         help="Translate an existing Codex JSONL stream instead of launching Codex.",
     )
     args = ap.parse_args()
+
+    if args.print_exec_config:
+        cmd = build_codex_command(
+            codex_bin=args.codex_bin,
+            model=args.model,
+            effort=args.effort,
+            network=args.network,
+            prompt="<TASK_PROMPT>",
+        )
+        print(
+            json.dumps(
+                {
+                    "permission_profile": PERMISSION_PROFILE,
+                    "filesystem_read_scope": (
+                        "workspace-only-plus-minimal-runtime; temp roots denied"
+                    ),
+                    "shell_environment_allowlist": SHELL_ENV_ALLOWLIST,
+                    "network": args.network,
+                    "argv": cmd,
+                },
+                indent=2,
+            )
+        )
+        return 0
 
     run_dir = Path(os.environ["NARNESS_RUN_DIR"]).resolve()
     prompt_file = Path(os.environ["NARNESS_PROMPT_FILE"]).resolve()
@@ -434,56 +529,13 @@ def main() -> int:
     )
     codex_version = version_proc.stdout.strip() if version_proc.returncode == 0 else "unknown"
 
-    shell_env_allowlist = [
-        "PATH",
-        "HOME",
-        "TMPDIR",
-        "TMP",
-        "TEMP",
-        "LANG",
-        "LC_*",
-        "SHELL",
-        "USER",
-    ]
-    permission_profile = "narness-research"
-
-    cmd = [
-        args.codex_bin,
-        "exec",
-        "--ephemeral",
-        "--json",
-        "--ask-for-approval",
-        "never",
-        "--ignore-user-config",
-        "--ignore-rules",
-        "--model",
-        args.model,
-        "--config",
-        f'model_reasoning_effort="{args.effort}"',
-        "--config",
-        "agents.enabled=false",
-        "--config",
-        'web_search="disabled"',
-        "--config",
-        "allow_login_shell=false",
-        "--config",
-        f'default_permissions="{permission_profile}"',
-        "--config",
-        f'permissions.{permission_profile}.extends=":workspace"',
-        "--config",
-        (
-            f'permissions.{permission_profile}.filesystem='
-            '{":root"="deny",":minimal"="read"}'
-        ),
-        "--config",
-        f'permissions.{permission_profile}.network={{enabled={str(args.network).lower()}}}',
-        "--config",
-        (
-            "shell_environment_policy.include_only="
-            + json.dumps(shell_env_allowlist, separators=(",", ":"))
-        ),
-    ]
-    cmd.append(prompt)
+    cmd = build_codex_command(
+        codex_bin=args.codex_bin,
+        model=args.model,
+        effort=args.effort,
+        network=args.network,
+        prompt=prompt,
+    )
 
     append_jsonl(
         trace,
@@ -499,9 +551,11 @@ def main() -> int:
             "codex_version": codex_version,
             "subagents_enabled": False,
             "web_search": "disabled",
-            "permission_profile": permission_profile,
-            "filesystem_read_scope": "workspace-only-plus-minimal-runtime",
-            "shell_environment_allowlist": shell_env_allowlist,
+            "permission_profile": PERMISSION_PROFILE,
+            "filesystem_read_scope": (
+                "workspace-only-plus-minimal-runtime; temp roots denied"
+            ),
+            "shell_environment_allowlist": SHELL_ENV_ALLOWLIST,
             "harness_environment_scrubbed": True,
             "scrubbed_environment_keys": scrubbed_env_keys,
             "command": shlex.join(cmd[:-1] + ["<TASK_PROMPT>"]),
