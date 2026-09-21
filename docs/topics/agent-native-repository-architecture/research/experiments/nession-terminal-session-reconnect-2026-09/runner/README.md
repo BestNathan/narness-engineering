@@ -56,8 +56,17 @@ The exact agent command is part of the recorded run and must remain fixed across
     "B": {},
     "C": {}
   },
+  "oracle": {
+    "ref": "<frozen research-ci SHA>",
+    "files": [
+      {
+        "source": ".research/ai-native/acceptance/Txx.test.ts",
+        "destination": "web/src/.../__research_Txx.test.ts"
+      }
+    ]
+  },
   "acceptance_commands": [
-    "hidden-oracle-command"
+    "cd web && npm test -- src/.../__research_Txx.test.ts"
   ],
   "verification_commands": [
     "cd web && npm run build",
@@ -89,3 +98,10 @@ A separate post-run review marks a run admissible only after:
 - artifact relevance scoring;
 - no cross-treatment/session contamination;
 - correct frozen treatment and fixture identities.
+
+
+## Hidden-oracle timing
+
+The runner materializes `oracle.files` only **after the agent process exits**. After acceptance completes, those files are removed before repository verification and final diff capture.
+
+Therefore the coding agent cannot discover the hidden acceptance implementation through filesystem search, while the run remains locally reproducible from the frozen oracle Git SHA.
