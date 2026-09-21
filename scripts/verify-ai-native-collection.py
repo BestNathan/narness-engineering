@@ -54,6 +54,10 @@ def main() -> int:
     analysis = load(analysis_path)
     plan = load(plan_path)
     formal_plan_sha256 = sha256_file(plan_path)
+    collection_start_path = runs_root / "_collection" / "collection-start.json"
+    collection_start = (
+        load(collection_start_path) if collection_start_path.exists() else None
+    )
 
     errors: list[str] = []
     missing: list[str] = []
@@ -82,6 +86,22 @@ def main() -> int:
     if plan.get("analysis_definition_sha") != analysis.get("definition_sha"):
         errors.append("formal plan analysis definition mismatch")
 
+    if collection_start is None:
+        if not args.allow_incomplete:
+            errors.append("collection-start lock is missing")
+    else:
+        critical = collection_start.get("critical") or {}
+        if critical.get("formal_plan_sha256") != formal_plan_sha256:
+            errors.append("collection-start formal plan hash mismatch")
+        if critical.get("execution_profile_sha256") != sha256_file(profile_path):
+            errors.append("collection-start execution profile hash mismatch")
+        if critical.get("schedule_sha256") != sha256_file(schedule_path):
+            errors.append("collection-start schedule hash mismatch")
+        if critical.get("benchmark_definition_sha") != lock.get("definition_sha"):
+            errors.append("collection-start benchmark definition mismatch")
+        if critical.get("analysis_definition_sha") != analysis.get("definition_sha"):
+            errors.append("collection-start analysis definition mismatch")
+
     entries = schedule.get("entries", [])
     expected_ids = [run_id_for(entry) for entry in entries]
     if len(expected_ids) != len(set(expected_ids)):
@@ -106,6 +126,18 @@ def main() -> int:
             errors.append(f"{run_id}: treatment differs from schedule")
         if int(run.get("attempt", -1)) != int(entry.get("attempt", -2)):
             errors.append(f"{run_id}: attempt differs from schedule")
+        if collection_start is not None:
+            expected_harness_sha = (
+                collection_start.get("critical", {}).get("narness_repository_sha")
+            )
+            actual_harness_sha = run.get("environment", {}).get(
+                "harness_repository_sha"
+            )
+            if expected_harness_sha and actual_harness_sha != expected_harness_sha:
+                errors.append(
+                    f"{run_id}: harness repository SHA differs from collection start: "
+                    f"{actual_harness_sha} != {expected_harness_sha}"
+                )
 
         verified = subprocess.run(
             [
@@ -167,11 +199,18 @@ def main() -> int:
             f"formal collection is missing {len(missing)} scheduled runs"
         )
 
-    collection_material = "\n".join(
+    collection_start_sha256 = (
+        sha256_file(collection_start_path) if collection_start_path.exists() else None
+    )
+    collection_lines = []
+    if collection_start_sha256:
+        collection_lines.append(f"collection-start:{collection_start_sha256}")
+    collection_lines.extend(
         f"{row['sequence']}:{row['run_id']}:{row['run_seal_sha256']}:"
         f"{row['review_sha256'] or '-'}"
         for row in sorted(records, key=lambda row: row["sequence"])
-    ).encode("utf-8")
+    )
+    collection_material = "\n".join(collection_lines).encode("utf-8")
 
     manifest = {
         "schema_version": 1,
@@ -183,6 +222,11 @@ def main() -> int:
         "execution_profile_id": profile["profile_id"],
         "formal_plan_id": plan.get("plan_id"),
         "formal_plan_sha256": formal_plan_sha256,
+        "collection_start_sha256": collection_start_sha256,
+        "collection_start_narness_repository_sha": (
+            collection_start.get("critical", {}).get("narness_repository_sha")
+            if collection_start else None
+        ),
         "schedule_sha256": sha256_file(schedule_path),
         "execution_profile_sha256": sha256_file(profile_path),
         "benchmark_lock_sha256": sha256_file(lock_path),
