@@ -53,7 +53,7 @@ Preferred formal design:
 = 216 formal runs
 ```
 
-The formal schedule uses a balanced cyclic Latin-square treatment order within each task.
+The formal schedule uses a balanced cyclic Latin-square treatment order within each task and a deterministic SHA-256 task-block permutation per replication (seed `20260921`).
 
 Task strata:
 
