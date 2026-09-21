@@ -90,7 +90,7 @@ trace.jsonl present and parseable
 raw Codex JSONL preserved
 at least one navigation event captured
 at least one edit event captured
-usage event captured
+exactly one usage event captured for the one ephemeral Codex turn
 hidden acceptance ran after agent exit
 build/lint verification completed
 score.json generated
@@ -173,3 +173,16 @@ collection. The formal-plan lock content-addresses the exact execution-profile a
 schedule bytes so they cannot drift after pre-registration. Formal execution pins runner/adapter/scorer bytes from the pilot-
 derived execution profile, so committing metadata afterward does not alter the
 measured tooling.
+
+
+## Usage-accounting guard
+
+The formal scorer aggregates `usage` events. The execution profile therefore
+requires one ephemeral Codex task to produce exactly one completed-turn usage
+record. Pilot validation and formal sealing reject zero or multiple usage events
+instead of silently changing token-accounting semantics.
+
+If a future Codex CLI version emits multiple completed-turn usage records for one
+task, do not patch the scorer in place after data collection begins. Resolve the
+instrumentation semantics before formal collection or create a new benchmark
+revision.
