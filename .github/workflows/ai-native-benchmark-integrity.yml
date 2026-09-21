@@ -28,6 +28,7 @@ jobs:
             scripts/score-ai-native-run.py \
             scripts/validate-ai-native-benchmark.py \
             scripts/validate-ai-native-treatment-isolation.py \
+            scripts/validate-ai-native-subject-checkout-isolation.py \
             scripts/validate-ai-native-pilot.py \
             scripts/validate-ai-native-pilot-handoff.py \
             scripts/promote-ai-native-pilot-handoff.py \
@@ -389,6 +390,20 @@ jobs:
           assert x['status'] == 'pass'
           assert x['capability_count'] == 6
           assert all(x['checks'].values()), x['checks']
+          PY
+
+      - name: Validate real Nession checkout isolation
+        run: |
+          python scripts/validate-ai-native-subject-checkout-isolation.py \
+            --source-repo /tmp/nession \
+            --output /tmp/subject-checkout-isolation.json
+          python - <<'PY'
+          import json
+          x=json.load(open('/tmp/subject-checkout-isolation.json'))
+          assert x['status'] == 'pass', x['errors']
+          assert {row['treatment'] for row in x['treatments']} == {'A','B','C'}
+          assert all(row['history_preserved'] for row in x['treatments'])
+          assert all(row['hidden_oracle_absent'] for row in x['treatments'])
           PY
 
       - name: Validate Codex pilot preflight without Codex
