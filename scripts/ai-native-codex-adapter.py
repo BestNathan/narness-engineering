@@ -416,6 +416,16 @@ def main() -> int:
         append_jsonl(trace, {"type": "agent-exit", "ts_ms": now_ms(origin), "exit_code": 0})
         return 0
 
+    # The adapter needs NARNESS_* paths to write traces, but the coding
+    # agent does not. Do not expose harness-internal run/prompt/trace locations
+    # to the Codex process or to shell commands executed by the model.
+    codex_env = os.environ.copy()
+    scrubbed_env_keys = sorted(
+        key for key in codex_env if key.startswith("NARNESS_")
+    )
+    for key in scrubbed_env_keys:
+        codex_env.pop(key, None)
+
     version_proc = subprocess.run(
         [args.codex_bin, "--version"],
         text=True,
@@ -466,6 +476,8 @@ def main() -> int:
             "codex_version": codex_version,
             "subagents_enabled": False,
             "web_search": "disabled",
+            "harness_environment_scrubbed": True,
+            "scrubbed_environment_keys": scrubbed_env_keys,
             "command": shlex.join(cmd[:-1] + ["<TASK_PROMPT>"]),
         },
     )
@@ -473,6 +485,7 @@ def main() -> int:
     with stderr_path.open("w", encoding="utf-8") as stderr_fh:
         proc = subprocess.Popen(
             cmd,
+            env=codex_env,
             stdout=subprocess.PIPE,
             stderr=stderr_fh,
             text=True,
