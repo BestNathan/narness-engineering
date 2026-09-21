@@ -319,6 +319,14 @@ def main() -> int:
         append_jsonl(trace, {"type": "agent-exit", "ts_ms": now_ms(origin), "exit_code": 0})
         return 0
 
+    version_proc = subprocess.run(
+        [args.codex_bin, "--version"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    codex_version = version_proc.stdout.strip() if version_proc.returncode == 0 else "unknown"
+
     cmd = [
         args.codex_bin,
         "exec",
@@ -334,6 +342,12 @@ def main() -> int:
         args.model,
         "--config",
         f'model_reasoning_effort="{args.effort}"',
+        "--config",
+        "agents.enabled=false",
+        "--config",
+        'web_search="disabled"',
+        "--config",
+        "allow_login_shell=false",
     ]
     if args.network:
         cmd.extend(["--config", "sandbox_workspace_write.network_access=true"])
@@ -350,6 +364,9 @@ def main() -> int:
             "model": args.model,
             "reasoning_effort": args.effort,
             "network": args.network,
+            "codex_version": codex_version,
+            "subagents_enabled": False,
+            "web_search": "disabled",
             "command": shlex.join(cmd[:-1] + ["<TASK_PROMPT>"]),
         },
     )
