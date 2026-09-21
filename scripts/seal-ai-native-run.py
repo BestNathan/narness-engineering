@@ -85,7 +85,13 @@ def main() -> int:
     trace_path = run_dir / "trace.jsonl"
 
     errors: list[str] = []
-    for path in (run_path, score_path, trace_path, run_dir / "final.diff"):
+    for path in (
+        run_path,
+        score_path,
+        trace_path,
+        run_dir / "final.diff",
+        run_dir / "prompt.txt",
+    ):
         if not path.exists():
             errors.append(f"missing required artifact: {path.name}")
     if errors:
@@ -108,26 +114,47 @@ def main() -> int:
             f"treatment SHA mismatch: {run.get('treatment_sha')} != {expected_treatment_sha}"
         )
 
+    frozen_task: dict[str, Any] | None = None
     if task_id:
         manifest_rel = (
             "docs/topics/agent-native-repository-architecture/research/experiments/"
             f"{lock['experiment_id']}/runner/manifests/{task_id}.json"
         )
-        expected_task_hash = sha256_bytes(
-            git_show(args.definition_repo.resolve(), definition_sha, manifest_rel)
+        frozen_task_bytes = git_show(
+            args.definition_repo.resolve(), definition_sha, manifest_rel
         )
+        expected_task_hash = sha256_bytes(frozen_task_bytes)
         if run.get("task_manifest_sha256") != expected_task_hash:
             errors.append("task manifest hash does not match frozen definition")
+        frozen_task = json.loads(frozen_task_bytes.decode("utf-8"))
 
     treatments_rel = (
         "docs/topics/agent-native-repository-architecture/research/experiments/"
         f"{lock['experiment_id']}/runner/treatments.json"
     )
-    expected_treatments_hash = sha256_bytes(
-        git_show(args.definition_repo.resolve(), definition_sha, treatments_rel)
+    frozen_treatments_bytes = git_show(
+        args.definition_repo.resolve(), definition_sha, treatments_rel
     )
+    expected_treatments_hash = sha256_bytes(frozen_treatments_bytes)
     if run.get("treatments_manifest_sha256") != expected_treatments_hash:
         errors.append("treatments manifest hash does not match frozen definition")
+    frozen_treatments = json.loads(frozen_treatments_bytes.decode("utf-8"))
+
+    if frozen_task is not None and treatment in frozen_treatments.get("treatments", {}):
+        expected_prompt = frozen_task["prompt"].strip() + "\n"
+        extra_instruction = frozen_treatments["treatments"][treatment].get(
+            "agent_instruction"
+        )
+        if extra_instruction:
+            expected_prompt = (
+                expected_prompt + "\n" + extra_instruction.strip() + "\n"
+            )
+        expected_prompt_hash = sha256_bytes(expected_prompt.encode("utf-8"))
+        actual_prompt_hash = sha256_bytes((run_dir / "prompt.txt").read_bytes())
+        if run.get("prompt_sha256") != expected_prompt_hash:
+            errors.append("recorded prompt hash does not match frozen task/treatment prompt")
+        if actual_prompt_hash != expected_prompt_hash:
+            errors.append("prompt.txt does not match frozen task/treatment prompt")
 
     if run.get("runner_error"):
         errors.append(f"runner_error present: {run['runner_error']}")
@@ -141,6 +168,48 @@ def main() -> int:
     commands = run.get("commands", {})
     check_command_list(commands.get("acceptance", []), name="acceptance", errors=errors)
     check_command_list(commands.get("verification", []), name="verification", errors=errors)
+
+    if frozen_task is not None:
+        fixture = frozen_task.get("fixtures", {}).get(treatment, {})
+        expected_fixture_steps = (
+            (1 if fixture.get("patch") else 0)
+            + len(fixture.get("preflight_commands", []))
+        )
+        actual_fixture_steps = commands.get("fixture_preflight", [])
+        if len(actual_fixture_steps) != expected_fixture_steps:
+            errors.append(
+                f"fixture-preflight record count mismatch: "
+                f"{len(actual_fixture_steps)} != {expected_fixture_steps}"
+            )
+        for item in actual_fixture_steps:
+            if item.get("exit_code") != 0:
+                errors.append("fixture preflight contains a non-zero result")
+
+        expected_oracle_files = frozen_task.get("oracle", {}).get("files", [])
+        actual_oracle_installs = commands.get("oracle_install", [])
+        if len(actual_oracle_installs) != len(expected_oracle_files):
+            errors.append(
+                f"oracle install count mismatch: "
+                f"{len(actual_oracle_installs)} != {len(expected_oracle_files)}"
+            )
+
+        expected_mutations = list(frozen_task.get("mutation_checks", []))
+        expected_mutations.extend(
+            frozen_task.get("mutation_checks_by_treatment", {}).get(treatment, [])
+        )
+        actual_mutations = commands.get("mutation_checks", [])
+        if len(actual_mutations) != len(expected_mutations):
+            errors.append(
+                f"mutation-check record count mismatch: "
+                f"{len(actual_mutations)} != {len(expected_mutations)}"
+            )
+        for index, item in enumerate(actual_mutations):
+            if "apply_exit_code" not in item:
+                errors.append(f"mutation check {index + 1} has no apply exit code")
+            if "killed" not in item:
+                errors.append(f"mutation check {index + 1} has no killed result")
+            if item.get("apply_exit_code") == 0 and "revert_exit_code" not in item:
+                errors.append(f"mutation check {index + 1} has no revert exit code")
 
     agent_end = float(agent.get("started_at_unix", 0)) + float(agent.get("duration_ms", 0)) / 1000.0
     for install in commands.get("oracle_install", []):
