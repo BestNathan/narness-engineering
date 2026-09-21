@@ -32,7 +32,27 @@ jobs:
             scripts/seal-ai-native-run.py \
             scripts/aggregate-ai-native-results.py \
             scripts/freeze-ai-native-execution-profile.py \
-            scripts/generate-ai-native-formal-schedule.py
+            scripts/generate-ai-native-formal-schedule.py \
+            scripts/run-ai-native-formal.py
+
+      - name: Validate formal schedule generator
+        run: |
+          python scripts/generate-ai-native-formal-schedule.py \
+            --replications 3 \
+            --profile-id ci-selftest \
+            --output /tmp/formal-schedule.json
+          python - <<'PY'
+          import json
+          x=json.load(open('/tmp/formal-schedule.json'))
+          assert x['run_count'] == 216
+          assert len(x['entries']) == 216
+          assert {e['treatment'] for e in x['entries']} == {'A','B','C'}
+          for task in {e['task_id'] for e in x['entries']}:
+              rows=[e for e in x['entries'] if e['task_id']==task]
+              assert len(rows)==9
+              for treatment in ('A','B','C'):
+                  assert sum(e['treatment']==treatment for e in rows)==3
+          PY
 
       - name: Run isolated runner/scorer selftest
         run: python scripts/selftest-ai-native-runner.py
