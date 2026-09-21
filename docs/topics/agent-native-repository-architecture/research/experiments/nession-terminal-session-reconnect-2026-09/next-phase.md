@@ -126,8 +126,8 @@ search-result path normalization                PASS
 runner/scorer selftest                          PASS
 benchmark semantic-drift gate                   PASS
 local pilot preflight (Codex skipped in CI)     PASS
-AI Native Benchmark Integrity run               35629539218 PASS
-general repository CI                           35629539165 PASS
+AI Native Benchmark Integrity run               35630413932 PASS
+general repository CI                           35630413911 PASS
 ```
 
 The remaining transition is external execution, not benchmark design:
@@ -180,12 +180,9 @@ structured H1-H5 review     READY
 ## Active execution handoff
 
 ```text
-Execution Pre-Pilot Revision 3
-branch  research/ai-native-execution-prepilot-r3
-SHA     1519adcb31bc66d5741e4cd0e67e54c79b19eef1
+Execution Pre-Pilot Revision 4
+branch  research/ai-native-execution-prepilot-r4
+SHA     d01117beb44e57c24cb6b73ae8c4c9f89100e825
 ```
 
-Revision 3 supersedes Revision 2 before any real pilot. It adds workspace-only
-Codex filesystem permissions, root/temp denial, shell-environment allowlisting,
-and static CI verification of the exact isolation argv. The three real pilots
-must run from this exact revision.
+Revision 4 supersedes Revision 3 before any real pilot. It retains the workspace-only Codex permission boundary and additionally replaces linked Git worktrees with standalone single-ref repositories so hidden oracle/research objects and refs cannot enter the coding-agent checkout. The three real pilots must run from this exact revision.
