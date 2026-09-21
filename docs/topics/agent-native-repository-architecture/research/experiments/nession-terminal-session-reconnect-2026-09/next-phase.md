@@ -1,6 +1,6 @@
 # Next Phase — Freeze Benchmark and Treatments
 
-> Status: Benchmark revision 1 frozen; instrumentation plumbing and preflight green; three real Codex pilots pending.
+> Status: Benchmark revision 1 and analysis revision 1 frozen; instrumentation plumbing and preflight green; three real Codex pilots pending.
 
 Benchmark revision 1 and all three treatments are now frozen. Formal A/B/C data collection is still blocked on the three non-reportable instrumentation pilots.
 
@@ -155,3 +155,19 @@ The one-command entry point is:
 The command now preflights both repositories before spending model budget and,
 after all three pilots pass, emits the frozen execution profile plus the
 pre-registered 216-run schedule.
+
+## Analysis and reporting readiness
+
+Before seeing any formal outcome, the analysis plan has also been frozen.
+
+```text
+analysis definition SHA     b7772c8f5ce63f55ddc311dd47bc880b7c8102a0
+analysis branch             research/ai-native-analysis-r1
+paired task analysis        READY
+task-cluster bootstrap      READY
+failure taxonomy pipeline   READY
+research report generator   READY
+structured H1-H5 review     READY
+```
+
+`RUNBOOK.md` now defines the complete operational path from the three external Codex pilots through 216 formal runs, failure review, paired analysis, and final research report generation.
