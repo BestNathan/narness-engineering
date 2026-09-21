@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,10 @@ TAXONOMY = {
 
 def load(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main() -> int:
@@ -71,6 +76,20 @@ def main() -> int:
         code = review.get("primary_failure_code")
         if code not in TAXONOMY:
             raise RuntimeError(f"{review_path}: invalid primary failure code {code!r}")
+        if review.get("review_policy_version") != 1:
+            raise RuntimeError(f"{review_path}: unsupported/missing review policy version")
+        seal_path = run_path.parent / "seal.json"
+        if not seal_path.exists():
+            raise RuntimeError(f"{review_path}: reviewed run has no seal.json")
+        expected_seal = sha256_file(seal_path)
+        if review.get("reviewed_run_seal_sha256") != expected_seal:
+            raise RuntimeError(
+                f"{review_path}: review is not anchored to the current run seal"
+            )
+        if not str(review.get("notes", "")).strip():
+            raise RuntimeError(f"{review_path}: failure rationale is empty")
+        if not review.get("evidence"):
+            raise RuntimeError(f"{review_path}: failure evidence references are empty")
 
         by_code[code] += 1
         by_treatment[run["treatment"]][code] += 1
