@@ -130,9 +130,9 @@ def main() -> int:
 
     if score.get("run_id") != run.get("run_id"):
         errors.append("score/run run_id mismatch")
-    expected_scorer_sha = profile.get("scorer_repository_sha")
-    if expected_scorer_sha is not None and score.get("scorer_repository_sha") != expected_scorer_sha:
-        errors.append("scorer SHA differs from execution profile")
+    expected_scorer_hash = profile.get("tooling", {}).get("scorer_file_sha256")
+    if expected_scorer_hash is not None and score.get("scorer_file_sha256") != expected_scorer_hash:
+        errors.append("scorer file identity differs from execution profile")
     if score.get("task_id") != task_id or score.get("treatment") != treatment:
         errors.append("score/run task or treatment mismatch")
 
@@ -161,7 +161,7 @@ def main() -> int:
             "subagents_enabled",
             "web_search",
             "codex_version",
-            "adapter_repository_sha",
+            "adapter_file_sha256",
         ):
             expected = profile.get("agent", {}).get(key)
             if expected is not None and agent_config.get(key) != expected:
