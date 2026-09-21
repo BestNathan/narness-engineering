@@ -114,6 +114,35 @@ def main() -> int:
                     f"{definition_sha}: {frozen.stderr.strip()}"
                 )
 
+    analysis_lock_path = root / "ANALYSIS-LOCK.json"
+    require(analysis_lock_path.exists(), f"missing analysis lock: {analysis_lock_path}", errors)
+    if analysis_lock_path.exists():
+        analysis_lock = load(analysis_lock_path)
+        analysis_sha = analysis_lock.get("definition_sha")
+        require(bool(analysis_sha), "analysis lock has no definition_sha", errors)
+        if analysis_sha:
+            analysis_paths = analysis_lock.get("frozen_paths", [])
+            require(bool(analysis_paths), "analysis lock has no frozen_paths", errors)
+            frozen = git(
+                definition_repo,
+                "diff",
+                "--quiet",
+                str(analysis_sha),
+                "--",
+                *analysis_paths,
+                check=False,
+            )
+            if frozen.returncode == 1:
+                errors.append(
+                    "analysis semantic drift detected relative to frozen analysis SHA "
+                    f"{analysis_sha}"
+                )
+            elif frozen.returncode != 0:
+                errors.append(
+                    "could not verify analysis freeze against "
+                    f"{analysis_sha}: {frozen.stderr.strip()}"
+                )
+
     require(set(treatments["treatments"]) == {"A", "B", "C"}, "treatments must be exactly A/B/C", errors)
     require(oracle["sha"], "oracle SHA must be non-empty", errors)
     require(set(gold["tasks"]) == set(EXPECTED_TASKS), "gold.json must contain T01-T24 exactly", errors)
