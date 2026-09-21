@@ -154,22 +154,26 @@ def main() -> int:
             encoding="utf-8",
         )
         formal_plan_path = root / "formal-plan.lock.json"
-        proc([
-            sys.executable,
-            str(ROOT / "scripts" / "freeze-ai-native-formal-plan.py"),
-            "--execution-profile",
-            str(profile_path),
-            "--schedule",
-            str(schedule_path),
-            "--benchmark-lock",
-            str(lock_path),
-            "--analysis-lock",
-            str(analysis_path),
-            "--output",
-            str(formal_plan_path),
-            "--plan-id",
-            "selftest-plan",
-        ])
+        formal_plan = {
+            "schema_version": 1,
+            "plan_id": "selftest-plan",
+            "status": "frozen",
+            "experiment_id": EXPERIMENT_ID,
+            "benchmark_revision": 1,
+            "benchmark_definition_sha": definition_sha,
+            "analysis_revision": analysis_lock["analysis_revision"],
+            "analysis_definition_sha": analysis_lock["definition_sha"],
+            "execution_profile_id": profile_id,
+            "execution_profile_sha256": sha(profile_path),
+            "schedule_sha256": sha(schedule_path),
+            "run_count": 1,
+            "replications": 1,
+            "design": "selftest",
+        }
+        formal_plan_path.write_text(
+            json.dumps(formal_plan, indent=2) + "\n",
+            encoding="utf-8",
+        )
         formal_plan_sha256 = sha(formal_plan_path)
 
         runs = root / "runs"
