@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
 from pathlib import Path
 import shlex
 import shutil
@@ -56,6 +57,22 @@ def run(
             f"command failed ({proc.returncode}): {result['command']}\n{proc.stderr}"
         )
     return result
+
+
+def probe_command(cmd: list[str], *, cwd: Path) -> str | None:
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=cwd,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip()
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -111,6 +128,7 @@ def main() -> int:
         raise RuntimeError(f"run directory already exists: {run_dir}")
     run_dir.mkdir(parents=True)
 
+    harness_root = Path(__file__).resolve().parents[1]
     record: dict[str, Any] = {
         "schema_version": 1,
         "run_id": run_id,
@@ -121,6 +139,17 @@ def main() -> int:
         "treatment_sha": treatment["sha"],
         "task_manifest": str(task_path),
         "started_at_unix": time.time(),
+        "environment": {
+            "python": sys.version.split()[0],
+            "platform": platform.platform(),
+            "git": probe_command(["git", "--version"], cwd=source_repo),
+            "node": probe_command(["node", "--version"], cwd=source_repo),
+            "npm": probe_command(["npm", "--version"], cwd=source_repo),
+            "harness_repository_sha": probe_command(["git", "rev-parse", "HEAD"], cwd=harness_root),
+            "harness_repository_dirty": bool(
+                probe_command(["git", "status", "--porcelain"], cwd=harness_root)
+            ),
+        },
         "commands": {
             "setup": [],
             "fixture_preflight": [],
