@@ -34,6 +34,7 @@ jobs:
             scripts/seal-ai-native-run.py \
             scripts/verify-ai-native-run-seal.py \
             scripts/verify-ai-native-collection.py \
+            scripts/archive-ai-native-raw-runs.py \
             scripts/selftest-ai-native-seals.py \
             scripts/aggregate-ai-native-results.py \
             scripts/analyze-ai-native-effects.py \
