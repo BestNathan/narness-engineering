@@ -93,6 +93,8 @@ H1–H5 reviewed conclusion
 research-report.md
 research-artifact-manifest.json
           ↓
+deterministic sealed raw archive
+          ↓
 published/benchmark-r2-analysis-r2/
 publication-manifest.json
 ```
@@ -124,6 +126,7 @@ Pilot task success itself is not required. Complete, trustworthy instrumentation
 - [Analysis Revision 2](ANALYSIS-REVISION-2-FROZEN.md)
 - [Pre-registered analysis plan](ANALYSIS-PLAN.md)
 - [Failure review protocol](FAILURE-REVIEW-PROTOCOL.md)
+- [Raw data retention policy](DATA-RETENTION.md)
 - [Results placeholder](results.md)
 - [Conclusion contract](conclusion.md)
 - [Treatment construction cost](treatments/construction-cost.md)
