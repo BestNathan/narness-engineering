@@ -22,6 +22,11 @@ runner/formal-plan-r1.lock.json
 
 Review and commit all three generated metadata files before formal collection. `formal-plan-r1.lock.json` freezes the exact profile and schedule bytes.
 
+The execution profile embeds a `pilot_set_digest_sha256` plus per-pilot artifact
+hashes. Keep the pilot directories until the profile has been reviewed; afterward
+the committed profile is the provenance record that binds the formal plan to the
+exact pilot evidence.
+
 ## 2. Run formal collection
 
 ```bash
