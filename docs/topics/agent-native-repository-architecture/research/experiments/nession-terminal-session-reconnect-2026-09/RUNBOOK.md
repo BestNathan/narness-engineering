@@ -107,7 +107,7 @@ Validate it:
 
 ```bash
 python3 scripts/validate-ai-native-conclusion.py \
-  --conclusions /path/to/conclusion-r1.json
+  --conclusions /path/to/conclusion-r2.json
 ```
 
 ## 6. Finalize the research artifact
@@ -116,7 +116,7 @@ python3 scripts/validate-ai-native-conclusion.py \
 python3 scripts/finalize-ai-native-research.py \
   --runs-root /path/to/formal-runs \
   --output-dir /path/to/research-results \
-  --conclusions /path/to/conclusion-r1.json
+  --conclusions /path/to/conclusion-r2.json
 ```
 
 Without `--allow-incomplete`, finalization fails when the pre-registered formal schedule is missing/incomplete, a treatment lacks all 24 tasks, any failed admissible run lacks taxonomy review, or H1–H5 conclusions are not supplied.
