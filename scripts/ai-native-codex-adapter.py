@@ -434,13 +434,24 @@ def main() -> int:
     )
     codex_version = version_proc.stdout.strip() if version_proc.returncode == 0 else "unknown"
 
+    shell_env_allowlist = [
+        "PATH",
+        "HOME",
+        "TMPDIR",
+        "TMP",
+        "TEMP",
+        "LANG",
+        "LC_*",
+        "SHELL",
+        "USER",
+    ]
+    permission_profile = "narness-research"
+
     cmd = [
         args.codex_bin,
         "exec",
         "--ephemeral",
         "--json",
-        "--sandbox",
-        "workspace-write",
         "--ask-for-approval",
         "never",
         "--ignore-user-config",
@@ -455,11 +466,23 @@ def main() -> int:
         'web_search="disabled"',
         "--config",
         "allow_login_shell=false",
+        "--config",
+        f'default_permissions="{permission_profile}"',
+        "--config",
+        f'permissions.{permission_profile}.extends=":workspace"',
+        "--config",
+        (
+            f'permissions.{permission_profile}.filesystem='
+            '{":root"="deny",":minimal"="read"}'
+        ),
+        "--config",
+        f'permissions.{permission_profile}.network={{enabled={str(args.network).lower()}}}',
+        "--config",
+        (
+            "shell_environment_policy.include_only="
+            + json.dumps(shell_env_allowlist, separators=(",", ":"))
+        ),
     ]
-    if args.network:
-        cmd.extend(["--config", "sandbox_workspace_write.network_access=true"])
-    else:
-        cmd.extend(["--config", "sandbox_workspace_write.network_access=false"])
     cmd.append(prompt)
 
     append_jsonl(
@@ -476,6 +499,9 @@ def main() -> int:
             "codex_version": codex_version,
             "subagents_enabled": False,
             "web_search": "disabled",
+            "permission_profile": permission_profile,
+            "filesystem_read_scope": "workspace-only-plus-minimal-runtime",
+            "shell_environment_allowlist": shell_env_allowlist,
             "harness_environment_scrubbed": True,
             "scrubbed_environment_keys": scrubbed_env_keys,
             "command": shlex.join(cmd[:-1] + ["<TASK_PROMPT>"]),
