@@ -103,12 +103,16 @@ def main() -> int:
                 *semantic_paths,
                 check=False,
             )
-            require(
-                frozen.returncode == 0,
-                "benchmark semantic drift detected relative to frozen definition SHA "
-                f"{definition_sha}",
-                errors,
-            )
+            if frozen.returncode == 1:
+                errors.append(
+                    "benchmark semantic drift detected relative to frozen definition SHA "
+                    f"{definition_sha}"
+                )
+            elif frozen.returncode != 0:
+                errors.append(
+                    "could not verify benchmark semantic freeze against "
+                    f"{definition_sha}: {frozen.stderr.strip()}"
+                )
 
     require(set(treatments["treatments"]) == {"A", "B", "C"}, "treatments must be exactly A/B/C", errors)
     require(oracle["sha"], "oracle SHA must be non-empty", errors)
