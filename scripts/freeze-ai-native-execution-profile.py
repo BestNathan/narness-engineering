@@ -165,7 +165,7 @@ def main() -> int:
         "required_metrics": REQUIRED_METRICS,
         "notes": {
             "pilot_task_success_required": False,
-            "formal_task_success_required": True,
+            "formal_task_success_required_for_admissibility": False,
             "network_policy": "offline coding agent; dependency install occurs before agent",
         },
     }
