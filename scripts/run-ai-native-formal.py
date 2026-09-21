@@ -55,6 +55,11 @@ def main() -> int:
     ap.add_argument("--source-repo", required=True, type=Path)
     ap.add_argument("--schedule", required=True, type=Path)
     ap.add_argument("--execution-profile", required=True, type=Path)
+    ap.add_argument(
+        "--formal-plan-lock",
+        type=Path,
+        default=EXPERIMENT / "runner" / "formal-plan-r1.lock.json",
+    )
     ap.add_argument("--runs-root", required=True, type=Path)
     ap.add_argument("--start-sequence", type=int)
     ap.add_argument("--end-sequence", type=int)
@@ -66,8 +71,12 @@ def main() -> int:
     args = ap.parse_args()
 
     source = args.source_repo.resolve()
-    schedule = load(args.schedule.resolve())
-    profile = load(args.execution_profile.resolve())
+    schedule_path = args.schedule.resolve()
+    profile_path = args.execution_profile.resolve()
+    plan_path = args.formal_plan_lock.resolve()
+    schedule = load(schedule_path)
+    profile = load(profile_path)
+    plan = load(plan_path)
     runs_root = args.runs_root.resolve()
     runs_root.mkdir(parents=True, exist_ok=True)
 
@@ -77,6 +86,16 @@ def main() -> int:
         raise RuntimeError("formal schedule is not pre-registered")
     if schedule.get("profile_id") != profile.get("profile_id"):
         raise RuntimeError("schedule/profile ID mismatch")
+    if plan.get("status") != "frozen":
+        raise RuntimeError("formal plan is not frozen")
+    if plan.get("execution_profile_id") != profile.get("profile_id"):
+        raise RuntimeError("formal plan/profile ID mismatch")
+    if plan.get("execution_profile_sha256") != file_sha256(profile_path):
+        raise RuntimeError("execution profile bytes differ from frozen formal plan")
+    if plan.get("schedule_sha256") != file_sha256(schedule_path):
+        raise RuntimeError("formal schedule bytes differ from frozen formal plan")
+    if int(plan.get("run_count", -1)) != len(schedule.get("entries", [])):
+        raise RuntimeError("formal plan run count differs from schedule")
 
     ensure_clean(ROOT)
     tooling = profile.get("tooling", {})
@@ -124,6 +143,19 @@ def main() -> int:
     )
 
     lock_path = EXPERIMENT / "BENCHMARK-LOCK.json"
+    analysis_lock_path = EXPERIMENT / "ANALYSIS-LOCK.json"
+    benchmark_lock = load(lock_path)
+    analysis_lock = load(analysis_lock_path)
+    if plan.get("benchmark_revision") != benchmark_lock.get("benchmark_revision"):
+        raise RuntimeError("formal plan benchmark revision mismatch")
+    if plan.get("benchmark_definition_sha") != benchmark_lock.get("definition_sha"):
+        raise RuntimeError("formal plan benchmark definition mismatch")
+    if plan.get("analysis_revision") != analysis_lock.get("analysis_revision"):
+        raise RuntimeError("formal plan analysis revision mismatch")
+    if plan.get("analysis_definition_sha") != analysis_lock.get("definition_sha"):
+        raise RuntimeError("formal plan analysis definition mismatch")
+    formal_plan_sha256 = file_sha256(plan_path)
+
     gold_path = EXPERIMENT / "runner" / "gold.json"
     treatments_path = EXPERIMENT / "runner" / "treatments.json"
 
@@ -174,6 +206,8 @@ def main() -> int:
                         str(profile["profile_id"]),
                         "--expected-benchmark-sha",
                         str(benchmark_sha),
+                        "--expected-formal-plan-sha256",
+                        str(formal_plan_sha256),
                     ]
                 )
                 if verified.returncode != 0:
@@ -274,7 +308,9 @@ def main() -> int:
                 "--definition-repo",
                 str(ROOT),
                 "--execution-profile",
-                str(args.execution_profile.resolve()),
+                str(profile_path),
+                "--formal-plan-lock",
+                str(plan_path),
             ],
         )
         if sealed.returncode != 0:
@@ -292,6 +328,8 @@ def main() -> int:
                 str(profile["profile_id"]),
                 "--expected-benchmark-sha",
                 str(benchmark_sha),
+                "--expected-formal-plan-sha256",
+                str(formal_plan_sha256),
             ]
         )
         if verified.returncode != 0:
