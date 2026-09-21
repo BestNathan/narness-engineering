@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "task_id": "T15",
+  "prompt": "A user route-intent change can resolve to the same URL. It must still replace the transport generation but open exactly one new physical socket.",
+  "fixtures": {
+    "A": {
+      "patch": "../fixtures/T15-AB.patch"
+    },
+    "B": {
+      "patch": "../fixtures/T15-AB.patch"
+    },
+    "C": {
+      "patch": "../fixtures/T15-C.patch"
+    }
+  },
+  "oracle": {
+    "ref": "70d8074e7c50f3865771fabd714e811ae440e09d",
+    "files": [
+      {
+        "source": ".research/ai-native/acceptance/T15.test.ts",
+        "destination": "web/src/platform/session-runtime/__tests__/unit/__research_T15.test.ts"
+      }
+    ]
+  },
+  "acceptance_commands": [
+    "cd web && npm test"
+  ],
+  "verification_commands": [
+    "cd web && npm run build",
+    "cd web && npm run lint"
+  ]
+}
