@@ -2,7 +2,7 @@
 
 > Non-reportable. These runs validate measurement plumbing only.
 
-Benchmark revision 1 is frozen. The remaining gate before formal A/B/C collection
+Benchmark revision 2 and Analysis revision 2 are frozen. The remaining gate before formal A/B/C collection
 is to prove that a real coding-agent harness produces complete, scoreable traces.
 
 ## Pilot matrix
@@ -147,12 +147,14 @@ After all three pilots pass, the same command writes:
 ```text
 runner/execution-profile-r1.json
 runner/formal-schedule-r1.json
+runner/formal-plan-r1.lock.json
 ```
 
 The formal schedule contains 216 pre-registered entries
 (24 tasks × 3 treatments × 3 repetitions).
 
-These two generated metadata files must be reviewed and committed before formal
-collection. Formal execution pins runner/adapter/scorer bytes from the pilot-
+These three generated metadata files must be reviewed and committed before formal
+collection. The formal-plan lock content-addresses the exact execution-profile and
+schedule bytes so they cannot drift after pre-registration. Formal execution pins runner/adapter/scorer bytes from the pilot-
 derived execution profile, so committing metadata afterward does not alter the
 measured tooling.
