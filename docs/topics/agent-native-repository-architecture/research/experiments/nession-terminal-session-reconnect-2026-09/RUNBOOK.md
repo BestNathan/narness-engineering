@@ -182,3 +182,35 @@ Changing an already sealed trace, score, run record, prompt, diff, or other seal
 The finalizer writes `research-artifact-manifest.json` after generating the research outputs. It records SHA-256 identities for the frozen benchmark/analysis inputs, execution metadata, collection manifest, core analysis/reporting tools, conclusion file when supplied, and generated result files.
 
 Its `artifact_set_digest_sha256` is a compact content identity for the assembled research artifact. It is a tamper-evident content digest, not a digital signature.
+
+
+## 7. Publish the completed study back into Narness
+
+After strict finalization succeeds:
+
+```bash
+python3 scripts/publish-ai-native-research.py \
+  --runs-root /path/to/formal-runs \
+  --results-dir /path/to/research-results \
+  --conclusions /path/to/conclusion-r2.json
+```
+
+The default destination is:
+
+```text
+docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/published/benchmark-r2-analysis-r2/
+```
+
+Publication refuses incomplete results. It copies the reviewed report, raw tabular
+measurements, paired effects, failure taxonomy, conclusion, collection identity,
+collection-start lock, and frozen profile/schedule/formal-plan inputs into one
+Git-friendly bundle.
+
+It intentionally does **not** duplicate every raw trace/diff into Git. The
+published `collection-manifest.json` retains every run-seal identity, and the
+full sealed run collection should be retained separately according to the raw-data
+retention policy.
+
+The generated `publication-manifest.json` content-addresses the published file
+set and records the source research-artifact digest. Review the bundle, then
+commit it as the permanent Narness research record.
