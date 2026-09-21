@@ -115,14 +115,14 @@ T08 / B
 T20 / C
 ```
 
-Pilot task success itself is not required. Complete, trustworthy instrumentation is required.
+Pilot task success itself is not required. Complete, trustworthy instrumentation is required. The active execution handoff is `research/ai-native-execution-prepilot-r3@1519adcb31bc66d5741e4cd0e67e54c79b19eef1`.
 
 ## Key documents
 
 - [Protocol](protocol.md)
 - [Runbook](RUNBOOK.md)
 - [Instrumentation pilots](instrumentation-pilots.md)
-- [Execution Pre-Pilot Revision 2](EXECUTION-PREPILOT-R2.md)
+- [Execution Pre-Pilot Revision 3](EXECUTION-PREPILOT-R3.md)
 - [Benchmark Revision 2](REVISION-2-FROZEN.md)
 - [Analysis Revision 2](ANALYSIS-REVISION-2-FROZEN.md)
 - [Pre-registered analysis plan](ANALYSIS-PLAN.md)
