@@ -43,7 +43,8 @@ jobs:
             scripts/validate-ai-native-conclusion.py \
             scripts/freeze-ai-native-execution-profile.py \
             scripts/generate-ai-native-formal-schedule.py \
-            scripts/run-ai-native-formal.py
+            scripts/run-ai-native-formal.py \
+            scripts/inspect-ai-native-formal-progress.py
 
       - name: Validate paired-effects analyzer
         run: |
