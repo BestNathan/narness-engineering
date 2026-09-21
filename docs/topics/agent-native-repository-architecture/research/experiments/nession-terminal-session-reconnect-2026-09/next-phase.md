@@ -126,8 +126,8 @@ search-result path normalization                PASS
 runner/scorer selftest                          PASS
 benchmark semantic-drift gate                   PASS
 local pilot preflight (Codex skipped in CI)     PASS
-AI Native Benchmark Integrity                    awaiting Revision-2 integrity record
-general repository CI                           awaiting Revision-2 integrity record
+AI Native Benchmark Integrity run               35609845199 PASS
+general repository CI                           35609845214 PASS
 ```
 
 The remaining transition is external execution, not benchmark design:
