@@ -35,6 +35,14 @@ python3 scripts/run-ai-native-formal.py \
 
 The orchestrator validates benchmark/analysis integrity before model spending, enforces the frozen execution-tool bytes, runs the balanced schedule, scores every run, and writes a tamper-evident `seal.json` for every admissible outcome. Existing runs are never skipped merely because `run.json` says they are sealed; their artifact hashes are re-verified first.
 
+Before the first reportable run, the orchestrator also creates:
+
+```text
+/formal-runs/_collection/collection-start.json
+```
+
+The collection-start lock requires the execution profile, formal schedule, and formal-plan lock to already be Git-tracked and byte-identical to the current Narness HEAD. It freezes that Narness commit, local runtime/tool versions, Codex CLI version, metadata hashes, and result-producing tool hashes. Resuming the same collection from a different harness commit or execution environment is rejected.
+
 Failed tasks remain in the dataset when the run itself is admissible.
 
 ### Progress and interruption recovery
@@ -136,6 +144,7 @@ failure-summary.json
 failure-summary.md
 research-completeness.json
 collection-manifest.json
+collection-start.json (under the run collection)
 research-report.md
 research-artifact-manifest.json
 ```
