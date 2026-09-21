@@ -6,7 +6,19 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import subprocess
 from typing import Any
+
+
+def repo_head(path: Path) -> str | None:
+    proc = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=path,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    return proc.stdout.strip() if proc.returncode == 0 else None
 
 
 def load_json(path: Path) -> Any:
@@ -191,6 +203,7 @@ def main() -> int:
 
     scored = {
         "schema_version": 1,
+        "scorer_repository_sha": repo_head(Path(__file__).resolve().parents[1]),
         "run_id": run_record["run_id"],
         "task_id": task_id,
         "treatment": args.treatment,
