@@ -13,6 +13,7 @@ Python stdlib only.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -102,6 +103,14 @@ def probe_command(cmd: list[str], *, cwd: Path) -> str | None:
     return proc.stdout.strip()
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def load_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as fh:
         return json.load(fh)
@@ -171,6 +180,9 @@ def main() -> int:
         "admissible_for_final_analysis": False,
         "treatment_sha": treatment["sha"],
         "task_manifest": str(task_path),
+        "task_manifest_sha256": sha256_file(task_path),
+        "treatments_manifest": str(treatments_path),
+        "treatments_manifest_sha256": sha256_file(treatments_path),
         "started_at_unix": time.time(),
         "environment": {
             "python": sys.version.split()[0],
@@ -248,6 +260,7 @@ def main() -> int:
                 prompt + "\n" + extra_instruction.strip() + "\n",
                 encoding="utf-8",
             )
+        record["prompt_sha256"] = sha256_file(prompt_path)
 
         env = os.environ.copy()
         trace_path = run_dir / "trace.jsonl"
