@@ -124,6 +124,17 @@ time/token limits
 
 Only then may reportable runs begin.
 
+The generated execution profile also content-addresses the exact three pilot
+evidence sets. For each pilot it records SHA-256 identities for the prompt, run
+record, score, structured trace, raw Codex JSONL, final diff, Git status, and
+agent logs, plus the common Narness harness commit. Those per-pilot hashes are
+collapsed into one `pilot_set_digest_sha256`.
+
+This means the formal plan is not merely derived from "some pilots". It is
+cryptographically bound to the exact non-reportable evidence that established
+the execution profile. Re-running or editing a pilot requires a newly generated
+execution profile/formal plan before formal collection.
+
 
 ## One-command pilot gate
 
