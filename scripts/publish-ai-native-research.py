@@ -178,6 +178,9 @@ def main() -> int:
         "collection_digest_sha256": artifact.get("collection_digest_sha256"),
         "raw_archive_filename": raw_archive.get("archive_filename"),
         "raw_archive_sha256": raw_archive.get("archive_sha256"),
+        "raw_content_set_digest_sha256": raw_archive.get(
+            "content_set_digest_sha256"
+        ),
         "research_artifact_set_digest_sha256": artifact.get(
             "artifact_set_digest_sha256"
         ),
