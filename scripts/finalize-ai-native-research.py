@@ -186,12 +186,17 @@ def main() -> int:
         out / "research-report.md",
         EXPERIMENT / "BENCHMARK-LOCK.json",
         EXPERIMENT / "ANALYSIS-LOCK.json",
+        EXPERIMENT / "treatments" / "construction-cost-r1.json",
+        EXPERIMENT / "treatments" / "construction-cost.md",
         schedule_path,
         profile_path,
         plan_path,
         ROOT / "scripts" / "aggregate-ai-native-results.py",
         ROOT / "scripts" / "analyze-ai-native-effects.py",
         ROOT / "scripts" / "generate-ai-native-research-report.py",
+        ROOT / "scripts" / "aggregate-ai-native-failures.py",
+        ROOT / "scripts" / "verify-ai-native-collection.py",
+        ROOT / "scripts" / "validate-ai-native-conclusion.py",
         ROOT / "scripts" / "finalize-ai-native-research.py",
     ]
     if args.conclusions:
