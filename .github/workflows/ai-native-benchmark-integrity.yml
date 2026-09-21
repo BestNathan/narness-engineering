@@ -208,7 +208,7 @@ jobs:
           assert completeness['hypothesis_classification_complete'] is False
           PY
 
-      - name: Validate formal schedule generator
+      - name: Validate formal schedule and plan freezer
         run: |
           python scripts/generate-ai-native-formal-schedule.py \
             --replications 3 \
@@ -216,15 +216,47 @@ jobs:
             --output /tmp/formal-schedule.json
           python - <<'PY'
           import json
-          x=json.load(open('/tmp/formal-schedule.json'))
-          assert x['run_count'] == 216
-          assert len(x['entries']) == 216
-          assert {e['treatment'] for e in x['entries']} == {'A','B','C'}
-          for task in {e['task_id'] for e in x['entries']}:
-              rows=[e for e in x['entries'] if e['task_id']==task]
+          from pathlib import Path
+          profile={
+            'schema_version':1,
+            'profile_id':'ci-selftest',
+            'status':'frozen',
+          }
+          Path('/tmp/execution-profile.json').write_text(json.dumps(profile))
+          PY
+          python scripts/freeze-ai-native-formal-plan.py \
+            --execution-profile /tmp/execution-profile.json \
+            --schedule /tmp/formal-schedule.json \
+            --benchmark-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/BENCHMARK-LOCK.json \
+            --analysis-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/ANALYSIS-LOCK.json \
+            --output /tmp/formal-plan.json \
+            --plan-id ci-selftest-plan
+          python - <<'PY'
+          import json
+          schedule=json.load(open('/tmp/formal-schedule.json'))
+          plan=json.load(open('/tmp/formal-plan.json'))
+          assert schedule['run_count'] == 216
+          assert len(schedule['entries']) == 216
+          assert {e['treatment'] for e in schedule['entries']} == {'A','B','C'}
+          checks=plan['schedule_design_validation']
+          assert checks['tasks'] == 24
+          assert checks['treatments'] == 3
+          assert checks['unique_run_ids'] is True
+          assert checks['contiguous_sequence'] is True
+          assert checks['balanced_task_treatment_cells'] is True
+          assert checks['balanced_within_task_blocks'] is True
+          assert checks['latin_square_positions'] is True
+          for task in {e['task_id'] for e in schedule['entries']}:
+              rows=[e for e in schedule['entries'] if e['task_id']==task]
               assert len(rows)==9
               for treatment in ('A','B','C'):
                   assert sum(e['treatment']==treatment for e in rows)==3
+                  positions=[
+                    e['within_task_position']
+                    for e in rows
+                    if e['treatment']==treatment
+                  ]
+                  assert sorted(positions)==[1,2,3]
           PY
 
       - name: Run isolated runner/scorer selftest
