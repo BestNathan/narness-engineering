@@ -18,6 +18,18 @@ def file_sha256(path: Path) -> str:
 
 
 EXPECTED_PILOTS = {("T05", "A"), ("T08", "B"), ("T20", "C")}
+PILOT_ARTIFACTS = (
+    "run.json",
+    "score.json",
+    "trace.jsonl",
+    "codex.raw.jsonl",
+    "final.diff",
+    "prompt.txt",
+    "git-status.txt",
+    "agent.stdout.log",
+    "agent.stderr.log",
+)
+
 REQUIRED_METRICS = [
     "search_calls",
     "glob_calls",
@@ -98,12 +110,26 @@ def main() -> int:
         if metrics.get("patch_count", 0) <= 0:
             raise RuntimeError(f"{run_dir}: no edit event captured")
 
+        artifact_hashes: dict[str, str] = {}
+        for name in PILOT_ARTIFACTS:
+            path = run_dir / name
+            if not path.exists():
+                raise RuntimeError(
+                    f"{run_dir}: required pilot artifact is missing: {name}"
+                )
+            artifact_hashes[name] = file_sha256(path)
+        for optional_name in ("codex.stderr.log",):
+            path = run_dir / optional_name
+            if path.exists():
+                artifact_hashes[optional_name] = file_sha256(path)
+
         rows.append({
             "run_dir": run_dir,
             "run": run,
             "score": score,
             "agent": agent,
             "cfg": cfg,
+            "artifact_hashes": artifact_hashes,
         })
 
     if observed != EXPECTED_PILOTS:
@@ -160,6 +186,21 @@ def main() -> int:
             raise RuntimeError("pilot agent timeout differs")
         if row["score"].get("scorer_file_sha256") != scorer_file_sha256:
             raise RuntimeError("pilot scorer file identity differs")
+        actual_repo_sha = row["run"].get("environment", {}).get(
+            "harness_repository_sha"
+        )
+        if actual_repo_sha != pilot_repository_sha:
+            raise RuntimeError(
+                "pilot harness repository SHA differs: "
+                f"{actual_repo_sha!r} != {pilot_repository_sha!r}"
+            )
+
+    pilot_material = "\n".join(
+        f"{row['run']['run_id']}:{name}:{digest}"
+        for row in sorted(rows, key=lambda item: item["run"]["run_id"])
+        for name, digest in sorted(row["artifact_hashes"].items())
+    ).encode("utf-8")
+    pilot_set_digest_sha256 = hashlib.sha256(pilot_material).hexdigest()
 
     profile = {
         "schema_version": 1,
@@ -170,9 +211,15 @@ def main() -> int:
                 "run_id": row["run"]["run_id"],
                 "task_id": row["run"]["task_id"],
                 "treatment": row["run"]["treatment"],
+                "task_success": bool(row["run"].get("task_success")),
+                "harness_repository_sha": row["run"].get(
+                    "environment", {}
+                ).get("harness_repository_sha"),
+                "artifacts": dict(sorted(row["artifact_hashes"].items())),
             }
-            for row in rows
+            for row in sorted(rows, key=lambda item: item["run"]["run_id"])
         ],
+        "pilot_set_digest_sha256": pilot_set_digest_sha256,
         "agent": agent_profile,
         "environment": environment,
         "agent_timeout_seconds": timeout,
@@ -208,6 +255,7 @@ def main() -> int:
     print(f"  profile_id: {profile['profile_id']}")
     print(f"  codex_version: {agent_profile.get('codex_version')}")
     print(f"  pilot repository SHA: {pilot_repository_sha}")
+    print(f"  pilot evidence digest: {pilot_set_digest_sha256}")
     return 0
 
 
