@@ -146,15 +146,19 @@ generate + commit formal-schedule-r1.json
 formal collection may begin
 ```
 
-The one-command entry point is:
+The local one-command entry point is:
 
 ```bash
 ./scripts/run-ai-native-codex-pilots.sh /path/to/nession
 ```
 
+A trusted self-hosted Actions runner can instead dispatch
+`.github/workflows/ai-native-codex-pilots-self-hosted.yml` with the absolute
+Nession checkout path. Both paths use the same preflight and benchmark runner.
+
 The command now preflights both repositories before spending model budget and,
-after all three pilots pass, emits the frozen execution profile plus the
-pre-registered 216-run schedule.
+after all three pilots pass, emits the frozen execution profile, the
+pre-registered 216-run schedule, and `formal-plan-r1.lock.json`.
 
 ## Analysis and reporting readiness
 
