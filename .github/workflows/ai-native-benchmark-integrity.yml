@@ -37,6 +37,7 @@ jobs:
             scripts/review-ai-native-run.py \
             scripts/aggregate-ai-native-failures.py \
             scripts/finalize-ai-native-research.py \
+            scripts/validate-ai-native-conclusion.py \
             scripts/freeze-ai-native-execution-profile.py \
             scripts/generate-ai-native-formal-schedule.py \
             scripts/run-ai-native-formal.py
@@ -100,6 +101,31 @@ jobs:
             --output /tmp/paired-effects/research-report.md
           grep -q 'H1 Retrieval precision' /tmp/paired-effects/research-report.md
           grep -q 'REVIEW REQUIRED' /tmp/paired-effects/research-report.md
+
+      - name: Validate structured conclusion contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          value={
+            'schema_version':1,
+            'experiment_id':'nession-terminal-session-reconnect-2026-09',
+            'benchmark_revision':1,
+            'analysis_revision':1,
+            'hypotheses':{
+              key:{'classification':'Inconclusive','rationale':'synthetic CI rationale'}
+              for key in ('H1','H2','H3','H4','H5')
+            },
+            'overall_summary':'synthetic CI summary',
+            'architecture_decisions':[
+              {'idea':'semantic resolver','decision':'keep-experimental','rationale':'synthetic CI rationale'}
+            ],
+            'limitations':['synthetic CI limitation'],
+          }
+          Path('/tmp/conclusion.json').write_text(json.dumps(value))
+          PY
+          python scripts/validate-ai-native-conclusion.py \
+            --conclusions /tmp/conclusion.json
 
       - name: Validate formal schedule generator
         run: |
