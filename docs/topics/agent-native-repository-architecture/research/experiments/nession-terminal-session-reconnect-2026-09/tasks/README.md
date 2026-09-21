@@ -74,9 +74,9 @@ Expose whether the session is currently recovering through P2P retry, candidate 
 
 If a previously authenticated transport exhausted its normal reconnect budget while the page was backgrounded and is now stopped in `disconnected`, one visibility wake may initiate one fresh explicit connection attempt. It must not create an unbounded retry loop.
 
-### T14 — Successful attach resets attach retry budget only after current generation succeeds
+### T14 — Preserve live transport across non-routing context churn
 
-Do not reset the P2P attach retry count because an old generation succeeds late. Reset only when attach succeeds for the current transport generation.
+Updating session context that does not change the effective endpoint or token must preserve the existing physical WebSocket transport and its reconnect-attempt budget. Viewport changes, transport-ready changes, or value-equivalent context rebuilds must not silently rebuild the transport or reset transport recovery.
 
 ### T15 — Route change to the same URL must create exactly one new physical connection
 
@@ -96,9 +96,9 @@ When automatic P2P recovery exhausts, force relay exactly once and do not emit r
 
 ## Refactoring tasks
 
-### T19 — Centralize transport-failure classification
+### T19 — Replace prose-string transport failure classification with a typed failure kind
 
-Remove duplicated knowledge about which attach failures are transport-level failures. Introduce one canonical classifier used by attach recovery logic without changing observable behavior.
+Refactor attach recovery so it consumes a typed/discriminated transport-failure kind rather than matching transport error prose. Preserve timeout, transport-failure, genuine agent-error, and rejection behavior.
 
 ### T20 — Make reconnect transition output explicit
 
@@ -114,9 +114,9 @@ Make WebSocket reconnect backoff a separately testable deterministic policy with
 
 ## Verification / impact tasks
 
-### T23 — Add an invariant test for no duplicate attach on one transport generation
+### T23 — Add an invariant test for competing recovery signals
 
-Add a deterministic test proving that repeated triggers while one attach is in flight for the same transport generation cannot create a second attach request.
+Add a deterministic test proving that once automatic recovery decides to force relay, a stale or competing candidate/transport recovery signal cannot produce a second force-relay transition, a second relay begin, or return the runtime to P2P recovery.
 
 ### T24 — Add an invariant test for recovery convergence
 
