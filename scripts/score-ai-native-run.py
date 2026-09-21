@@ -4,10 +4,17 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import subprocess
 from typing import Any
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    digest.update(path.read_bytes())
+    return digest.hexdigest()
 
 
 def repo_head(path: Path) -> str | None:
@@ -204,6 +211,7 @@ def main() -> int:
     scored = {
         "schema_version": 1,
         "scorer_repository_sha": repo_head(Path(__file__).resolve().parents[1]),
+        "scorer_file_sha256": sha256_file(Path(__file__).resolve()),
         "run_id": run_record["run_id"],
         "task_id": task_id,
         "treatment": args.treatment,
