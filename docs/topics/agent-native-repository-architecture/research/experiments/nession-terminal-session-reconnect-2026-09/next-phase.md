@@ -1,8 +1,8 @@
 # Next Phase — Freeze Benchmark and Treatments
 
-> Status: Benchmark revision 1 and analysis revision 2 frozen; instrumentation plumbing and preflight green; three real Codex pilots pending.
+> Status: Benchmark revision 2 and analysis revision 2 frozen; instrumentation plumbing and preflight green; three real Codex pilots pending.
 
-Benchmark revision 1 and all three treatments are now frozen. Formal A/B/C data collection is still blocked on the three non-reportable instrumentation pilots.
+Benchmark revision 2 and all three treatments are now frozen. Formal A/B/C data collection is still blocked on the three non-reportable instrumentation pilots.
 
 ## Exit criteria
 
@@ -116,7 +116,7 @@ The next phase therefore optimizes for experimental validity, not fast headline 
 
 ## Current instrumentation gate
 
-The benchmark semantics remain frozen at the revision-1 definition SHA. Post-freeze work has only hardened measurement mechanics.
+The active benchmark semantics are frozen at the revision-2 definition SHA. Post-freeze work has only hardened measurement mechanics.
 
 Latest validated instrumentation state:
 
@@ -126,8 +126,8 @@ search-result path normalization                PASS
 runner/scorer selftest                          PASS
 benchmark semantic-drift gate                   PASS
 local pilot preflight (Codex skipped in CI)     PASS
-AI Native Benchmark Integrity run               35565009798 PASS
-general repository CI                           35565009794 PASS
+AI Native Benchmark Integrity                    awaiting Revision-2 integrity record
+general repository CI                           awaiting Revision-2 integrity record
 ```
 
 The remaining transition is external execution, not benchmark design:
