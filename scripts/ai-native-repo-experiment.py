@@ -18,6 +18,7 @@ import os
 import platform
 from pathlib import Path
 import shlex
+import signal
 import shutil
 import subprocess
 import sys
@@ -33,9 +34,10 @@ def run(
     env: dict[str, str] | None = None,
     shell: bool = False,
     check: bool = False,
+    timeout_seconds: float | None = None,
 ) -> dict[str, Any]:
     started = time.time()
-    proc = subprocess.run(
+    proc = subprocess.Popen(
         cmd,
         cwd=cwd,
         env=env,
@@ -43,18 +45,43 @@ def run(
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        start_new_session=timeout_seconds is not None,
     )
+    timed_out = False
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        if os.name != "nt":
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                stdout, stderr = proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                stdout, stderr = proc.communicate()
+        else:
+            proc.kill()
+            stdout, stderr = proc.communicate()
+
     result = {
         "command": cmd if isinstance(cmd, str) else shlex.join(cmd),
         "exit_code": proc.returncode,
+        "timed_out": timed_out,
+        "timeout_seconds": timeout_seconds,
         "started_at_unix": started,
         "duration_ms": round((time.time() - started) * 1000),
-        "stdout": proc.stdout,
-        "stderr": proc.stderr,
+        "stdout": stdout,
+        "stderr": stderr,
     }
     if check and proc.returncode != 0:
         raise RuntimeError(
-            f"command failed ({proc.returncode}): {result['command']}\n{proc.stderr}"
+            f"command failed ({proc.returncode}): {result['command']}\n{stderr}"
         )
     return result
 
@@ -99,6 +126,12 @@ def main() -> int:
     parser.add_argument("--agent-cmd", required=True)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--attempt", type=int, default=1)
+    parser.add_argument(
+        "--agent-timeout-seconds",
+        type=float,
+        default=1800,
+        help="Wall-clock limit for the coding agent process. Default: 1800 seconds.",
+    )
     parser.add_argument(
         "--setup-cmd",
         action="append",
@@ -231,7 +264,13 @@ def main() -> int:
         )
 
         agent_cmd = render(args.agent_cmd, values)
-        agent = run(agent_cmd, cwd=worktree, env=env, shell=True)
+        agent = run(
+            agent_cmd,
+            cwd=worktree,
+            env=env,
+            shell=True,
+            timeout_seconds=args.agent_timeout_seconds,
+        )
         record["commands"]["agent"] = agent
         (run_dir / "agent.stdout.log").write_text(agent["stdout"], encoding="utf-8")
         (run_dir / "agent.stderr.log").write_text(agent["stderr"], encoding="utf-8")
