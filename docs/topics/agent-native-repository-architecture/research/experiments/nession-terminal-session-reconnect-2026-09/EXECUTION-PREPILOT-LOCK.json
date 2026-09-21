@@ -39,5 +39,24 @@
     "repository_sha": "6072a096e2ea8899930056d876c4b4679421c9b3",
     "reason": "Codex execution isolation was strengthened before any real pilot: custom workspace-only permissions deny filesystem root and temp roots outside the workspace, shell-command environment is allowlisted, and the self-hosted workflow is pinned to Revision 3."
   },
-  "promotion_rule": "A pilot handoff is promotable only if all three pilot run records and the generated execution profile identify repository_sha 1519adcb31bc66d5741e4cd0e67e54c79b19eef1, the profile records the narness-research permission profile with workspace-only filesystem scope, and the profile/schedule/formal-plan identities agree."
+  "promotion_rule": "A pilot handoff is promotable only if all three pilot run records and the generated execution profile identify repository_sha 1519adcb31bc66d5741e4cd0e67e54c79b19eef1, the profile records the narness-research permission profile with workspace-only filesystem scope, and the profile/schedule/formal-plan identities agree.",
+  "required_agent_config": {
+    "permission_profile": "narness-research",
+    "filesystem_read_scope": "workspace-only-plus-minimal-runtime; temp roots denied",
+    "network": false,
+    "subagents_enabled": false,
+    "web_search": "disabled",
+    "harness_environment_scrubbed": true,
+    "shell_environment_allowlist": [
+      "PATH",
+      "HOME",
+      "TMPDIR",
+      "TMP",
+      "TEMP",
+      "LANG",
+      "LC_*",
+      "SHELL",
+      "USER"
+    ]
+  }
 }
