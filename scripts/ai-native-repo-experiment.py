@@ -239,14 +239,21 @@ def main() -> int:
             task.get("mutation_checks_by_treatment", {}).get(args.treatment, [])
         )
         for index, mutation in enumerate(mutation_checks, start=1):
-            mutation_ref = mutation["ref"]
-            patch_source = mutation["patch_source"]
-            shown = git(source_repo, "show", f"{mutation_ref}:{patch_source}", check=False)
-            if shown["exit_code"] != 0:
-                raise RuntimeError(f"failed to materialize mutation patch: {patch_source}")
-
             patch_path = run_dir / f"mutation-{index:02d}.patch"
-            patch_path.write_text(shown["stdout"], encoding="utf-8")
+            mutation_ref = mutation.get("ref")
+            patch_source = mutation.get("patch_source")
+            local_patch = mutation.get("patch")
+            if local_patch:
+                source_path = (task_path.parent / local_patch).resolve()
+                patch_path.write_text(source_path.read_text(encoding="utf-8"), encoding="utf-8")
+            elif mutation_ref and patch_source:
+                shown = git(source_repo, "show", f"{mutation_ref}:{patch_source}", check=False)
+                if shown["exit_code"] != 0:
+                    raise RuntimeError(f"failed to materialize mutation patch: {patch_source}")
+                patch_path.write_text(shown["stdout"], encoding="utf-8")
+            else:
+                raise RuntimeError("mutation check requires patch or ref + patch_source")
+
             applied = run(
                 ["git", "apply", "--whitespace=nowarn", str(patch_path)],
                 cwd=worktree,
@@ -255,6 +262,7 @@ def main() -> int:
                 "name": mutation.get("name", f"mutation-{index}"),
                 "ref": mutation_ref,
                 "patch_source": patch_source,
+                "patch": local_patch,
                 "apply_exit_code": applied["exit_code"],
                 "commands": [],
                 "killed": False,
