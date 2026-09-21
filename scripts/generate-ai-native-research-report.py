@@ -25,7 +25,9 @@ HYPOTHESES = {
     ],
     "H2 Retrieval recall": [
         ("A_vs_B", "navigation_recall"),
+        ("A_vs_B", "important_artifacts_missed_count"),
         ("B_vs_C", "navigation_recall"),
+        ("B_vs_C", "important_artifacts_missed_count"),
     ],
     "H3 Context efficiency": [
         ("A_vs_B", "input_tokens"),
