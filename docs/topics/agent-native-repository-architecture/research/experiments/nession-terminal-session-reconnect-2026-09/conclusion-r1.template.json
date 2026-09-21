@@ -2,7 +2,7 @@
   "schema_version": 1,
   "experiment_id": "nession-terminal-session-reconnect-2026-09",
   "benchmark_revision": 1,
-  "analysis_revision": 1,
+  "analysis_revision": 2,
   "hypotheses": {
     "H1": {
       "classification": null,
