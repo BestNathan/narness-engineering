@@ -35,6 +35,7 @@ def main() -> int:
     ap.add_argument("--runs-root", required=True, type=Path)
     ap.add_argument("--output-dir", required=True, type=Path)
     ap.add_argument("--allow-incomplete", action="store_true")
+    ap.add_argument("--conclusions", type=Path)
     args = ap.parse_args()
 
     runs_root = args.runs_root.resolve()
@@ -45,6 +46,7 @@ def main() -> int:
     analyze = ROOT / "scripts" / "analyze-ai-native-effects.py"
     failures = ROOT / "scripts" / "aggregate-ai-native-failures.py"
     report = ROOT / "scripts" / "generate-ai-native-research-report.py"
+    validate_conclusion = ROOT / "scripts" / "validate-ai-native-conclusion.py"
 
     run([
         sys.executable, str(aggregate),
@@ -69,11 +71,22 @@ def main() -> int:
         failure_cmd.append("--allow-missing-reviews")
     run(failure_cmd, allow_codes={0, 2} if args.allow_incomplete else {0})
 
-    run([
+    conclusion_complete = False
+    if args.conclusions:
+        run([
+            sys.executable, str(validate_conclusion),
+            "--conclusions", str(args.conclusions.resolve()),
+        ])
+        conclusion_complete = True
+
+    report_cmd = [
         sys.executable, str(report),
         "--results-dir", str(out),
         "--output", str(out / "research-report.md"),
-    ])
+    ]
+    if args.conclusions:
+        report_cmd.extend(["--conclusions", str(args.conclusions.resolve())])
+    run(report_cmd)
 
     summary = load(out / "summary.json")
     total_runs = sum(int(summary.get(t, {}).get("n", 0) or 0) for t in ("A", "B", "C"))
@@ -100,7 +113,7 @@ def main() -> int:
         ),
         "missing_failure_reviews": failure_summary.get("missing_review_count", 0),
         "report_generated": (out / "research-report.md").exists(),
-        "hypothesis_classification_complete": False,
+        "hypothesis_classification_complete": conclusion_complete,
     }
     (out / "research-completeness.json").write_text(
         json.dumps(completeness, indent=2, sort_keys=True) + "\n",
@@ -117,6 +130,8 @@ def main() -> int:
             errors.append(f"task coverage incomplete: {task_cells}")
         if failure_summary.get("missing_review_count", 0):
             errors.append("failed runs still need taxonomy review")
+        if not conclusion_complete:
+            errors.append("reviewed H1-H5 conclusion file is required")
         if errors:
             print("Research data pipeline is INCOMPLETE")
             for error in errors:
