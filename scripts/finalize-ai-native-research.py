@@ -181,6 +181,7 @@ def main() -> int:
         out / "failure-summary.json",
         out / "failure-summary.md",
         out / "collection-manifest.json",
+        runs_root / "_collection" / "collection-start.json",
         completeness_path,
         out / "research-report.md",
         EXPERIMENT / "BENCHMARK-LOCK.json",
