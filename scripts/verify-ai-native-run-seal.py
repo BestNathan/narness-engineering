@@ -24,6 +24,7 @@ def main() -> int:
     ap.add_argument("--expected-profile-id")
     ap.add_argument("--expected-benchmark-sha")
     ap.add_argument("--expected-formal-plan-sha256")
+    ap.add_argument("--expected-analysis-sha")
     args = ap.parse_args()
 
     run_dir = args.run_dir.resolve()
@@ -58,6 +59,10 @@ def main() -> int:
     admissibility = run.get("admissibility", {})
     if seal.get("benchmark_definition_sha") != admissibility.get("benchmark_definition_sha"):
         errors.append("seal/run benchmark definition mismatch")
+    if seal.get("analysis_revision") != admissibility.get("analysis_revision"):
+        errors.append("seal/run analysis revision mismatch")
+    if seal.get("analysis_definition_sha") != admissibility.get("analysis_definition_sha"):
+        errors.append("seal/run analysis definition mismatch")
     if seal.get("execution_profile_id") != admissibility.get("execution_profile_id"):
         errors.append("seal/run execution profile mismatch")
     if seal.get("formal_plan_sha256") != admissibility.get("formal_plan_sha256"):
@@ -74,6 +79,11 @@ def main() -> int:
         errors.append(
             f"benchmark SHA mismatch: {seal.get('benchmark_definition_sha')} != "
             f"{args.expected_benchmark_sha}"
+        )
+    if args.expected_analysis_sha and seal.get("analysis_definition_sha") != args.expected_analysis_sha:
+        errors.append(
+            f"analysis SHA mismatch: {seal.get('analysis_definition_sha')} != "
+            f"{args.expected_analysis_sha}"
         )
     if (
         args.expected_formal_plan_sha256
