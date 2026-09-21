@@ -4,11 +4,43 @@ This is the operational path from the frozen benchmark to the final research rep
 
 ## 1. Run the three non-reportable pilots
 
-Use a machine with an authenticated Codex CLI and clean local checkouts of Narness Engineering and Nession.
+Use a trusted machine with a clean Nession checkout and a **stored authenticated
+Codex session**. The preflight executes `codex login status` and rejects
+`OPENAI_API_KEY` / `CODEX_ACCESS_TOKEN` when exported into the experiment
+process environment; the coding agent must not inherit authentication secrets.
+
+### Local path
 
 ```bash
 ./scripts/run-ai-native-codex-pilots.sh /path/to/nession
 ```
+
+### Trusted self-hosted GitHub Actions path
+
+A second entry point is:
+
+```text
+.github/workflows/ai-native-codex-pilots-self-hosted.yml
+```
+
+It runs only on a self-hosted runner carrying the `ai-native-research` label.
+The runner must already have Codex authenticated in its credential store and must
+have a clean local Nession checkout. Dispatch the workflow with the absolute
+`nession_path`.
+
+The workflow deliberately:
+
+```text
+uses persist-credentials: false for actions/checkout
+rejects OPENAI_API_KEY
+rejects CODEX_ACCESS_TOKEN
+checks codex login status
+uses the normal benchmark preflight
+uploads pilot traces + generated freeze metadata as a non-reportable artifact
+```
+
+This path is intended for a trusted private runner, not a public or untrusted CI
+executor.
 
 The command performs preflight, executes T05/A, T08/B, and T20/C with fresh ephemeral sessions, scores the traces, validates instrumentation, freezes the execution profile, and generates the pre-registered 216-run schedule.
 
