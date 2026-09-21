@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -131,7 +132,23 @@ def main() -> int:
         versions[name] = value if code == 0 else None
 
     codex_version = None
+    codex_auth_status = None
     if not args.skip_codex:
+        exposed_auth_env = [
+            key
+            for key in ("OPENAI_API_KEY", "CODEX_ACCESS_TOKEN")
+            if os.environ.get(key)
+        ]
+        if exposed_auth_env:
+            fail(
+                errors,
+                "refusing pilot execution with authentication secrets exported "
+                "in the process environment: "
+                + ", ".join(exposed_auth_env)
+                + ". Authenticate Codex into its credential store first and unset "
+                "these variables for the experiment.",
+            )
+
         codex_path = shutil.which(args.codex_bin)
         if codex_path is None:
             fail(
@@ -144,6 +161,18 @@ def main() -> int:
                 fail(errors, "Codex CLI exists but --version failed")
             else:
                 codex_version = value
+
+            auth_code, _auth_value = capture(
+                [args.codex_bin, "login", "status"]
+            )
+            if auth_code != 0:
+                fail(
+                    errors,
+                    "Codex CLI is installed but has no usable authenticated "
+                    "session (codex login status failed).",
+                )
+            else:
+                codex_auth_status = "authenticated"
 
     for task, treatment in PILOTS:
         run_dir = output / f"{task}-{treatment}-01"
@@ -168,6 +197,8 @@ def main() -> int:
         print("  codex: skipped")
     else:
         print(f"  codex: {codex_version}")
+        print(f"  codex auth: {codex_auth_status}")
+        print("  exported auth secrets: none")
     print("  benchmark integrity: PASS")
     print("  planned pilots: T05/A, T08/B, T20/C")
     return 0
