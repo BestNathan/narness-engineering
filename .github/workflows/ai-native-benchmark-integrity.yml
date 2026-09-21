@@ -293,6 +293,34 @@ jobs:
       - name: Validate pilot shell syntax
         run: bash -n scripts/run-ai-native-codex-pilots.sh
 
+      - name: Validate Codex execution isolation contract
+        run: |
+          python scripts/ai-native-codex-adapter.py             --print-exec-config > /tmp/codex-exec-config.json
+          python - <<'PY'
+          import json
+          x=json.load(open('/tmp/codex-exec-config.json'))
+          argv=x['argv']
+          joined='\n'.join(argv)
+          assert x['permission_profile'] == 'narness-research'
+          assert x['network'] is False
+          assert 'workspace-only-plus-minimal-runtime' in x['filesystem_read_scope']
+          assert 'temp roots denied' in x['filesystem_read_scope']
+          assert '--sandbox' not in argv
+          assert 'default_permissions="narness-research"' in argv
+          assert 'permissions.narness-research.extends=":workspace"' in argv
+          fs=next(v for v in argv if v.startswith('permissions.narness-research.filesystem='))
+          assert '":root"="deny"' in fs
+          assert '":minimal"="read"' in fs
+          assert '":tmpdir"="deny"' in fs
+          assert '":slash_tmp"="deny"' in fs
+          network=next(v for v in argv if v.startswith('permissions.narness-research.network='))
+          assert network.endswith('{enabled=false}')
+          shell=next(v for v in argv if v.startswith('shell_environment_policy.include_only='))
+          for name in ('PATH','HOME','TMPDIR','LANG','LC_*'):
+              assert f'"{name}"' in shell
+          assert argv[-1] == '<TASK_PROMPT>'
+          PY
+
       - name: Replay synthetic Codex JSONL instrumentation
         run: |
           mkdir -p /tmp/ai-native-adapter
