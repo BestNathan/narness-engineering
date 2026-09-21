@@ -104,9 +104,9 @@ def main() -> int:
         "subagents_enabled",
         "web_search",
         "codex_version",
-        "adapter_repository_sha",
+        "adapter_file_sha256",
     ]
-    env_keys = ["python", "platform", "git", "node", "npm", "harness_repository_sha"]
+    env_keys = ["python", "platform", "git", "node", "npm", "runner_file_sha256"]
 
     agent_profile = {key: first["cfg"].get(key) for key in agent_keys}
     environment = {
@@ -118,7 +118,8 @@ def main() -> int:
         for item in first["run"].get("commands", {}).get("setup", [])
     ]
     timeout = first["agent"].get("timeout_seconds")
-    scorer_sha = first["score"].get("scorer_repository_sha")
+    scorer_file_sha256 = first["score"].get("scorer_file_sha256")
+    pilot_repository_sha = first["run"].get("environment", {}).get("harness_repository_sha")
 
     for row in rows[1:]:
         for key, expected in agent_profile.items():
@@ -142,8 +143,8 @@ def main() -> int:
             raise RuntimeError("pilot setup commands differ")
         if row["agent"].get("timeout_seconds") != timeout:
             raise RuntimeError("pilot agent timeout differs")
-        if row["score"].get("scorer_repository_sha") != scorer_sha:
-            raise RuntimeError("pilot scorer SHA differs")
+        if row["score"].get("scorer_file_sha256") != scorer_file_sha256:
+            raise RuntimeError("pilot scorer file identity differs")
 
     profile = {
         "schema_version": 1,
@@ -161,7 +162,12 @@ def main() -> int:
         "environment": environment,
         "agent_timeout_seconds": timeout,
         "setup_commands": setup_commands,
-        "scorer_repository_sha": scorer_sha,
+        "tooling": {
+            "runner_file_sha256": environment.get("runner_file_sha256"),
+            "adapter_file_sha256": agent_profile.get("adapter_file_sha256"),
+            "scorer_file_sha256": scorer_file_sha256,
+        },
+        "pilot_repository_sha": pilot_repository_sha,
         "required_metrics": REQUIRED_METRICS,
         "notes": {
             "pilot_task_success_required": False,
@@ -176,7 +182,7 @@ def main() -> int:
     print(f"Frozen execution profile: {output}")
     print(f"  profile_id: {profile['profile_id']}")
     print(f"  codex_version: {agent_profile.get('codex_version')}")
-    print(f"  harness SHA: {environment.get('harness_repository_sha')}")
+    print(f"  pilot repository SHA: {pilot_repository_sha}")
     return 0
 
 
