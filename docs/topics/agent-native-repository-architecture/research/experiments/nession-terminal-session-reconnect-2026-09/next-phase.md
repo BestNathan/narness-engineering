@@ -1,23 +1,24 @@
 # Next Phase — Freeze Benchmark and Treatments
 
-> Status: Active.
+> Status: Benchmark revision 1 frozen; instrumentation pilots pending.
 
-The study is not ready for formal A/B/C data collection yet. The next phase is to freeze both the benchmark and the treatments so the experiment cannot be tuned after seeing comparative results.
+Benchmark revision 1 and all three treatments are now frozen. Formal A/B/C data collection is still blocked on the three non-reportable instrumentation pilots.
 
 ## Exit criteria
 
-Formal runs may begin only when all of the following are true:
+Freeze criteria through the executable benchmark are complete. Formal runs may begin when the final pilot criterion is satisfied:
 
 ```text
-T01–T24 task intents hardened
-T01–T24 starting-state/fixture semantics frozen
-T01–T24 hidden acceptance oracles frozen
-Treatment A SHA frozen
-Treatment B SHA frozen
-Treatment C SHA frozen
-C transformation cost recorded
-formal runner contract frozen
-pilot instrumentation validated on 3 non-reportable runs
+T01–T24 task intents hardened                         DONE
+T01–T24 starting-state/fixture semantics frozen            DONE
+T01–T24 hidden acceptance oracles frozen                   DONE
+Treatment A SHA frozen                                      DONE
+Treatment B SHA frozen                                      DONE
+Treatment C SHA frozen                                      DONE
+C transformation cost recorded                              DONE
+formal runner contract frozen                               DONE
+benchmark integrity gate                                    PASS
+pilot instrumentation validated on 3 non-reportable runs    PENDING
 ```
 
 ## Work order
