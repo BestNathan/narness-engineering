@@ -101,6 +101,18 @@ def main() -> int:
     if metrics.get("patch_count", 0) <= 0:
         fail("score contains no edit/patch event", errors)
 
+    required_analysis_metrics = (
+        "navigation_events_before_first_edit",
+        "search_calls_before_first_edit",
+        "files_read_before_first_edit",
+        "important_artifacts_missed_count",
+        "out_of_scope_edit_count",
+        "validation_failures",
+    )
+    for metric in required_analysis_metrics:
+        if metrics.get(metric) is None:
+            fail(f"score is missing preregistered analysis metric: {metric}", errors)
+
     if errors:
         print("Instrumentation pilot FAILED")
         for error in errors:
