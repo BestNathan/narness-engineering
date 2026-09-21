@@ -183,7 +183,8 @@ def main() -> int:
         prompt = "Do the synthetic task.\n"
         (run_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
         (run_dir / "trace.jsonl").write_text(
-            '{"type":"agent-config"}\n',
+            '{"type":"agent-config"}\n'
+            '{"type":"usage","input_tokens":1000,"cached_tokens":0,"output_tokens":100}\n',
             encoding="utf-8",
         )
         (run_dir / "final.diff").write_text("diff --git synthetic\n", encoding="utf-8")
