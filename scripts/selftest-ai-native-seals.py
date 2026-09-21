@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke-test tamper-evident per-run and collection seals."""
+"""End-to-end smoke test for formal run sealing and collection verification."""
 
 from __future__ import annotations
 
@@ -12,91 +12,233 @@ import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
+EXPERIMENT_ID = "seal-selftest"
+
+
+def sha_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
 
 def sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return sha_bytes(path.read_bytes())
 
 
-def run(cmd: list[str], expected: int = 0) -> subprocess.CompletedProcess[str]:
-    proc = subprocess.run(
+def proc(
+    cmd: list[str],
+    *,
+    cwd: Path = ROOT,
+    expected: int = 0,
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
         cmd,
-        cwd=ROOT,
+        cwd=cwd,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
-    if proc.returncode != expected:
-        print(proc.stdout)
+    if result.returncode != expected:
+        print(result.stdout)
         raise RuntimeError(
-            f"expected exit {expected}, got {proc.returncode}: {' '.join(cmd)}"
+            f"expected exit {expected}, got {result.returncode}: {' '.join(cmd)}"
         )
-    return proc
+    return result
 
 
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="narness-seal-selftest-") as tmp:
         root = Path(tmp)
+
+        # Build a tiny frozen definition repository so the real sealer can
+        # verify the task manifest, treatment manifest, and exact prompt bytes.
+        definition = root / "definition"
+        manifest_dir = (
+            definition
+            / "docs/topics/agent-native-repository-architecture/research/experiments"
+            / EXPERIMENT_ID
+            / "runner/manifests"
+        )
+        manifest_dir.mkdir(parents=True)
+        runner_dir = manifest_dir.parent
+
+        task = {
+            "schema_version": 1,
+            "task_id": "T01",
+            "prompt": "Do the synthetic task.",
+            "fixtures": {"A": {}, "B": {}, "C": {}},
+            "acceptance_commands": ["true"],
+            "verification_commands": ["true"],
+        }
+        treatments = {
+            "schema_version": 1,
+            "treatments": {
+                "A": {"name": "A", "sha": "subject-a", "agent_instruction": None},
+                "B": {"name": "B", "sha": "subject-b", "agent_instruction": None},
+                "C": {"name": "C", "sha": "subject-c", "agent_instruction": None},
+            },
+        }
+        task_path = manifest_dir / "T01.json"
+        treatments_path = runner_dir / "treatments.json"
+        task_path.write_text(json.dumps(task, indent=2) + "\n", encoding="utf-8")
+        treatments_path.write_text(
+            json.dumps(treatments, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        proc(["git", "init"], cwd=definition)
+        proc(["git", "config", "user.email", "seal-selftest@example.invalid"], cwd=definition)
+        proc(["git", "config", "user.name", "Narness Seal Selftest"], cwd=definition)
+        proc(["git", "add", "."], cwd=definition)
+        proc(["git", "commit", "-m", "frozen definition"], cwd=definition)
+        definition_sha = proc(["git", "rev-parse", "HEAD"], cwd=definition).stdout.strip()
+
+        benchmark_lock = {
+            "schema_version": 1,
+            "experiment_id": EXPERIMENT_ID,
+            "benchmark_revision": 1,
+            "status": "frozen",
+            "definition_sha": definition_sha,
+            "treatments": {
+                "A": "subject-a",
+                "B": "subject-b",
+                "C": "subject-c",
+            },
+        }
+        lock_path = root / "BENCHMARK-LOCK.json"
+        lock_path.write_text(
+            json.dumps(benchmark_lock, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        profile_id = "seal-selftest-profile"
+        profile = {
+            "schema_version": 1,
+            "profile_id": profile_id,
+            "status": "frozen",
+            "agent": {},
+            "environment": {},
+            "agent_timeout_seconds": 60,
+            "setup_commands": [],
+            "tooling": {},
+            "required_metrics": [],
+        }
+        profile_path = root / "execution-profile.json"
+        profile_path.write_text(json.dumps(profile, indent=2) + "\n", encoding="utf-8")
+
         runs = root / "runs"
         run_dir = runs / "T01-A-01"
         run_dir.mkdir(parents=True)
 
-        benchmark_sha = "benchmark-definition-sha"
-        profile_id = "selftest-profile"
-        run_json = {
-            "run_id": "T01-A-01",
-            "task_id": "T01",
-            "treatment": "A",
-            "attempt": 1,
-            "task_success": True,
-            "admissible_for_final_analysis": True,
-            "admissibility": {
-                "sealed": True,
-                "benchmark_definition_sha": benchmark_sha,
-                "execution_profile_id": profile_id,
-            },
-        }
-        (run_dir / "run.json").write_text(json.dumps(run_json), encoding="utf-8")
-        (run_dir / "score.json").write_text('{"metrics":{}}\n', encoding="utf-8")
-        (run_dir / "trace.jsonl").write_text('{"type":"agent-config"}\n', encoding="utf-8")
-        (run_dir / "final.diff").write_text("diff\n", encoding="utf-8")
-        (run_dir / "prompt.txt").write_text("task\n", encoding="utf-8")
+        prompt = "Do the synthetic task.\n"
+        (run_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
+        (run_dir / "trace.jsonl").write_text(
+            '{"type":"agent-config"}\n',
+            encoding="utf-8",
+        )
+        (run_dir / "final.diff").write_text("diff --git synthetic\n", encoding="utf-8")
+        (run_dir / "git-status.txt").write_text(" M synthetic\n", encoding="utf-8")
+        (run_dir / "agent.stdout.log").write_text("", encoding="utf-8")
+        (run_dir / "agent.stderr.log").write_text("", encoding="utf-8")
 
-        artifacts = {
-            name: sha(run_dir / name)
-            for name in ("run.json", "score.json", "trace.jsonl", "final.diff", "prompt.txt")
-        }
-        seal = {
+        score = {
             "schema_version": 1,
             "run_id": "T01-A-01",
             "task_id": "T01",
             "treatment": "A",
-            "benchmark_revision": 1,
-            "benchmark_definition_sha": benchmark_sha,
-            "execution_profile_id": profile_id,
-            "sealed_at": "selftest",
-            "artifacts": artifacts,
+            "metrics": {},
         }
-        (run_dir / "seal.json").write_text(json.dumps(seal), encoding="utf-8")
+        (run_dir / "score.json").write_text(
+            json.dumps(score, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
+        run_json = {
+            "schema_version": 1,
+            "run_id": "T01-A-01",
+            "task_id": "T01",
+            "treatment": "A",
+            "attempt": 1,
+            "treatment_sha": "subject-a",
+            "task_manifest_sha256": sha(task_path),
+            "treatments_manifest_sha256": sha(treatments_path),
+            "prompt_sha256": sha_bytes(prompt.encode("utf-8")),
+            "trace_present": True,
+            "trace_complete": True,
+            "agent_exit_ok": True,
+            "task_success": True,
+            "acceptance_ok": True,
+            "verification_ok": True,
+            "mutation_checks_ok": True,
+            "admissible_for_final_analysis": False,
+            "environment": {},
+            "commands": {
+                "setup": [],
+                "fixture_preflight": [],
+                "agent": {
+                    "command": "synthetic-agent",
+                    "exit_code": 0,
+                    "started_at_unix": 100.0,
+                    "duration_ms": 1000,
+                    "timeout_seconds": 60,
+                },
+                "oracle_install": [],
+                "acceptance": [{"command": "true", "exit_code": 0}],
+                "verification": [{"command": "true", "exit_code": 0}],
+                "mutation_checks": [],
+            },
+        }
+        (run_dir / "run.json").write_text(
+            json.dumps(run_json, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        sealer = ROOT / "scripts" / "seal-ai-native-run.py"
         verifier = ROOT / "scripts" / "verify-ai-native-run-seal.py"
-        run([
-            sys.executable, str(verifier),
-            "--run-dir", str(run_dir),
-            "--expected-profile-id", profile_id,
-            "--expected-benchmark-sha", benchmark_sha,
+
+        proc([
+            sys.executable,
+            str(sealer),
+            "--run-dir",
+            str(run_dir),
+            "--benchmark-lock",
+            str(lock_path),
+            "--definition-repo",
+            str(definition),
+            "--execution-profile",
+            str(profile_path),
+        ])
+        assert (run_dir / "seal.json").exists()
+
+        proc([
+            sys.executable,
+            str(verifier),
+            "--run-dir",
+            str(run_dir),
+            "--expected-profile-id",
+            profile_id,
+            "--expected-benchmark-sha",
+            definition_sha,
         ])
 
+        # Tampering after seal creation must be detectable.
         original_score = (run_dir / "score.json").read_text(encoding="utf-8")
-        (run_dir / "score.json").write_text('{"metrics":{"tampered":true}}\n', encoding="utf-8")
-        run([
-            sys.executable, str(verifier),
-            "--run-dir", str(run_dir),
-            "--expected-profile-id", profile_id,
-            "--expected-benchmark-sha", benchmark_sha,
+        (run_dir / "score.json").write_text(
+            '{"metrics":{"tampered":true}}\n',
+            encoding="utf-8",
+        )
+        proc([
+            sys.executable,
+            str(verifier),
+            "--run-dir",
+            str(run_dir),
+            "--expected-profile-id",
+            profile_id,
+            "--expected-benchmark-sha",
+            definition_sha,
         ], expected=1)
         (run_dir / "score.json").write_text(original_score, encoding="utf-8")
 
+        # The complete scheduled collection should also verify and obtain one
+        # deterministic collection digest.
         schedule = {
             "schema_version": 1,
             "status": "pre-registered",
@@ -112,37 +254,32 @@ def main() -> int:
                 "within_task_position": 1,
             }],
         }
-        profile = {
-            "schema_version": 1,
-            "status": "frozen",
-            "profile_id": profile_id,
-        }
-        lock = {
-            "schema_version": 1,
-            "experiment_id": "selftest",
-            "benchmark_revision": 1,
-            "definition_sha": benchmark_sha,
-        }
-        (root / "schedule.json").write_text(json.dumps(schedule), encoding="utf-8")
-        (root / "profile.json").write_text(json.dumps(profile), encoding="utf-8")
-        (root / "lock.json").write_text(json.dumps(lock), encoding="utf-8")
+        schedule_path = root / "schedule.json"
+        schedule_path.write_text(json.dumps(schedule, indent=2) + "\n", encoding="utf-8")
 
         collection = ROOT / "scripts" / "verify-ai-native-collection.py"
-        manifest = root / "collection.json"
-        run([
-            sys.executable, str(collection),
-            "--runs-root", str(runs),
-            "--schedule", str(root / "schedule.json"),
-            "--execution-profile", str(root / "profile.json"),
-            "--benchmark-lock", str(root / "lock.json"),
-            "--output", str(manifest),
+        manifest = root / "collection-manifest.json"
+        proc([
+            sys.executable,
+            str(collection),
+            "--runs-root",
+            str(runs),
+            "--schedule",
+            str(schedule_path),
+            "--execution-profile",
+            str(profile_path),
+            "--benchmark-lock",
+            str(lock_path),
+            "--output",
+            str(manifest),
         ])
+
         value = json.loads(manifest.read_text(encoding="utf-8"))
         assert value["complete"] is True
         assert value["verified_run_count"] == 1
         assert len(value["collection_digest_sha256"]) == 64
 
-    print("Run/collection seal selftest OK")
+    print("Run sealer / tamper verification / collection seal selftest OK")
     return 0
 
 
