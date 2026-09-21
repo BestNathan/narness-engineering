@@ -234,7 +234,11 @@ def main() -> int:
             verification_ok = verification_ok and result["exit_code"] == 0
 
         mutation_checks_ok = True
-        for index, mutation in enumerate(task.get("mutation_checks", []), start=1):
+        mutation_checks = list(task.get("mutation_checks", []))
+        mutation_checks.extend(
+            task.get("mutation_checks_by_treatment", {}).get(args.treatment, [])
+        )
+        for index, mutation in enumerate(mutation_checks, start=1):
             mutation_ref = mutation["ref"]
             patch_source = mutation["patch_source"]
             shown = git(source_repo, "show", f"{mutation_ref}:{patch_source}", check=False)
