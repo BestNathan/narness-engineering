@@ -1,0 +1,113 @@
+name: AI Native Codex Pilots - Self Hosted
+
+on:
+  workflow_dispatch:
+    inputs:
+      nession_path:
+        description: Absolute path to a clean local BestNathan/nession checkout on the research runner
+        required: true
+        type: string
+      artifact_retention_days:
+        description: Pilot artifact retention in days
+        required: false
+        default: '14'
+        type: string
+
+concurrency:
+  group: ai-native-codex-pilots-r2
+  cancel-in-progress: false
+
+jobs:
+  pilots:
+    # Requires an explicitly labeled trusted runner. Keep Codex auth in the
+    # credential store; do not inject OPENAI_API_KEY or CODEX_ACCESS_TOKEN.
+    runs-on: [self-hosted, ai-native-research]
+    timeout-minutes: 240
+
+    steps:
+      - name: Checkout Narness Engineering
+        uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 0
+
+      - name: Verify runner contract
+        shell: bash
+        env:
+          NESSION_PATH: ${{ inputs.nession_path }}
+        run: |
+          set -euo pipefail
+          test -d "$NESSION_PATH/.git"
+          test -z "${OPENAI_API_KEY:-}"
+          test -z "${CODEX_ACCESS_TOKEN:-}"
+          codex --version
+          codex login status
+          test -z "$(git -C "$NESSION_PATH" status --porcelain --untracked-files=no)"
+
+      - name: Run three non-reportable instrumentation pilots
+        shell: bash
+        env:
+          NESSION_PATH: ${{ inputs.nession_path }}
+          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots
+        run: |
+          set -euo pipefail
+          ./scripts/run-ai-native-codex-pilots.sh "$NESSION_PATH" "$PILOT_OUTPUT"
+
+      - name: Capture pilot handoff metadata
+        if: always()
+        shell: bash
+        env:
+          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots
+        run: |
+          set -euo pipefail
+          EXP="docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
+          HANDOFF="${{ runner.temp }}/pilot-handoff"
+          mkdir -p "$HANDOFF"
+          {
+            echo "workflow_run_id=${{ github.run_id }}"
+            echo "repository_sha=${{ github.sha }}"
+            echo "runner_name=${{ runner.name }}"
+            echo "runner_os=${{ runner.os }}"
+            echo "codex_version=$(codex --version 2>/dev/null || true)"
+            echo "created_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > "$HANDOFF/workflow-metadata.txt"
+          for file in \
+            "$EXP/runner/execution-profile-r1.json" \
+            "$EXP/runner/formal-schedule-r1.json" \
+            "$EXP/runner/formal-plan-r1.lock.json"; do
+            if [[ -f "$file" ]]; then
+              cp "$file" "$HANDOFF/"
+            fi
+          done
+          if [[ -d "$PILOT_OUTPUT" ]]; then
+            cp -R "$PILOT_OUTPUT" "$HANDOFF/pilot-runs"
+          fi
+
+      - name: Upload non-reportable pilot handoff
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-native-codex-pilots-r2-${{ github.run_id }}
+          path: ${{ runner.temp }}/pilot-handoff
+          if-no-files-found: error
+          retention-days: ${{ fromJSON(inputs.artifact_retention_days) }}
+
+      - name: Show generated formal freeze files
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXP="docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
+          git status --short
+          for file in \
+            "$EXP/runner/execution-profile-r1.json" \
+            "$EXP/runner/formal-schedule-r1.json" \
+            "$EXP/runner/formal-plan-r1.lock.json"; do
+            test -f "$file"
+            python3 -m json.tool "$file" >/dev/null
+            if command -v sha256sum >/dev/null 2>&1; then
+              sha256sum "$file"
+            else
+              shasum -a 256 "$file"
+            fi
+          done
