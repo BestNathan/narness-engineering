@@ -194,6 +194,7 @@ def main() -> int:
         schedule_path,
         profile_path,
         plan_path,
+        EXPERIMENT / "runner" / "PILOT-FREEZE.json",
         ROOT / "scripts" / "aggregate-ai-native-results.py",
         ROOT / "scripts" / "analyze-ai-native-effects.py",
         ROOT / "scripts" / "generate-ai-native-research-report.py",
