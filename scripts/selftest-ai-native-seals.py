@@ -124,6 +124,54 @@ def main() -> int:
         profile_path = root / "execution-profile.json"
         profile_path.write_text(json.dumps(profile, indent=2) + "\n", encoding="utf-8")
 
+        schedule = {
+            "schema_version": 1,
+            "status": "pre-registered",
+            "profile_id": profile_id,
+            "replications": 1,
+            "run_count": 1,
+            "design": "selftest",
+            "entries": [{
+                "sequence": 1,
+                "replication": 1,
+                "task_id": "T01",
+                "treatment": "A",
+                "attempt": 1,
+                "within_task_position": 1,
+            }],
+        }
+        schedule_path = root / "schedule.json"
+        schedule_path.write_text(json.dumps(schedule, indent=2) + "\n", encoding="utf-8")
+        analysis_lock = {
+            "schema_version": 1,
+            "analysis_revision": 2,
+            "status": "frozen",
+            "definition_sha": "analysis-definition-sha",
+        }
+        analysis_path = root / "ANALYSIS-LOCK.json"
+        analysis_path.write_text(
+            json.dumps(analysis_lock, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        formal_plan_path = root / "formal-plan.lock.json"
+        proc([
+            sys.executable,
+            str(ROOT / "scripts" / "freeze-ai-native-formal-plan.py"),
+            "--execution-profile",
+            str(profile_path),
+            "--schedule",
+            str(schedule_path),
+            "--benchmark-lock",
+            str(lock_path),
+            "--analysis-lock",
+            str(analysis_path),
+            "--output",
+            str(formal_plan_path),
+            "--plan-id",
+            "selftest-plan",
+        ])
+        formal_plan_sha256 = sha(formal_plan_path)
+
         runs = root / "runs"
         run_dir = runs / "T01-A-01"
         run_dir.mkdir(parents=True)
@@ -205,6 +253,8 @@ def main() -> int:
             str(definition),
             "--execution-profile",
             str(profile_path),
+            "--formal-plan-lock",
+            str(formal_plan_path),
         ])
         assert (run_dir / "seal.json").exists()
 
@@ -217,6 +267,8 @@ def main() -> int:
             profile_id,
             "--expected-benchmark-sha",
             definition_sha,
+            "--expected-formal-plan-sha256",
+            formal_plan_sha256,
         ])
 
         # Tampering after seal creation must be detectable.
@@ -234,29 +286,13 @@ def main() -> int:
             profile_id,
             "--expected-benchmark-sha",
             definition_sha,
+            "--expected-formal-plan-sha256",
+            formal_plan_sha256,
         ], expected=1)
         (run_dir / "score.json").write_text(original_score, encoding="utf-8")
 
         # The complete scheduled collection should also verify and obtain one
         # deterministic collection digest.
-        schedule = {
-            "schema_version": 1,
-            "status": "pre-registered",
-            "profile_id": profile_id,
-            "replications": 1,
-            "run_count": 1,
-            "entries": [{
-                "sequence": 1,
-                "replication": 1,
-                "task_id": "T01",
-                "treatment": "A",
-                "attempt": 1,
-                "within_task_position": 1,
-            }],
-        }
-        schedule_path = root / "schedule.json"
-        schedule_path.write_text(json.dumps(schedule, indent=2) + "\n", encoding="utf-8")
-
         collection = ROOT / "scripts" / "verify-ai-native-collection.py"
         manifest = root / "collection-manifest.json"
         proc([
@@ -270,6 +306,8 @@ def main() -> int:
             str(profile_path),
             "--benchmark-lock",
             str(lock_path),
+            "--formal-plan-lock",
+            str(formal_plan_path),
             "--output",
             str(manifest),
         ])
