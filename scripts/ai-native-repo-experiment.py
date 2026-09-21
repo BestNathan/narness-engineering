@@ -175,6 +175,7 @@ def main() -> int:
             )
 
         env = os.environ.copy()
+        trace_path = run_dir / "trace.jsonl"
         env.update(
             {
                 "NARNESS_RUN_ID": run_id,
@@ -183,6 +184,7 @@ def main() -> int:
                 "NARNESS_WORKTREE": str(worktree),
                 "NARNESS_RUN_DIR": str(run_dir),
                 "NARNESS_PROMPT_FILE": str(prompt_path),
+                "NARNESS_TRACE_FILE": str(trace_path),
             }
         )
 
@@ -299,6 +301,8 @@ def main() -> int:
         status = git(worktree, "status", "--porcelain=v1", check=False)
         (run_dir / "git-status.txt").write_text(status["stdout"], encoding="utf-8")
 
+        record["trace_path"] = str(trace_path)
+        record["trace_present"] = trace_path.exists() and trace_path.stat().st_size > 0
         record["agent_exit_ok"] = agent["exit_code"] == 0
         record["acceptance_ok"] = acceptance_ok
         record["verification_ok"] = verification_ok
