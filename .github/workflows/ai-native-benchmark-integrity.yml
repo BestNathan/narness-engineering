@@ -1,0 +1,32 @@
+name: AI Native Benchmark Integrity
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/ai-native-repo-experiment.py'
+      - 'scripts/score-ai-native-run.py'
+      - 'scripts/validate-ai-native-benchmark.py'
+      - 'docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/**'
+      - '.github/workflows/ai-native-benchmark-integrity.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Compile research scripts
+        run: |
+          python -m py_compile             scripts/ai-native-repo-experiment.py             scripts/score-ai-native-run.py             scripts/validate-ai-native-benchmark.py
+
+      - name: Clone frozen subject repository
+        run: git clone --no-checkout https://github.com/BestNathan/nession.git /tmp/nession
+
+      - name: Validate benchmark manifests, fixtures, mutations, and oracle
+        run: |
+          python scripts/validate-ai-native-benchmark.py             --source-repo /tmp/nession
