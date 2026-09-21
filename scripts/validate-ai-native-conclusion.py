@@ -8,6 +8,13 @@ import json
 from pathlib import Path
 
 
+ROOT = Path(__file__).resolve().parents[1]
+EXPERIMENT = (
+    ROOT
+    / "docs/topics/agent-native-repository-architecture/research/experiments"
+    / "nession-terminal-session-reconnect-2026-09"
+)
+
 ALLOWED = {
     "Supported",
     "Partially supported",
@@ -25,6 +32,15 @@ def main() -> int:
 
     value = json.loads(args.conclusions.read_text(encoding="utf-8"))
     errors: list[str] = []
+
+    benchmark = json.loads((EXPERIMENT / "BENCHMARK-LOCK.json").read_text(encoding="utf-8"))
+    analysis = json.loads((EXPERIMENT / "ANALYSIS-LOCK.json").read_text(encoding="utf-8"))
+    if value.get("experiment_id") != benchmark.get("experiment_id"):
+        errors.append("experiment_id does not match frozen benchmark")
+    if value.get("benchmark_revision") != benchmark.get("benchmark_revision"):
+        errors.append("benchmark_revision does not match frozen benchmark")
+    if value.get("analysis_revision") != analysis.get("analysis_revision"):
+        errors.append("analysis_revision does not match active frozen analysis")
 
     hypotheses = value.get("hypotheses", {})
     if set(hypotheses) != set(HYPOTHESES):
