@@ -8,8 +8,8 @@
   "frozen_branch": "research/ai-native-benchmark-r2",
   "integrity": {
     "workflow": "AI Native Benchmark Integrity",
-    "run_id": null,
-    "conclusion": "pending after revision-2 lock update"
+    "run_id": 35609845199,
+    "conclusion": "success"
   },
   "subject_repository": "BestNathan/nession",
   "treatments": {
