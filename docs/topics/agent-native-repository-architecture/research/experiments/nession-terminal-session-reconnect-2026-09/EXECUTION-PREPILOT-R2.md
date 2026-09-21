@@ -1,6 +1,6 @@
-# Execution Pre-Pilot Revision 2
+# Execution Pre-Pilot Revision 2 — Superseded Before Real Pilots
 
-> Status: frozen before any real Codex instrumentation pilot.
+> Status: superseded by Revision 3 before any real Codex instrumentation pilot.
 
 The first execution pre-pilot handoff was frozen at:
 
@@ -100,3 +100,13 @@ runner/formal-plan-r1.lock.json
 
 No later Narness execution change may be mixed into the same formal plan without
 rerunning the pilot freeze.
+
+
+## Supersession
+
+Revision 2 remains as execution audit history. No real pilot was executed from it.
+
+Revision 3 adds workspace-only Codex filesystem permissions, explicit denial of
+general temporary roots, a shell-command environment allowlist, and CI checks for
+the exact isolation argv. Benchmark Revision 2 and Analysis Revision 2 remain
+unchanged.
