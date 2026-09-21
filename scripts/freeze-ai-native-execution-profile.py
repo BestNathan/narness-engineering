@@ -188,6 +188,9 @@ def main() -> int:
             "formal_orchestrator_file_sha256": file_sha256(
                 ROOT / "scripts" / "run-ai-native-formal.py"
             ),
+            "formal_readiness_file_sha256": file_sha256(
+                ROOT / "scripts" / "prepare-ai-native-formal-collection.py"
+            ),
         },
         "pilot_repository_sha": pilot_repository_sha,
         "required_metrics": REQUIRED_METRICS,
