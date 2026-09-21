@@ -178,12 +178,21 @@ jobs:
               (d/'run.json').write_text(json.dumps(run))
               (d/'score.json').write_text(json.dumps(score))
               if not success:
+                  import hashlib
+                  seal={'schema_version':1,'run_id':run['run_id']}
+                  seal_path=d/'seal.json'
+                  seal_path.write_text(json.dumps(seal))
+                  seal_sha=hashlib.sha256(seal_path.read_bytes()).hexdigest()
                   review={
                     'schema_version':1,'run_id':run['run_id'],'task_id':'T01',
                     'treatment':treatment,'task_success':False,
+                    'review_policy_version':1,
+                    'review_scope':'per-run-causal-review-before-aggregate-interpretation',
+                    'reviewed_run_seal_sha256':seal_sha,
                     'primary_failure_code':'R5','primary_failure':'invariant missed',
                     'secondary_failure_codes':[],'secondary_failures':[],
-                    'notes':'synthetic CI review','evidence':[],
+                    'notes':'synthetic CI review',
+                    'evidence':['synthetic acceptance failure'],
                   }
                   (d/'review.json').write_text(json.dumps(review))
           write('A',False,0.5,10000,5000)
