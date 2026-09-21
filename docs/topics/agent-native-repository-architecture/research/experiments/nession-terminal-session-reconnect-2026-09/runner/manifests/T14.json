@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "task_id": "T14",
+  "prompt": "Updating session context that does not change the effective endpoint or token must preserve the existing physical WebSocket transport and its reconnect-attempt budget. Viewport changes, transport-ready changes, or value-equivalent context rebuilds must not silently rebuild the transport or reset transport recovery.",
+  "fixtures": {
+    "A": {
+      "patch": "../fixtures/T14-AB.patch"
+    },
+    "B": {
+      "patch": "../fixtures/T14-AB.patch"
+    },
+    "C": {
+      "patch": "../fixtures/T14-C.patch"
+    }
+  },
+  "oracle": {
+    "ref": "70d8074e7c50f3865771fabd714e811ae440e09d",
+    "files": [
+      {
+        "source": ".research/ai-native/acceptance/T14.test.ts",
+        "destination": "web/src/platform/session-runtime/__tests__/unit/__research_T14.test.ts"
+      }
+    ]
+  },
+  "acceptance_commands": [
+    "cd web && npm test"
+  ],
+  "verification_commands": [
+    "cd web && npm run build",
+    "cd web && npm run lint"
+  ]
+}
