@@ -122,6 +122,7 @@ Pilot task success itself is not required. Complete, trustworthy instrumentation
 - [Protocol](protocol.md)
 - [Runbook](RUNBOOK.md)
 - [Instrumentation pilots](instrumentation-pilots.md)
+- [Execution Pre-Pilot Revision 2](EXECUTION-PREPILOT-R2.md)
 - [Benchmark Revision 2](REVISION-2-FROZEN.md)
 - [Analysis Revision 2](ANALYSIS-REVISION-2-FROZEN.md)
 - [Pre-registered analysis plan](ANALYSIS-PLAN.md)
@@ -139,6 +140,7 @@ Pilot task success itself is not required. Complete, trustworthy instrumentation
 ```text
 BENCHMARK-LOCK.json
 ANALYSIS-LOCK.json
+EXECUTION-PREPILOT-LOCK.json
 analysis-strata.json
 runner/treatments.json
 runner/gold.json
