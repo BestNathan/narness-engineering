@@ -30,6 +30,7 @@ jobs:
         with:
           clean: true
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Verify runner contract
         shell: bash
