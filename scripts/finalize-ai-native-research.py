@@ -47,6 +47,34 @@ def main() -> int:
     failures = ROOT / "scripts" / "aggregate-ai-native-failures.py"
     report = ROOT / "scripts" / "generate-ai-native-research-report.py"
     validate_conclusion = ROOT / "scripts" / "validate-ai-native-conclusion.py"
+    verify_collection = ROOT / "scripts" / "verify-ai-native-collection.py"
+
+    schedule_path = EXPERIMENT / "runner" / "formal-schedule-r1.json"
+    profile_path = EXPERIMENT / "runner" / "execution-profile-r1.json"
+    lock_path = EXPERIMENT / "BENCHMARK-LOCK.json"
+    collection_manifest_path = out / "collection-manifest.json"
+    collection_manifest = None
+
+    if schedule_path.exists() and profile_path.exists():
+        collection_cmd = [
+            sys.executable, str(verify_collection),
+            "--runs-root", str(runs_root),
+            "--schedule", str(schedule_path),
+            "--execution-profile", str(profile_path),
+            "--benchmark-lock", str(lock_path),
+            "--output", str(collection_manifest_path),
+        ]
+        if args.allow_incomplete:
+            collection_cmd.append("--allow-incomplete")
+        run(collection_cmd)
+        collection_manifest = load(collection_manifest_path)
+    elif not args.allow_incomplete:
+        missing = []
+        if not schedule_path.exists():
+            missing.append(str(schedule_path))
+        if not profile_path.exists():
+            missing.append(str(profile_path))
+        raise RuntimeError("formal collection metadata missing: " + ", ".join(missing))
 
     run([
         sys.executable, str(aggregate),
@@ -95,7 +123,6 @@ def main() -> int:
         for treatment in ("A", "B", "C")
     }
 
-    schedule_path = EXPERIMENT / "runner" / "formal-schedule-r1.json"
     expected_runs = None
     if schedule_path.exists():
         schedule = load(schedule_path)
@@ -114,6 +141,17 @@ def main() -> int:
         "missing_failure_reviews": failure_summary.get("missing_review_count", 0),
         "report_generated": (out / "research-report.md").exists(),
         "hypothesis_classification_complete": conclusion_complete,
+        "collection_manifest_present": collection_manifest is not None,
+        "collection_verified_run_count": (
+            collection_manifest.get("verified_run_count") if collection_manifest else None
+        ),
+        "collection_complete": (
+            bool(collection_manifest.get("complete")) if collection_manifest else False
+        ),
+        "collection_digest_sha256": (
+            collection_manifest.get("collection_digest_sha256")
+            if collection_manifest else None
+        ),
     }
     (out / "research-completeness.json").write_text(
         json.dumps(completeness, indent=2, sort_keys=True) + "\n",
@@ -132,6 +170,10 @@ def main() -> int:
             errors.append("failed runs still need taxonomy review")
         if not conclusion_complete:
             errors.append("reviewed H1-H5 conclusion file is required")
+        if collection_manifest is None:
+            errors.append("formal collection seal manifest is required")
+        elif not collection_manifest.get("complete"):
+            errors.append("formal collection seal verification is incomplete")
         if errors:
             print("Research data pipeline is INCOMPLETE")
             for error in errors:
