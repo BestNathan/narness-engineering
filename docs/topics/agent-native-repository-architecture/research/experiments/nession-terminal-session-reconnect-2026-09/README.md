@@ -120,6 +120,7 @@ Pilot task success itself is not required. Complete, trustworthy instrumentation
 - [Benchmark Revision 2](REVISION-2-FROZEN.md)
 - [Analysis Revision 2](ANALYSIS-REVISION-2-FROZEN.md)
 - [Pre-registered analysis plan](ANALYSIS-PLAN.md)
+- [Failure review protocol](FAILURE-REVIEW-PROTOCOL.md)
 - [Results placeholder](results.md)
 - [Conclusion contract](conclusion.md)
 - [Treatment construction cost](treatments/construction-cost.md)
