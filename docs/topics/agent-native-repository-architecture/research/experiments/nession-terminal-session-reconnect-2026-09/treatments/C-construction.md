@@ -1,6 +1,6 @@
 # Treatment C Construction Record
 
-> Status: C2 checkpoint complete; final CI validation pending at the time this record was written.
+> Status: Frozen construction complete; final isolated validation passed.
 >
 > Nession branch: `research/ai-native-repo-c-agent-native`
 >
@@ -86,7 +86,7 @@ web/src/units/terminal-session/README.md
 
 No production behavior is intentionally changed by the C structural conversion.
 
-The first C validation checkpoint before evidence relocation passed the full isolated Web gate. The final C2 checkpoint must also pass before the treatment SHA is frozen.
+The first C validation checkpoint before evidence relocation passed the full isolated Web gate. The final C2 checkpoint passed before the treatment SHA was frozen; see `C-validation.md`.
 
 ## Cost accounting note
 
@@ -95,4 +95,4 @@ The final study should report both:
 1. raw repository churn, because migration cost is real;
 2. semantic-change classification, because rename/move churn is not equivalent to new behavior.
 
-This prevents Treatment C from appearing either artificially cheap or artificially expensive.
+This prevents Treatment C from appearing either artificially cheap or artificially expensive. The completed quantitative decomposition is recorded in `construction-cost.md` and `construction-cost-r1.json`.
