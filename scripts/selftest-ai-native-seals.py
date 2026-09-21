@@ -217,7 +217,9 @@ def main() -> int:
             "verification_ok": True,
             "mutation_checks_ok": True,
             "admissible_for_final_analysis": False,
-            "environment": {},
+            "environment": {
+                "harness_repository_sha": "selftest-harness-sha",
+            },
             "commands": {
                 "setup": [],
                 "fixture_preflight": [],
@@ -299,6 +301,29 @@ def main() -> int:
 
         # The complete scheduled collection should also verify and obtain one
         # deterministic collection digest.
+        collection_start = runs / "_collection" / "collection-start.json"
+        collection_start.parent.mkdir(parents=True, exist_ok=True)
+        collection_start.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "status": "frozen-at-first-formal-run",
+                    "created_at": "selftest",
+                    "critical": {
+                        "formal_plan_sha256": formal_plan_sha256,
+                        "execution_profile_sha256": sha(profile_path),
+                        "schedule_sha256": sha(schedule_path),
+                        "benchmark_definition_sha": definition_sha,
+                        "analysis_definition_sha": analysis_lock["definition_sha"],
+                        "narness_repository_sha": "selftest-harness-sha",
+                    },
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
         collection = ROOT / "scripts" / "verify-ai-native-collection.py"
         manifest = root / "collection-manifest.json"
         proc([
