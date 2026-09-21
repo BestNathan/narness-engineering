@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "task_id": "T02",
+  "prompt": "A P2P attach started on one route can resolve after the user changes route. Ensure that a late successful attach from the old route cannot mark the new route as attached.",
+  "fixtures": {
+    "A": {
+      "patch": "../fixtures/T02-AB.patch"
+    },
+    "B": {
+      "patch": "../fixtures/T02-AB.patch"
+    },
+    "C": {
+      "patch": "../fixtures/T02-C.patch"
+    }
+  },
+  "acceptance_commands": [
+    "cd web && npm test"
+  ],
+  "verification_commands": [
+    "cd web && npm run build",
+    "cd web && npm run lint"
+  ]
+}
