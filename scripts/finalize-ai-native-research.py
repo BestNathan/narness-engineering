@@ -58,6 +58,7 @@ def main() -> int:
     profile_path = EXPERIMENT / "runner" / "execution-profile-r1.json"
     plan_path = EXPERIMENT / "runner" / "formal-plan-r1.lock.json"
     lock_path = EXPERIMENT / "BENCHMARK-LOCK.json"
+    analysis_lock_path = EXPERIMENT / "ANALYSIS-LOCK.json"
     collection_manifest_path = out / "collection-manifest.json"
     collection_manifest = None
 
@@ -68,6 +69,7 @@ def main() -> int:
             "--schedule", str(schedule_path),
             "--execution-profile", str(profile_path),
             "--benchmark-lock", str(lock_path),
+            "--analysis-lock", str(analysis_lock_path),
             "--formal-plan-lock", str(plan_path),
             "--output", str(collection_manifest_path),
         ]
