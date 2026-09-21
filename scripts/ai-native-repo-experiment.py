@@ -191,6 +191,7 @@ def main() -> int:
             "node": probe_command(["node", "--version"], cwd=source_repo),
             "npm": probe_command(["npm", "--version"], cwd=source_repo),
             "harness_repository_sha": probe_command(["git", "rev-parse", "HEAD"], cwd=harness_root),
+            "runner_file_sha256": sha256_file(Path(__file__).resolve()),
             "harness_repository_dirty": bool(
                 probe_command(["git", "status", "--porcelain"], cwd=harness_root)
             ),
