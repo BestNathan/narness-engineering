@@ -165,6 +165,7 @@ def main() -> int:
         "research_artifact_set_digest_sha256": artifact.get(
             "artifact_set_digest_sha256"
         ),
+        "publisher_file_sha256": sha256_file(Path(__file__).resolve()),
         "published_files": hashes,
         "publication_digest_sha256": hashlib.sha256(digest_material).hexdigest(),
         "raw_trace_policy": (
@@ -197,7 +198,8 @@ Research artifact digest:
 {artifact.get('artifact_set_digest_sha256')}
 
 Publication digest:
-{publication_manifest['publication_digest_sha256']}
+See publication-manifest.json. The README is itself part of the published file set,
+so the final digest is written only after this README has been created.
 
 Start with research-report.md.
 
