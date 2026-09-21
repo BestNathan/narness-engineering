@@ -77,6 +77,9 @@ def main() -> int:
         "runner_file_sha256": ROOT / "scripts" / "ai-native-repo-experiment.py",
         "adapter_file_sha256": ROOT / "scripts" / "ai-native-codex-adapter.py",
         "scorer_file_sha256": ROOT / "scripts" / "score-ai-native-run.py",
+        "seal_file_sha256": ROOT / "scripts" / "seal-ai-native-run.py",
+        "run_seal_verifier_file_sha256": ROOT / "scripts" / "verify-ai-native-run-seal.py",
+        "formal_orchestrator_file_sha256": ROOT / "scripts" / "run-ai-native-formal.py",
     }
     for key, tool_path in tool_paths.items():
         expected = tooling.get(key)
@@ -126,6 +129,9 @@ def main() -> int:
         f"--model {shlex.quote(str(model))} --effort {shlex.quote(str(effort))}"
     )
 
+    verifier = ROOT / "scripts" / "verify-ai-native-run-seal.py"
+    benchmark_sha = load(lock_path)["definition_sha"]
+
     entries = schedule["entries"]
     selected = []
     for entry in entries:
@@ -151,7 +157,23 @@ def main() -> int:
         if run_dir.exists():
             run_json = run_dir / "run.json"
             if run_json.exists() and load(run_json).get("admissible_for_final_analysis"):
-                print(f"SKIP sealed run {run_id}", flush=True)
+                verified = run(
+                    [
+                        sys.executable,
+                        str(verifier),
+                        "--run-dir",
+                        str(run_dir),
+                        "--expected-profile-id",
+                        str(profile["profile_id"]),
+                        "--expected-benchmark-sha",
+                        str(benchmark_sha),
+                    ]
+                )
+                if verified.returncode != 0:
+                    raise RuntimeError(
+                        f"existing sealed run failed tamper verification: {run_id}"
+                    )
+                print(f"SKIP verified sealed run {run_id}", flush=True)
                 continue
             raise RuntimeError(
                 f"run directory already exists but is not sealed: {run_dir}"
@@ -223,6 +245,21 @@ def main() -> int:
             raise RuntimeError(
                 f"run completed but failed formal admissibility seal: {run_id}"
             )
+
+        verified = run(
+            [
+                sys.executable,
+                str(verifier),
+                "--run-dir",
+                str(run_dir),
+                "--expected-profile-id",
+                str(profile["profile_id"]),
+                "--expected-benchmark-sha",
+                str(benchmark_sha),
+            ]
+        )
+        if verified.returncode != 0:
+            raise RuntimeError(f"newly sealed run failed tamper verification: {run_id}")
 
     print("Selected formal schedule entries completed.", flush=True)
     return 0
