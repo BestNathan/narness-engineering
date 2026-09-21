@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "experiment_id": "nession-terminal-session-reconnect-2026-09",
+  "benchmark_revision": 2,
+  "analysis_revision": 2,
+  "hypotheses": {
+    "H1": {
+      "classification": null,
+      "rationale": ""
+    },
+    "H2": {
+      "classification": null,
+      "rationale": ""
+    },
+    "H3": {
+      "classification": null,
+      "rationale": ""
+    },
+    "H4": {
+      "classification": null,
+      "rationale": ""
+    },
+    "H5": {
+      "classification": null,
+      "rationale": ""
+    }
+  },
+  "overall_summary": "",
+  "architecture_decisions": [
+    {
+      "idea": "",
+      "decision": "graduate | keep-experimental | reject",
+      "rationale": ""
+    }
+  ],
+  "limitations": []
+}
