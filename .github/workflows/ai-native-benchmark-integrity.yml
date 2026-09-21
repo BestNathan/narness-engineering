@@ -77,6 +77,8 @@ jobs:
           types=[e['type'] for e in events]
           assert 'resolver' in types, types
           assert 'search' in types, types
+          search_events=[e for e in events if e.get('type') == 'search']
+          assert any('web/src/platform/socket/WebSocketService.ts' in e.get('results', []) for e in search_events), search_events
           assert any(e.get('type') == 'read' and e.get('path') == 'web/src/platform/socket/WebSocketService.ts' for e in events), events
           assert 'edit' in types, types
           assert 'validation' in types, types
