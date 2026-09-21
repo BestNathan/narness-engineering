@@ -208,6 +208,8 @@ def main() -> int:
                         str(benchmark_sha),
                         "--expected-formal-plan-sha256",
                         str(formal_plan_sha256),
+                        "--expected-analysis-sha",
+                        str(analysis_lock["definition_sha"]),
                     ]
                 )
                 if verified.returncode != 0:
@@ -332,6 +334,8 @@ def main() -> int:
                 str(benchmark_sha),
                 "--expected-formal-plan-sha256",
                 str(formal_plan_sha256),
+                "--expected-analysis-sha",
+                str(analysis_lock["definition_sha"]),
             ]
         )
         if verified.returncode != 0:
