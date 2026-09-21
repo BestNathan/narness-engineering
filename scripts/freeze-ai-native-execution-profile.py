@@ -117,6 +117,7 @@ def main() -> int:
         "network",
         "subagents_enabled",
         "web_search",
+        "harness_environment_scrubbed",
         "codex_version",
         "adapter_file_sha256",
     ]
