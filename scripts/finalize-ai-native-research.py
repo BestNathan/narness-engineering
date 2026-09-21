@@ -56,17 +56,19 @@ def main() -> int:
 
     schedule_path = EXPERIMENT / "runner" / "formal-schedule-r1.json"
     profile_path = EXPERIMENT / "runner" / "execution-profile-r1.json"
+    plan_path = EXPERIMENT / "runner" / "formal-plan-r1.lock.json"
     lock_path = EXPERIMENT / "BENCHMARK-LOCK.json"
     collection_manifest_path = out / "collection-manifest.json"
     collection_manifest = None
 
-    if schedule_path.exists() and profile_path.exists():
+    if schedule_path.exists() and profile_path.exists() and plan_path.exists():
         collection_cmd = [
             sys.executable, str(verify_collection),
             "--runs-root", str(runs_root),
             "--schedule", str(schedule_path),
             "--execution-profile", str(profile_path),
             "--benchmark-lock", str(lock_path),
+            "--formal-plan-lock", str(plan_path),
             "--output", str(collection_manifest_path),
         ]
         if args.allow_incomplete:
@@ -79,6 +81,8 @@ def main() -> int:
             missing.append(str(schedule_path))
         if not profile_path.exists():
             missing.append(str(profile_path))
+        if not plan_path.exists():
+            missing.append(str(plan_path))
         raise RuntimeError("formal collection metadata missing: " + ", ".join(missing))
 
     run([
@@ -181,6 +185,7 @@ def main() -> int:
         EXPERIMENT / "ANALYSIS-LOCK.json",
         schedule_path,
         profile_path,
+        plan_path,
         ROOT / "scripts" / "aggregate-ai-native-results.py",
         ROOT / "scripts" / "analyze-ai-native-effects.py",
         ROOT / "scripts" / "generate-ai-native-research-report.py",
