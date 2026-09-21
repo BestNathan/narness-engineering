@@ -205,11 +205,53 @@ def collect_paths(value: Any, *, key: str | None = None) -> list[str]:
     return result
 
 
+def parse_command_result_paths(command: str, output: str) -> list[str]:
+    """Best-effort path extraction from deterministic navigation commands."""
+    if not output:
+        return []
+    kind = classify_command(command)
+    if kind not in {"search", "glob", "resolver"}:
+        return []
+
+    paths: set[str] = set()
+    for raw in output.splitlines():
+        line = raw.strip()
+        if not line or line.startswith(("warning:", "error:", "fatal:")):
+            continue
+
+        candidate = line
+        if kind == "search":
+            # rg/grep/git-grep commonly print path:line:text or path:text.
+            match = re.match(r"^([^:\n]+?)(?::\d+)?(?::|$)", line)
+            if not match:
+                continue
+            candidate = match.group(1)
+
+        # Resolver output can contain semantic IDs rather than filesystem paths.
+        if kind == "resolver" and "://" in candidate:
+            continue
+
+        candidate = candidate.strip().strip("'\"")
+        if not candidate or candidate in {".", ".."}:
+            continue
+        if candidate.startswith(("/", "~")):
+            try:
+                candidate = str(Path(candidate).resolve().relative_to(Path.cwd().resolve()))
+            except (ValueError, OSError):
+                continue
+        candidate = candidate.lstrip("./")
+        if candidate and not candidate.startswith("-"):
+            paths.add(candidate)
+
+    return sorted(paths)
+
+
 def emit_command_trace(
     trace: Path,
     origin: float,
     command: str,
     exit_code: int | None,
+    aggregated_output: str = "",
 ) -> None:
     base = {"ts_ms": now_ms(origin), "command": command}
     append_jsonl(trace, {"type": "command", **base, "exit_code": exit_code})
@@ -220,9 +262,25 @@ def emit_command_trace(
     elif kind == "validation":
         append_jsonl(trace, {"type": "validation", **base, "exit_code": exit_code})
     elif kind == "search":
-        append_jsonl(trace, {"type": "search", **base, "query": command})
+        append_jsonl(
+            trace,
+            {
+                "type": "search",
+                **base,
+                "query": command,
+                "results": parse_command_result_paths(command, aggregated_output),
+            },
+        )
     elif kind == "glob":
-        append_jsonl(trace, {"type": "glob", **base, "pattern": command})
+        append_jsonl(
+            trace,
+            {
+                "type": "glob",
+                **base,
+                "pattern": command,
+                "results": parse_command_result_paths(command, aggregated_output),
+            },
+        )
 
     for path in infer_read_paths(command):
         append_jsonl(trace, {"type": "read", "ts_ms": now_ms(origin), "path": path})
@@ -260,7 +318,10 @@ def process_codex_event(
             exit_code = item.get("exit_code")
             if not isinstance(exit_code, int):
                 exit_code = None
-            emit_command_trace(trace, origin, command, exit_code)
+            output = item.get("aggregated_output")
+            if not isinstance(output, str):
+                output = ""
+            emit_command_trace(trace, origin, command, exit_code, output)
         return
 
     if item_type == "file_change":
