@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "task_id": "T24",
+  "prompt": "Add one deterministic test covering the full automatic recovery path: attached P2P, transport loss, reconnect or candidate recovery, automatic forced relay after exhaustion, and attached relay. The test must prove no duplicate attach for one transport generation, no duplicate force-relay transition, final convergence to attached relay, and that stale P2P work cannot regain authority.",
+  "fixtures": {
+    "A": {},
+    "B": {},
+    "C": {}
+  },
+  "acceptance_commands": [
+    "cd web && npm test"
+  ],
+  "verification_commands": [
+    "cd web && npm run build",
+    "cd web && npm run lint"
+  ],
+  "mutation_checks_by_treatment": {
+    "A": [
+      {
+        "name": "T24-semantic-mutation",
+        "patch": "../mutations/T24-AB.patch",
+        "expected": "failure",
+        "commands": [
+          "cd web && npm test"
+        ]
+      }
+    ],
+    "B": [
+      {
+        "name": "T24-semantic-mutation",
+        "patch": "../mutations/T24-AB.patch",
+        "expected": "failure",
+        "commands": [
+          "cd web && npm test"
+        ]
+      }
+    ],
+    "C": [
+      {
+        "name": "T24-semantic-mutation",
+        "patch": "../mutations/T24-C.patch",
+        "expected": "failure",
+        "commands": [
+          "cd web && npm test"
+        ]
+      }
+    ]
+  }
+}
