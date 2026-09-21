@@ -20,6 +20,16 @@ FORBIDDEN_PROMPT_FRAGMENTS = (
     "research/ai-native-",
 )
 
+SEMANTIC_FREEZE_PATHS = (
+    "tasks/README.md",
+    "runner/manifests",
+    "runner/fixtures",
+    "runner/mutations",
+    "runner/treatments.json",
+    "runner/oracle.json",
+    "runner/gold.json",
+)
+
 
 def load(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as fh:
@@ -70,6 +80,35 @@ def main() -> int:
     treatments = load(treatments_path)
     oracle = load(oracle_path)
     gold = load(gold_path)
+
+    # Revision-1 semantics are frozen at the definition SHA recorded in the
+    # experiment lock. Main may continue to evolve runner/adapter mechanics,
+    # but task/treatment/gold/fixture semantics must remain byte-identical.
+    definition_repo = Path(__file__).resolve().parents[1]
+    lock_path = root / "BENCHMARK-LOCK.json"
+    require(lock_path.exists(), f"missing benchmark lock: {lock_path}", errors)
+    if lock_path.exists():
+        lock = load(lock_path)
+        definition_sha = lock.get("definition_sha")
+        require(bool(definition_sha), "benchmark lock has no definition_sha", errors)
+        if definition_sha:
+            rel_root = root.relative_to(definition_repo)
+            semantic_paths = [str(rel_root / item) for item in SEMANTIC_FREEZE_PATHS]
+            frozen = git(
+                definition_repo,
+                "diff",
+                "--quiet",
+                str(definition_sha),
+                "--",
+                *semantic_paths,
+                check=False,
+            )
+            require(
+                frozen.returncode == 0,
+                "benchmark semantic drift detected relative to frozen definition SHA "
+                f"{definition_sha}",
+                errors,
+            )
 
     require(set(treatments["treatments"]) == {"A", "B", "C"}, "treatments must be exactly A/B/C", errors)
     require(oracle["sha"], "oracle SHA must be non-empty", errors)
