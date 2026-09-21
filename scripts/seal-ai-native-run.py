@@ -73,6 +73,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-dir", required=True, type=Path)
     ap.add_argument("--benchmark-lock", required=True, type=Path)
+    ap.add_argument("--analysis-lock", required=True, type=Path)
     ap.add_argument("--definition-repo", required=True, type=Path)
     ap.add_argument("--execution-profile", required=True, type=Path)
     ap.add_argument("--formal-plan-lock", required=True, type=Path)
@@ -80,6 +81,7 @@ def main() -> int:
 
     run_dir = args.run_dir.resolve()
     lock = load(args.benchmark_lock.resolve())
+    analysis_lock = load(args.analysis_lock.resolve())
     profile_path = args.execution_profile.resolve()
     profile = load(profile_path)
     plan_path = args.formal_plan_lock.resolve()
@@ -121,6 +123,10 @@ def main() -> int:
         errors.append("formal plan benchmark revision mismatch")
     if plan.get("benchmark_definition_sha") != lock.get("definition_sha"):
         errors.append("formal plan benchmark definition mismatch")
+    if plan.get("analysis_revision") != analysis_lock.get("analysis_revision"):
+        errors.append("formal plan analysis revision mismatch")
+    if plan.get("analysis_definition_sha") != analysis_lock.get("definition_sha"):
+        errors.append("formal plan analysis definition mismatch")
     if task_id not in {f"T{i:02d}" for i in range(1, 25)}:
         errors.append(f"unexpected formal task: {task_id}")
     expected_treatment_sha = lock.get("treatments", {}).get(treatment)
@@ -303,6 +309,8 @@ def main() -> int:
     run["admissibility"] = {
         "benchmark_revision": lock["benchmark_revision"],
         "benchmark_definition_sha": definition_sha,
+        "analysis_revision": analysis_lock.get("analysis_revision"),
+        "analysis_definition_sha": analysis_lock.get("definition_sha"),
         "execution_profile_id": profile["profile_id"],
         "formal_plan_id": plan.get("plan_id"),
         "formal_plan_sha256": formal_plan_sha256,
@@ -320,6 +328,8 @@ def main() -> int:
         "treatment": run["treatment"],
         "benchmark_revision": lock["benchmark_revision"],
         "benchmark_definition_sha": definition_sha,
+        "analysis_revision": analysis_lock.get("analysis_revision"),
+        "analysis_definition_sha": analysis_lock.get("definition_sha"),
         "execution_profile_id": profile["profile_id"],
         "formal_plan_id": plan.get("plan_id"),
         "formal_plan_sha256": formal_plan_sha256,
