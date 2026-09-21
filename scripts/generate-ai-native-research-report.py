@@ -90,6 +90,8 @@ def main() -> int:
     strata = load(experiment / "analysis-strata.json")
     summary = load(results / "summary.json")
     effects = load(results / "paired-effects.json")
+    failure_path = results / "failure-summary.json"
+    failures = load(failure_path) if failure_path.exists() else None
 
     total_runs = sum(int(summary.get(t, {}).get("n", 0) or 0) for t in ("A", "B", "C"))
 
@@ -215,8 +217,29 @@ def main() -> int:
         "",
         "## Failure analysis",
         "",
-        "Aggregate and report the pre-registered R1–R12 failure taxonomy, including target-selection failures, missed dependencies/invariants, implementation failures, verification gaps, insufficient feedback, tool/runtime failures, and treatment-introduced accidental complexity.",
-        "",
+    ])
+
+    if failures is None:
+        lines.extend([
+            "Failure taxonomy aggregation is not available yet.",
+            "",
+        ])
+    else:
+        lines.extend([
+            f"Failed admissible runs: {failures.get('failed_admissible_runs', 0)}.",
+            f"Reviewed failed runs: {failures.get('reviewed_failed_runs', 0)}.",
+            f"Missing failure reviews: {failures.get('missing_review_count', 0)}.",
+            "",
+            "| Code | Failure class | Count |",
+            "|---|---|---:|",
+        ])
+        for code, item in failures.get("primary_failures", {}).items():
+            lines.append(
+                f"| {code} | {item.get('label', '')} | {item.get('count', 0)} |"
+            )
+        lines.append("")
+
+    lines.extend([
         "## Limitations",
         "",
         "- one repository and one bounded cross-cutting workflow;",
