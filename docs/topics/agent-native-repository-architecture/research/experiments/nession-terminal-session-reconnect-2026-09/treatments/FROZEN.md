@@ -1,4 +1,4 @@
-# Frozen Treatment SHAs — Experiment Revision 1
+# Frozen Treatment Set — Used by Benchmark Revision 2
 
 > Formal comparative runs must use these exact treatment commits.
 
@@ -27,7 +27,7 @@ It supplies hidden experiment acceptance and validation only.
 
 From this point forward, formal A/B/C results are comparable only when the corresponding treatment starts from the SHA above.
 
-If A, B, or C is changed for any reason after reportable runs begin, the new state belongs to **experiment revision 2** and must not be mixed into revision-1 aggregates.
+If A, B, or C is changed after reportable runs begin, the new treatment set requires **Benchmark Revision 3** and must not be mixed into the Revision-2 formal collection.
 
 ## Treatment meaning
 
