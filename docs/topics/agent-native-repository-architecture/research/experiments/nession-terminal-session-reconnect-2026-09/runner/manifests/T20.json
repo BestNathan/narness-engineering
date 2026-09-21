@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "T20",
+  "prompt": "Refactor attach transition results so recovery intent is one discriminated action: none, retry-attach, or force-relay; the force-relay action must also carry its route-epoch consequence. Remove the independent authoritative forceRelay, bumpRouteEpoch, and retryAttach result booleans. Preserve current behavior.",
+  "fixtures": {
+    "A": {},
+    "B": {},
+    "C": {}
+  },
+  "oracle": {
+    "ref": "70d8074e7c50f3865771fabd714e811ae440e09d",
+    "files": [
+      {
+        "source": ".research/ai-native/acceptance/T20.test.ts",
+        "destination": "web/src/platform/attach/__tests__/unit/__research_T20.test.ts"
+      }
+    ]
+  },
+  "acceptance_commands": [
+    "cd web && npm test"
+  ],
+  "verification_commands": [
+    "cd web && npm run build",
+    "cd web && npm run lint"
+  ]
+}
