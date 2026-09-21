@@ -2,7 +2,7 @@
 
 > Experiment ID: `nession-terminal-session-reconnect-2026-09`
 >
-> Status: Benchmark revision 1 frozen; instrumentation pilot stage.
+> Status: Benchmark revision 2 and analysis revision 2 frozen; instrumentation pilot stage.
 >
 > Target repository: `BestNathan/nession`
 >
@@ -43,7 +43,7 @@ This target was selected because it has all of the properties the research hypot
 
 ## Frozen benchmark revision
 
-The revision-1 benchmark definition is locked at `BestNathan/narness-engineering@5ba7fe074fc230fa2ff2e20a69c61d7442dc21de` and tracked by `research/ai-native-benchmark-r1`. Integrity workflow run `35556728129` passed before the freeze was declared. See `BENCHMARK-LOCK.json` and `REVISION-1-FROZEN.md`.
+The active benchmark is Revision 2, locked at `BestNathan/narness-engineering@194bf5dc1a28f4e4c10491d7326891ba157d325b` and tracked by `research/ai-native-benchmark-r2`. Revision 1 remains as a superseded pre-data audit artifact. Revision 2 keeps the same tasks/treatments/oracle/gold but additionally freezes the completed scorer implementation. See `BENCHMARK-LOCK.json`, `REVISION-1-FROZEN.md`, and `REVISION-2-FROZEN.md`.
 
 ## Frozen experiment branches
 
