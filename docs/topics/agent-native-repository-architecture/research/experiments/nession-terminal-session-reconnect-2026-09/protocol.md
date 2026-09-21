@@ -89,6 +89,46 @@ resolver-oriented entry point
 
 The purpose of A vs B is to isolate the value of semantic addressability and deterministic resolution from code restructuring.
 
+## Treatment-isolation boundary
+
+The experiment validates the independent-variable boundary before formal collection.
+
+```text
+A → B
+  only .ai-native/README.md
+       .ai-native/capabilities.json
+       .ai-native/resolve.mjs
+  may differ from baseline production source
+
+B → C
+  resolver implementation must remain byte-identical
+
+  these semantic capability fields must remain identical:
+    id
+    name
+    description
+    aliases
+    dependencies
+    consumers
+    state
+    invariants
+
+  these physical projections may change:
+    owners
+    evidence paths
+```
+
+B and C receive the same one-sentence resolver-availability instruction. Therefore
+A→B measures the effect of an **exposed semantic-resolution surface**, not the
+effect of silently placing metadata in a repository and hoping an agent discovers
+it. B→C is the cleaner test of physical code shape because resolver behavior,
+semantic identities, semantic descriptions, graph relationships, state, and
+invariants are held constant; owner/evidence paths change only because ownership
+was relocated.
+
+This boundary is machine-checked by
+`scripts/validate-ai-native-treatment-isolation.py`.
+
 ### Treatment C — Agent-native structure
 
 Start from the same frozen behavior and add:
