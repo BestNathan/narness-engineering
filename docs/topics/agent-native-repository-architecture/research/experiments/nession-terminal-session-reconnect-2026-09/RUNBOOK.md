@@ -42,6 +42,21 @@ uploads pilot traces + generated freeze metadata as a non-reportable artifact
 This path is intended for a trusted private runner, not a public or untrusted CI
 executor.
 
+
+After downloading/unzipping the workflow artifact, validate the handoff before
+promoting any generated freeze file:
+
+```bash
+python3 scripts/validate-ai-native-pilot-handoff.py \
+  --handoff-dir /path/to/pilot-handoff \
+  --output /tmp/pilot-handoff-validation.json
+```
+
+The validator requires all three pilot runs to identify the active execution
+pre-pilot SHA from `EXECUTION-PREPILOT-LOCK.json`, re-runs each pilot
+instrumentation validator, re-checks pilot artifact hashes from the frozen
+execution profile, and verifies profile → schedule → formal-plan identity.
+
 The command performs preflight, executes T05/A, T08/B, and T20/C with fresh ephemeral sessions, scores the traces, validates instrumentation, freezes the execution profile, and generates the pre-registered 216-run schedule.
 
 It writes:
