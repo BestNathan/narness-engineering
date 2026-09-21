@@ -121,6 +121,7 @@ def main() -> int:
             "oracle_install": [],
             "acceptance": [],
             "verification": [],
+            "mutation_checks": [],
         },
     }
 
@@ -232,6 +233,55 @@ def main() -> int:
             record["commands"]["verification"].append(result)
             verification_ok = verification_ok and result["exit_code"] == 0
 
+        mutation_checks_ok = True
+        for index, mutation in enumerate(task.get("mutation_checks", []), start=1):
+            mutation_ref = mutation["ref"]
+            patch_source = mutation["patch_source"]
+            shown = git(source_repo, "show", f"{mutation_ref}:{patch_source}", check=False)
+            if shown["exit_code"] != 0:
+                raise RuntimeError(f"failed to materialize mutation patch: {patch_source}")
+
+            patch_path = run_dir / f"mutation-{index:02d}.patch"
+            patch_path.write_text(shown["stdout"], encoding="utf-8")
+            applied = run(
+                ["git", "apply", "--whitespace=nowarn", str(patch_path)],
+                cwd=worktree,
+            )
+            mutation_record: dict[str, Any] = {
+                "name": mutation.get("name", f"mutation-{index}"),
+                "ref": mutation_ref,
+                "patch_source": patch_source,
+                "apply_exit_code": applied["exit_code"],
+                "commands": [],
+                "killed": False,
+            }
+            record["commands"]["mutation_checks"].append(mutation_record)
+            if applied["exit_code"] != 0:
+                mutation_checks_ok = False
+                continue
+
+            expected = mutation.get("expected", "failure")
+            observed_failure = False
+            observed_success = True
+            for command in mutation.get("commands", []):
+                result = run(render(command, values), cwd=worktree, shell=True)
+                mutation_record["commands"].append(result)
+                observed_failure = observed_failure or result["exit_code"] != 0
+                observed_success = observed_success and result["exit_code"] == 0
+
+            mutation_record["killed"] = (
+                observed_failure if expected == "failure" else observed_success
+            )
+            mutation_checks_ok = mutation_checks_ok and mutation_record["killed"]
+
+            reverted = run(
+                ["git", "apply", "-R", "--whitespace=nowarn", str(patch_path)],
+                cwd=worktree,
+            )
+            mutation_record["revert_exit_code"] = reverted["exit_code"]
+            if reverted["exit_code"] != 0:
+                raise RuntimeError(f"failed to revert mutation: {patch_source}")
+
         diff = git(worktree, "diff", "--binary", check=False)
         (run_dir / "final.diff").write_text(diff["stdout"], encoding="utf-8")
         status = git(worktree, "status", "--porcelain=v1", check=False)
@@ -240,7 +290,8 @@ def main() -> int:
         record["agent_exit_ok"] = agent["exit_code"] == 0
         record["acceptance_ok"] = acceptance_ok
         record["verification_ok"] = verification_ok
-        record["task_success"] = acceptance_ok and verification_ok
+        record["mutation_checks_ok"] = mutation_checks_ok
+        record["task_success"] = acceptance_ok and verification_ok and mutation_checks_ok
         record["finished_at_unix"] = time.time()
         record["wall_time_ms"] = round(
             (record["finished_at_unix"] - record["started_at_unix"]) * 1000
