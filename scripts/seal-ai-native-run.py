@@ -25,7 +25,7 @@ def sha256_file(path: Path) -> str:
 
 
 def artifact_digests(run_dir: Path) -> dict[str, str]:
-    names = [
+    names = {
         "run.json",
         "score.json",
         "trace.jsonl",
@@ -35,10 +35,12 @@ def artifact_digests(run_dir: Path) -> dict[str, str]:
         "agent.stdout.log",
         "agent.stderr.log",
         "codex.raw.jsonl",
-    ]
+        "codex.stderr.log",
+    }
+    names.update(path.name for path in run_dir.glob("mutation-*.patch"))
     return {
         name: sha256_file(run_dir / name)
-        for name in names
+        for name in sorted(names)
         if (run_dir / name).exists()
     }
 
