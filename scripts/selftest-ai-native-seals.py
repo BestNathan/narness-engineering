@@ -249,6 +249,8 @@ def main() -> int:
             str(run_dir),
             "--benchmark-lock",
             str(lock_path),
+            "--analysis-lock",
+            str(analysis_path),
             "--definition-repo",
             str(definition),
             "--execution-profile",
@@ -269,6 +271,8 @@ def main() -> int:
             definition_sha,
             "--expected-formal-plan-sha256",
             formal_plan_sha256,
+            "--expected-analysis-sha",
+            analysis_lock["definition_sha"],
         ])
 
         # Tampering after seal creation must be detectable.
@@ -288,6 +292,8 @@ def main() -> int:
             definition_sha,
             "--expected-formal-plan-sha256",
             formal_plan_sha256,
+            "--expected-analysis-sha",
+            analysis_lock["definition_sha"],
         ], expected=1)
         (run_dir / "score.json").write_text(original_score, encoding="utf-8")
 
@@ -306,6 +312,8 @@ def main() -> int:
             str(profile_path),
             "--benchmark-lock",
             str(lock_path),
+            "--analysis-lock",
+            str(analysis_path),
             "--formal-plan-lock",
             str(formal_plan_path),
             "--output",
