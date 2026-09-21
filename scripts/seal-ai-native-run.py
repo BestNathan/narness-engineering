@@ -130,6 +130,9 @@ def main() -> int:
 
     if score.get("run_id") != run.get("run_id"):
         errors.append("score/run run_id mismatch")
+    expected_scorer_sha = profile.get("scorer_repository_sha")
+    if expected_scorer_sha is not None and score.get("scorer_repository_sha") != expected_scorer_sha:
+        errors.append("scorer SHA differs from execution profile")
     if score.get("task_id") != task_id or score.get("treatment") != treatment:
         errors.append("score/run task or treatment mismatch")
 
