@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "experiment_id": "nession-terminal-session-reconnect-2026-09",
+  "benchmark_revision": 1,
+  "status": "frozen",
+  "definition_repository": "BestNathan/narness-engineering",
+  "definition_sha": "5ba7fe074fc230fa2ff2e20a69c61d7442dc21de",
+  "frozen_branch": "research/ai-native-benchmark-r1",
+  "integrity": {
+    "workflow": "AI Native Benchmark Integrity",
+    "run_id": 35556728129,
+    "conclusion": "success"
+  },
+  "subject_repository": "BestNathan/nession",
+  "treatments": {
+    "A": "0dc28d5e768f3a0421cb17ebc2a88f0e6a84d664",
+    "B": "8fb6e8707f2dc967a900e227bb899b0c75336d2e",
+    "C": "3e544761d5b89dc09a631533659dca4862f9e559"
+  },
+  "hidden_oracle_sha": "70d8074e7c50f3865771fabd714e811ae440e09d",
+  "task_count": 24,
+  "formal_run_count_minimum": 72,
+  "formal_run_count_preferred": 216,
+  "post_freeze_rule": "Any benchmark-definition, treatment, fixture, oracle, gold, or scoring semantic change creates revision 2. Pilot-only harness adapters may evolve before formal collection only if they do not alter the frozen benchmark semantics and their exact version is recorded per run."
+}
