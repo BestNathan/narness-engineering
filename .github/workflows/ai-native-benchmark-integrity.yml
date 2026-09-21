@@ -28,6 +28,7 @@ jobs:
             scripts/validate-ai-native-benchmark.py \
             scripts/validate-ai-native-treatment-isolation.py \
             scripts/validate-ai-native-pilot.py \
+            scripts/validate-ai-native-pilot-handoff.py \
             scripts/ai-native-codex-adapter.py \
             scripts/preflight-ai-native-codex-pilots.py \
             scripts/selftest-ai-native-runner.py \
