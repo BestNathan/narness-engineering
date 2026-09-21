@@ -36,6 +36,7 @@ def main() -> int:
     ap.add_argument("--schedule", required=True, type=Path)
     ap.add_argument("--execution-profile", required=True, type=Path)
     ap.add_argument("--benchmark-lock", required=True, type=Path)
+    ap.add_argument("--formal-plan-lock", required=True, type=Path)
     ap.add_argument("--output", required=True, type=Path)
     ap.add_argument("--allow-incomplete", action="store_true")
     args = ap.parse_args()
@@ -44,9 +45,12 @@ def main() -> int:
     schedule_path = args.schedule.resolve()
     profile_path = args.execution_profile.resolve()
     lock_path = args.benchmark_lock.resolve()
+    plan_path = args.formal_plan_lock.resolve()
     schedule = load(schedule_path)
     profile = load(profile_path)
     lock = load(lock_path)
+    plan = load(plan_path)
+    formal_plan_sha256 = sha256_file(plan_path)
 
     errors: list[str] = []
     missing: list[str] = []
@@ -58,6 +62,18 @@ def main() -> int:
         errors.append("execution profile is not frozen")
     if schedule.get("profile_id") != profile.get("profile_id"):
         errors.append("schedule/profile ID mismatch")
+    if plan.get("status") != "frozen":
+        errors.append("formal plan is not frozen")
+    if plan.get("execution_profile_id") != profile.get("profile_id"):
+        errors.append("formal plan/profile ID mismatch")
+    if plan.get("execution_profile_sha256") != sha256_file(profile_path):
+        errors.append("execution profile bytes differ from frozen formal plan")
+    if plan.get("schedule_sha256") != sha256_file(schedule_path):
+        errors.append("schedule bytes differ from frozen formal plan")
+    if plan.get("benchmark_revision") != lock.get("benchmark_revision"):
+        errors.append("formal plan benchmark revision mismatch")
+    if plan.get("benchmark_definition_sha") != lock.get("definition_sha"):
+        errors.append("formal plan benchmark definition mismatch")
 
     entries = schedule.get("entries", [])
     expected_ids = [run_id_for(entry) for entry in entries]
@@ -94,6 +110,8 @@ def main() -> int:
                 str(profile["profile_id"]),
                 "--expected-benchmark-sha",
                 str(lock["definition_sha"]),
+                "--expected-formal-plan-sha256",
+                str(formal_plan_sha256),
             ],
             cwd=ROOT,
             text=True,
@@ -152,6 +170,8 @@ def main() -> int:
         "benchmark_revision": lock["benchmark_revision"],
         "benchmark_definition_sha": lock["definition_sha"],
         "execution_profile_id": profile["profile_id"],
+        "formal_plan_id": plan.get("plan_id"),
+        "formal_plan_sha256": formal_plan_sha256,
         "schedule_sha256": sha256_file(schedule_path),
         "execution_profile_sha256": sha256_file(profile_path),
         "benchmark_lock_sha256": sha256_file(lock_path),
