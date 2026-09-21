@@ -66,12 +66,23 @@ def main() -> int:
     for item in records:
         run = item["run"]
         metrics = item["score"].get("metrics", {})
+        agent = run.get("commands", {}).get("agent") or {}
+        setup = run.get("commands", {}).get("setup") or []
         raw_rows.append({
             "run_id": run.get("run_id"),
             "task_id": run.get("task_id"),
             "treatment": run.get("treatment"),
             "attempt": run.get("attempt"),
             "task_success": run.get("task_success"),
+            "acceptance_ok": run.get("acceptance_ok"),
+            "verification_ok": run.get("verification_ok"),
+            "mutation_checks_ok": run.get("mutation_checks_ok"),
+            "agent_exit_ok": run.get("agent_exit_ok"),
+            "agent_timed_out": bool(agent.get("timed_out")),
+            "agent_duration_ms": agent.get("duration_ms"),
+            "setup_duration_ms": sum(
+                int(item.get("duration_ms", 0) or 0) for item in setup
+            ),
             "wall_time_ms": run.get("wall_time_ms"),
             **metrics,
         })
@@ -114,6 +125,18 @@ def main() -> int:
             "repair_loops_median": med(
                 [row["repair_loops"] for row in rows if row.get("repair_loops") is not None]
             ),
+            "navigation_events_before_first_edit_median": med(
+                [row["navigation_events_before_first_edit"] for row in rows if row.get("navigation_events_before_first_edit") is not None]
+            ),
+            "agent_duration_ms_median": med(
+                [row["agent_duration_ms"] for row in rows if row.get("agent_duration_ms") is not None]
+            ),
+            "out_of_scope_edit_count_median": med(
+                [row["out_of_scope_edit_count"] for row in rows if row.get("out_of_scope_edit_count") is not None]
+            ),
+            "validation_failures_median": med(
+                [row["validation_failures"] for row in rows if row.get("validation_failures") is not None]
+            ),
             "wall_time_ms_median": med(
                 [row["wall_time_ms"] for row in rows if row.get("wall_time_ms") is not None]
             ),
@@ -134,6 +157,10 @@ def main() -> int:
         ("Median search calls", "search_calls_median"),
         ("Median input tokens", "input_tokens_median"),
         ("Median repair loops", "repair_loops_median"),
+        ("Median navigation events before first edit", "navigation_events_before_first_edit_median"),
+        ("Median agent duration ms", "agent_duration_ms_median"),
+        ("Median out-of-scope edit count", "out_of_scope_edit_count_median"),
+        ("Median validation failures", "validation_failures_median"),
         ("Median wall time ms", "wall_time_ms_median"),
     ]
     lines = [
