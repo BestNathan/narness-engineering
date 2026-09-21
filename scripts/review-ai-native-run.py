@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 
@@ -29,6 +30,10 @@ def load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-dir", required=True, type=Path)
@@ -49,6 +54,16 @@ def main() -> int:
         raise RuntimeError("successful run must use primary=NONE")
     if not success and args.primary == "NONE":
         raise RuntimeError("failed run requires one R1-R12 primary failure code")
+    if not success and not args.notes.strip():
+        raise RuntimeError("failed run review requires a causal rationale in --notes")
+    if not success and not args.evidence:
+        raise RuntimeError(
+            "failed run review requires at least one --evidence reference"
+        )
+
+    seal_path = run_dir / "seal.json"
+    if not seal_path.exists():
+        raise RuntimeError("sealed run has no seal.json")
 
     review_path = run_dir / "review.json"
     if review_path.exists() and not args.force:
@@ -61,6 +76,9 @@ def main() -> int:
         "task_id": run["task_id"],
         "treatment": run["treatment"],
         "task_success": success,
+        "review_policy_version": 1,
+        "review_scope": "per-run-causal-review-before-aggregate-interpretation",
+        "reviewed_run_seal_sha256": sha256_file(seal_path),
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
         "primary_failure_code": None if args.primary == "NONE" else args.primary,
         "primary_failure": None if args.primary == "NONE" else TAXONOMY[args.primary],
