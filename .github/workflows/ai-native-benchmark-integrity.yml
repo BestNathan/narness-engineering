@@ -28,6 +28,7 @@ jobs:
             scripts/validate-ai-native-benchmark.py \
             scripts/validate-ai-native-pilot.py \
             scripts/ai-native-codex-adapter.py \
+            scripts/preflight-ai-native-codex-pilots.py \
             scripts/selftest-ai-native-runner.py \
             scripts/seal-ai-native-run.py \
             scripts/aggregate-ai-native-results.py \
@@ -90,4 +91,12 @@ jobs:
 
       - name: Validate benchmark manifests, fixtures, mutations, and oracle
         run: |
-          python scripts/validate-ai-native-benchmark.py             --source-repo /tmp/nession
+          python scripts/validate-ai-native-benchmark.py \
+            --source-repo /tmp/nession
+
+      - name: Validate Codex pilot preflight without Codex
+        run: |
+          python scripts/preflight-ai-native-codex-pilots.py \
+            --source-repo /tmp/nession \
+            --output-dir /tmp/ai-native-pilot-preflight \
+            --skip-codex
