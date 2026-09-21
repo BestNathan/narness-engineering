@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import shlex
 import subprocess
 import sys
@@ -56,6 +58,11 @@ def main() -> int:
     ap.add_argument("--runs-root", required=True, type=Path)
     ap.add_argument("--start-sequence", type=int)
     ap.add_argument("--end-sequence", type=int)
+    ap.add_argument(
+        "--recover-incomplete",
+        action="store_true",
+        help="Quarantine an existing unsealed run directory and restart that scheduled entry.",
+    )
     args = ap.parse_args()
 
     source = args.source_repo.resolve()
@@ -175,8 +182,37 @@ def main() -> int:
                     )
                 print(f"SKIP verified sealed run {run_id}", flush=True)
                 continue
-            raise RuntimeError(
-                f"run directory already exists but is not sealed: {run_dir}"
+
+            if not args.recover_incomplete:
+                raise RuntimeError(
+                    f"run directory already exists but is not sealed: {run_dir}; "
+                    "inspect it or rerun with --recover-incomplete"
+                )
+
+            quarantine_root = runs_root / "_incomplete"
+            quarantine_root.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            quarantine = quarantine_root / f"{run_id}--{stamp}"
+            suffix = 1
+            while quarantine.exists():
+                suffix += 1
+                quarantine = quarantine_root / f"{run_id}--{stamp}--{suffix}"
+            shutil.move(str(run_dir), str(quarantine))
+            recovery = {
+                "schema_version": 1,
+                "run_id": run_id,
+                "sequence": int(entry["sequence"]),
+                "quarantined_at": datetime.now(timezone.utc).isoformat(),
+                "reason": "existing run directory was not formally sealed",
+                "replacement_run_expected": True,
+            }
+            (quarantine / "recovery.json").write_text(
+                json.dumps(recovery, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            print(
+                f"QUARANTINED incomplete run {run_id} -> {quarantine}",
+                flush=True,
             )
 
         runner_cmd = [
