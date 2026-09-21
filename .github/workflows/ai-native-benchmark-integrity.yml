@@ -32,9 +32,36 @@ jobs:
             scripts/selftest-ai-native-runner.py \
             scripts/seal-ai-native-run.py \
             scripts/aggregate-ai-native-results.py \
+            scripts/analyze-ai-native-effects.py \
             scripts/freeze-ai-native-execution-profile.py \
             scripts/generate-ai-native-formal-schedule.py \
             scripts/run-ai-native-formal.py
+
+      - name: Validate paired-effects analyzer
+        run: |
+          cat > /tmp/raw-runs.csv <<'CSV'
+run_id,task_id,treatment,attempt,task_success,navigation_precision,navigation_recall,irrelevant_files_read,files_read,search_calls,navigation_events_before_first_edit,time_to_first_relevant_artifact_ms,time_to_first_edit_ms,input_tokens,repair_loops,validation_failures,out_of_scope_edit_count,agent_duration_ms,first_hit_correct
+T01-A-01,T01,A,1,true,0.50,1.0,4,8,5,10,1000,2000,10000,2,2,1,5000,false
+T01-B-01,T01,B,1,true,0.75,1.0,2,6,3,7,700,1500,8000,1,1,0,4000,true
+T01-C-01,T01,C,1,true,0.80,1.0,1,5,2,5,600,1200,7000,1,1,0,3500,true
+T02-A-01,T02,A,1,false,0.40,0.5,6,10,7,14,1400,2600,14000,3,3,2,6500,false
+T02-B-01,T02,B,1,true,0.70,1.0,3,7,4,8,900,1700,9000,1,1,0,4500,true
+T02-C-01,T02,C,1,true,0.85,1.0,2,6,3,6,700,1400,8000,1,1,0,3800,true
+CSV
+          python scripts/analyze-ai-native-effects.py \
+            --raw-runs /tmp/raw-runs.csv \
+            --strata docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/analysis-strata.json \
+            --output-dir /tmp/paired-effects \
+            --bootstrap-samples 100
+          python - <<'PY'
+          import json
+          x=json.load(open('/tmp/paired-effects/paired-effects.json'))
+          ab=x['contrasts']['A_vs_B']
+          assert ab['navigation_precision']['matched_tasks'] == 2
+          assert ab['navigation_precision']['median_oriented_improvement'] > 0
+          assert ab['irrelevant_files_read']['median_oriented_improvement'] > 0
+          assert ab['agent_duration_ms']['median_oriented_improvement'] > 0
+          PY
 
       - name: Validate formal schedule generator
         run: |
