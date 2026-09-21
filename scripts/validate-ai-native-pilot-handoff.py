@@ -34,6 +34,21 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def git_blob_sha256(ref: str, path: str) -> str:
+    proc = subprocess.run(
+        ["git", "show", f"{ref}:{path}"],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"cannot read frozen execution tool {ref}:{path}: "
+            + proc.stderr.decode("utf-8", errors="replace")
+        )
+    return hashlib.sha256(proc.stdout).hexdigest()
+
+
 def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         cmd,
@@ -83,6 +98,35 @@ def main() -> int:
             "pilot repository SHA mismatch: "
             f"{profile.get('pilot_repository_sha')} != {expected_repo_sha}"
         )
+
+    required_agent_config = lock.get("required_agent_config", {})
+    actual_agent_config = profile.get("agent", {})
+    for key, expected in required_agent_config.items():
+        actual = actual_agent_config.get(key)
+        if actual != expected:
+            errors.append(
+                f"execution profile agent.{key} mismatch: "
+                f"{actual!r} != {expected!r}"
+            )
+
+    frozen_tool_paths = {
+        "runner_file_sha256": "scripts/ai-native-repo-experiment.py",
+        "adapter_file_sha256": "scripts/ai-native-codex-adapter.py",
+        "scorer_file_sha256": "scripts/score-ai-native-run.py",
+        "seal_file_sha256": "scripts/seal-ai-native-run.py",
+        "run_seal_verifier_file_sha256": "scripts/verify-ai-native-run-seal.py",
+        "formal_orchestrator_file_sha256": "scripts/run-ai-native-formal.py",
+        "formal_readiness_file_sha256": "scripts/prepare-ai-native-formal-collection.py",
+    }
+    profile_tooling = profile.get("tooling", {})
+    for key, repo_path in frozen_tool_paths.items():
+        expected = git_blob_sha256(expected_repo_sha, repo_path)
+        actual = profile_tooling.get(key)
+        if actual != expected:
+            errors.append(
+                f"execution profile tooling.{key} mismatch for "
+                f"{repo_path}: {actual} != {expected}"
+            )
 
     source_pilots = {
         item.get("run_id"): item
