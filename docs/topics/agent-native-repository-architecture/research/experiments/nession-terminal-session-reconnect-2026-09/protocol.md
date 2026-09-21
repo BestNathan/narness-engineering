@@ -2,7 +2,7 @@
 
 > Experiment ID: `nession-terminal-session-reconnect-2026-09`
 >
-> Status: Setup / task set frozen before treatment implementation.
+> Status: Benchmark revision 1 frozen; instrumentation pilot stage.
 >
 > Target repository: `BestNathan/nession`
 >
@@ -40,6 +40,10 @@ This target was selected because it has all of the properties the research hypot
 - correctness depends on temporal invariants and stale-event suppression;
 - failures are observable through deterministic unit/integration tests;
 - the slice is important enough to be realistic but bounded enough to run repeatedly.
+
+## Frozen benchmark revision
+
+The revision-1 benchmark definition is locked at `BestNathan/narness-engineering@5ba7fe074fc230fa2ff2e20a69c61d7442dc21de` and tracked by `research/ai-native-benchmark-r1`. Integrity workflow run `35556728129` passed before the freeze was declared. See `BENCHMARK-LOCK.json` and `REVISION-1-FROZEN.md`.
 
 ## Frozen experiment branches
 
