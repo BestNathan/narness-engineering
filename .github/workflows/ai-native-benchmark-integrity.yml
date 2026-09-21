@@ -24,6 +24,9 @@ jobs:
         run: |
           python -m py_compile             scripts/ai-native-repo-experiment.py             scripts/score-ai-native-run.py             scripts/validate-ai-native-benchmark.py
 
+      - name: Validate pilot shell syntax
+        run: bash -n scripts/run-ai-native-codex-pilots.sh
+
       - name: Replay synthetic Codex JSONL instrumentation
         run: |
           mkdir -p /tmp/ai-native-adapter
@@ -39,6 +42,7 @@ jobs:
           from pathlib import Path
           events=[json.loads(x) for x in Path('/tmp/ai-native-adapter/trace.jsonl').read_text().splitlines()]
           types=[e['type'] for e in events]
+          assert 'resolver' in types, types
           assert 'search' in types, types
           assert any(e.get('type') == 'read' and e.get('path') == 'web/src/platform/socket/WebSocketService.ts' for e in events), events
           assert 'edit' in types, types
