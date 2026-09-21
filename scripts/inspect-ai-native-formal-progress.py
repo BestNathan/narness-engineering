@@ -34,6 +34,7 @@ def main() -> int:
     ap.add_argument("--schedule", required=True, type=Path)
     ap.add_argument("--execution-profile", required=True, type=Path)
     ap.add_argument("--benchmark-lock", required=True, type=Path)
+    ap.add_argument("--analysis-lock", required=True, type=Path)
     ap.add_argument("--formal-plan-lock", required=True, type=Path)
     ap.add_argument("--json-output", type=Path)
     args = ap.parse_args()
@@ -45,6 +46,7 @@ def main() -> int:
     schedule = load(schedule_path)
     profile = load(profile_path)
     lock = load(args.benchmark_lock.resolve())
+    analysis = load(args.analysis_lock.resolve())
     plan = load(plan_path)
     formal_plan_sha256 = sha256_file(plan_path)
     if plan.get("execution_profile_sha256") != sha256_file(profile_path):
@@ -53,6 +55,10 @@ def main() -> int:
         raise RuntimeError("schedule bytes differ from frozen formal plan")
     if plan.get("benchmark_definition_sha") != lock.get("definition_sha"):
         raise RuntimeError("formal plan benchmark definition mismatch")
+    if plan.get("analysis_revision") != analysis.get("analysis_revision"):
+        raise RuntimeError("formal plan analysis revision mismatch")
+    if plan.get("analysis_definition_sha") != analysis.get("definition_sha"):
+        raise RuntimeError("formal plan analysis definition mismatch")
     verifier = ROOT / "scripts" / "verify-ai-native-run-seal.py"
 
     rows: list[dict[str, Any]] = []
@@ -85,6 +91,8 @@ def main() -> int:
                         str(lock["definition_sha"]),
                         "--expected-formal-plan-sha256",
                         str(formal_plan_sha256),
+                        "--expected-analysis-sha",
+                        str(analysis["definition_sha"]),
                     ],
                     cwd=ROOT,
                     text=True,
