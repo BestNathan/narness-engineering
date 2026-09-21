@@ -347,7 +347,23 @@ Run the three non-reportable T05/A, T08/B, and T20/C pilots to freeze the exact 
 
 Generate a balanced cyclic Latin-square treatment order within each task. With three repetitions this yields 216 entries. Every entry launches a fresh ephemeral agent.
 
-Formal collection does **not** execute all A runs, then all B runs, then all C runs. Interleaving the already-frozen treatments reduces temporal/backend drift while preserving within-task matching.
+Task blocks are also deterministically permuted independently for each replication
+using SHA-256 ordering over:
+
+```text
+seed : replication : task_id
+```
+
+with the fixed default seed:
+
+```text
+20260921
+```
+
+This removes the previous fixed T01→T24 temporal ordering while keeping the exact
+schedule reproducible without relying on a language-runtime PRNG implementation.
+
+Formal collection does **not** execute all A runs, then all B runs, then all C runs. Within each task block, A/B/C position rotates as a Latin square; across each replication, task blocks use a different deterministic permutation. This reduces treatment-position and task-order correlation with temporal/backend drift while preserving matched-task analysis.
 
 ### Stage 4 — Formal collection
 
