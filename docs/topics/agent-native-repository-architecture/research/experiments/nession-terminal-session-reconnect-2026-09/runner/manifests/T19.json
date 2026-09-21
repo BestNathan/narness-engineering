@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "T19",
+  "prompt": "Refactor attach recovery so false attach results carry kind: 'timeout' | 'transport' | 'agent' in addition to human-readable error text, and recovery behavior is selected from that typed kind rather than matching transport error prose. Changing error wording alone must not change classification. Preserve timeout, transport-failure, genuine agent-error, and rejection behavior.",
+  "fixtures": {
+    "A": {},
+    "B": {},
+    "C": {}
+  },
+  "oracle": {
+    "ref": "70d8074e7c50f3865771fabd714e811ae440e09d",
+    "files": [
+      {
+        "source": ".research/ai-native/acceptance/T19.test.ts",
+        "destination": "web/src/platform/attach/__tests__/unit/__research_T19.test.ts"
+      }
+    ]
+  },
+  "acceptance_commands": [
+    "cd web && npm test"
+  ],
+  "verification_commands": [
+    "cd web && npm run build",
+    "cd web && npm run lint"
+  ]
+}
