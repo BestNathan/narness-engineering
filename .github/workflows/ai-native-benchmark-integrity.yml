@@ -44,6 +44,7 @@ jobs:
             scripts/freeze-ai-native-execution-profile.py \
             scripts/generate-ai-native-formal-schedule.py \
             scripts/freeze-ai-native-formal-plan.py \
+            scripts/prepare-ai-native-formal-collection.py \
             scripts/run-ai-native-formal.py \
             scripts/inspect-ai-native-formal-progress.py
 
