@@ -92,6 +92,9 @@ H1–H5 reviewed conclusion
           ↓
 research-report.md
 research-artifact-manifest.json
+          ↓
+published/benchmark-r2-analysis-r2/
+publication-manifest.json
 ```
 
 ## Current gate
