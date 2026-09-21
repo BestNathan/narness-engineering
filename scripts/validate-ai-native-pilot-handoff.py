@@ -109,6 +109,16 @@ def main() -> int:
                 f"{actual!r} != {expected!r}"
             )
 
+    required_environment = lock.get("required_environment", {})
+    actual_environment = profile.get("environment", {})
+    for key, expected in required_environment.items():
+        actual = actual_environment.get(key)
+        if actual != expected:
+            errors.append(
+                f"execution profile environment.{key} mismatch: "
+                f"{actual!r} != {expected!r}"
+            )
+
     frozen_tool_paths = {
         "runner_file_sha256": "scripts/ai-native-repo-experiment.py",
         "adapter_file_sha256": "scripts/ai-native-codex-adapter.py",
