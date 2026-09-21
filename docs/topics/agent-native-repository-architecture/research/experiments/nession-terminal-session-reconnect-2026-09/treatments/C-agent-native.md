@@ -1,6 +1,6 @@
 # Treatment C — Agent-Native Structure
 
-> Status: C0 semantic layer seeded; structural transformation not yet frozen.
+> Status: Frozen at `3e544761d5b89dc09a631533659dca4862f9e559`; structural transformation complete and validated.
 >
 > Nession branch: `research/ai-native-repo-c-agent-native`
 
@@ -49,7 +49,7 @@ web/src/units/terminal-session/
     __tests__/
 ```
 
-The exact names may change during C construction, but the transformation must be completed and frozen before any formal C task run.
+The final names and ownership shape are frozen before formal collection; see `C-construction.md` and `C-validation.md`.
 
 ## Constraint against cheating
 
@@ -78,4 +78,4 @@ This matters because even if C produces faster future agent changes, the refacto
 
 The branch has been seeded with the same `.ai-native` semantic layer as B. No performance claim is attached to C0.
 
-The next C step is the behavior-locality refactor of the selected reconnect slice while preserving all existing behavior and tests.
+The behavior-locality refactor is complete. No empirical productivity claim is attached to the treatment until formal A/B/C collection is executed.
