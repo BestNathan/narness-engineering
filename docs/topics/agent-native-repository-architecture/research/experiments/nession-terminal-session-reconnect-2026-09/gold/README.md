@@ -63,16 +63,16 @@ related app visibility tests if added
 | T11 | G4, G5 | controller/runtime tests |
 | T12 | G5, G3 | runtime snapshot tests |
 | T13 | G2, G1 | visibility/socket tests |
-| T14 | G4, G5 | controller/runtime generation tests |
+| T14 | G5, G1 | runtime/socket identity-preservation tests |
 | T15 | G5, G1 | runtime/socket tests |
 | T16 | G5, G4, G6 | runtime + terminal attach tests |
 | T17 | G3, G5 | state-machine/runtime tests |
 | T18 | G3, G5 | state-machine/runtime tests |
-| T19 | G4 | controller classifier tests |
+| T19 | G4, G1 | typed transport-failure contract + controller behavior tests |
 | T20 | G3, G4, G5 | state-machine/controller/runtime tests |
 | T21 | G4, G5 | controller/runtime tests |
 | T22 | G1 | socket policy unit tests |
-| T23 | G4 | controller invariant test |
+| T23 | G5, G3 | competing recovery-signal convergence invariant |
 | T24 | G3, G4, G5 | state-machine/controller/runtime integration test |
 
 ## Known invariants
