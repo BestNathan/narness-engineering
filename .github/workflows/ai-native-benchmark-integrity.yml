@@ -31,6 +31,7 @@ jobs:
             scripts/ai-native-codex-adapter.py \
             scripts/preflight-ai-native-codex-pilots.py \
             scripts/selftest-ai-native-runner.py \
+            scripts/selftest-ai-native-execution-profile.py \
             scripts/seal-ai-native-run.py \
             scripts/verify-ai-native-run-seal.py \
             scripts/verify-ai-native-collection.py \
@@ -273,6 +274,9 @@ jobs:
 
       - name: Run isolated runner/scorer selftest
         run: python scripts/selftest-ai-native-runner.py
+
+      - name: Run execution-profile pilot provenance selftest
+        run: python scripts/selftest-ai-native-execution-profile.py
 
       - name: Run tamper-evident seal selftest
         run: python scripts/selftest-ai-native-seals.py
