@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
   "experiment_id": "nession-terminal-session-reconnect-2026-09",
-  "benchmark_revision": 1,
+  "benchmark_revision": 2,
   "status": "frozen",
   "definition_repository": "BestNathan/narness-engineering",
-  "definition_sha": "5ba7fe074fc230fa2ff2e20a69c61d7442dc21de",
-  "frozen_branch": "research/ai-native-benchmark-r1",
+  "definition_sha": "194bf5dc1a28f4e4c10491d7326891ba157d325b",
+  "frozen_branch": "research/ai-native-benchmark-r2",
   "integrity": {
     "workflow": "AI Native Benchmark Integrity",
-    "run_id": 35556728129,
-    "conclusion": "success"
+    "run_id": null,
+    "conclusion": "pending after revision-2 lock update"
   },
   "subject_repository": "BestNathan/nession",
   "treatments": {
@@ -21,5 +21,20 @@
   "task_count": 24,
   "formal_run_count_minimum": 72,
   "formal_run_count_preferred": 216,
-  "post_freeze_rule": "Any benchmark-definition, treatment, fixture, oracle, gold, or scoring semantic change creates revision 2. Pilot-only harness adapters may evolve before formal collection only if they do not alter the frozen benchmark semantics and their exact version is recorded per run."
+  "post_freeze_rule": "Any benchmark-definition, treatment, fixture, oracle, gold, or scoring semantic change creates revision 2. Pilot-only harness adapters may evolve before formal collection only if they do not alter the frozen benchmark semantics and their exact version is recorded per run.",
+  "frozen_paths": [
+    "docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/tasks/README.md",
+    "docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/manifests",
+    "docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/fixtures",
+    "docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/mutations",
+    "docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/treatments.json",
+    "docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/oracle.json",
+    "docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/gold.json",
+    "scripts/score-ai-native-run.py"
+  ],
+  "supersedes": {
+    "benchmark_revision": 1,
+    "definition_sha": "5ba7fe074fc230fa2ff2e20a69c61d7442dc21de",
+    "reason": "The benchmark task/treatment/oracle/gold semantics remained unchanged, but the scorer gained pre-registered metric implementations after revision 1 was frozen. Because the benchmark lock explicitly treats scoring semantics as frozen, revision 2 re-freezes the same benchmark plus the completed scorer before any reportable formal run."
+  }
 }
