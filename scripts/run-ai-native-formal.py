@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import shlex
@@ -18,6 +19,10 @@ EXPERIMENT = (
     / "docs/topics/agent-native-repository-architecture/research/experiments"
     / "nession-terminal-session-reconnect-2026-09"
 )
+
+
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -67,12 +72,19 @@ def main() -> int:
         raise RuntimeError("schedule/profile ID mismatch")
 
     ensure_clean(ROOT)
-    expected_harness = profile.get("environment", {}).get("harness_repository_sha")
-    current_harness = capture(["git", "rev-parse", "HEAD"], cwd=ROOT)
-    if expected_harness and current_harness != expected_harness:
-        raise RuntimeError(
-            f"harness checkout mismatch: {current_harness} != {expected_harness}"
-        )
+    tooling = profile.get("tooling", {})
+    tool_paths = {
+        "runner_file_sha256": ROOT / "scripts" / "ai-native-repo-experiment.py",
+        "adapter_file_sha256": ROOT / "scripts" / "ai-native-codex-adapter.py",
+        "scorer_file_sha256": ROOT / "scripts" / "score-ai-native-run.py",
+    }
+    for key, tool_path in tool_paths.items():
+        expected = tooling.get(key)
+        actual = file_sha256(tool_path)
+        if expected and actual != expected:
+            raise RuntimeError(
+                f"formal tooling mismatch for {tool_path.name}: {actual} != {expected}"
+            )
 
     # Refresh only references; every actual run still checks out immutable SHAs.
     run(
