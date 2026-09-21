@@ -7,6 +7,7 @@ analysis revision:      2
 definition SHA:         357c38c9b10a3eb668b15aead703a5f5200b2858
 definition branch:      research/ai-native-analysis-r2
 formal runs observed:   0
+integrity run:          35592905134 — PASS
 bootstrap samples:      10000
 bootstrap seed:         20260921
 ```
