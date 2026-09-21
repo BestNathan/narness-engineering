@@ -21,7 +21,7 @@
   "task_count": 24,
   "formal_run_count_minimum": 72,
   "formal_run_count_preferred": 216,
-  "post_freeze_rule": "Any benchmark-definition, treatment, fixture, oracle, gold, or scoring semantic change creates revision 2. Pilot-only harness adapters may evolve before formal collection only if they do not alter the frozen benchmark semantics and their exact version is recorded per run.",
+  "post_freeze_rule": "Any benchmark-definition, treatment, fixture, oracle, gold, or scoring semantic change creates Benchmark Revision 3. Instrumentation/orchestration mechanics may evolve only before execution-profile freeze when they do not alter benchmark semantics; after execution-profile/formal-plan freeze, execution-tool drift invalidates the formal plan.",
   "frozen_paths": [
     "docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/tasks/README.md",
     "docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/manifests",
