@@ -98,19 +98,19 @@ When automatic P2P recovery exhausts, force relay exactly once and do not emit r
 
 ### T19 — Replace prose-string transport failure classification with a typed failure kind
 
-Refactor attach recovery so it consumes a typed/discriminated transport-failure kind rather than matching transport error prose. Preserve timeout, transport-failure, genuine agent-error, and rejection behavior.
+Refactor attach recovery so false attach results carry `kind: 'timeout' | 'transport' | 'agent'` in addition to human-readable error text, and recovery behavior is selected from that typed kind rather than matching transport error prose. Changing error wording alone must not change classification. Preserve timeout, transport-failure, genuine agent-error, and rejection behavior.
 
 ### T20 — Make reconnect transition output explicit
 
-Refactor attach transition results so the recovery action is represented as one explicit typed action rather than multiple booleans that can theoretically conflict. Preserve current behavior.
+Refactor attach transition results so recovery intent is one discriminated `action`: `none`, `retry-attach`, or `force-relay` (the force-relay action also carries its route-epoch consequence). Remove the independent authoritative `forceRelay`, `bumpRouteEpoch`, and `retryAttach` result booleans. Preserve current behavior.
 
 ### T21 — Separate transport generation from attach attempt identity
 
-Refactor naming/types so a transport generation and an attach request attempt cannot be accidentally confused in recovery code. Preserve behavior and tests.
+Introduce distinct TypeScript nominal/opaque identities named `TransportGeneration` and `AttachAttemptGeneration`. They must not be mutually assignable, and recovery code must use the appropriate identity rather than plain interchangeable numbers. Preserve runtime behavior.
 
 ### T22 — Extract reconnect backoff policy
 
-Make WebSocket reconnect backoff a separately testable deterministic policy with the existing base delay, exponential behavior, and 30-second cap unchanged.
+Make WebSocket reconnect backoff a separately owned and testable deterministic policy. Export `computeReconnectDelayMs(attempt, baseDelay)` through the existing socket public surface. Preserve the current base-delay semantics, exponential growth, attempt indexing, and 30-second cap.
 
 ## Verification / impact tasks
 
