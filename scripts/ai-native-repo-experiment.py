@@ -378,10 +378,21 @@ def main() -> int:
             if reverted["exit_code"] != 0:
                 raise RuntimeError(f"failed to revert mutation: {patch_source}")
 
-        diff = git(worktree, "diff", "--binary", check=False)
-        (run_dir / "final.diff").write_text(diff["stdout"], encoding="utf-8")
         status = git(worktree, "status", "--porcelain=v1", check=False)
         (run_dir / "git-status.txt").write_text(status["stdout"], encoding="utf-8")
+
+        # `git diff` omits untracked files. Mark them intent-to-add in this
+        # disposable worktree so final.diff captures newly created source/tests
+        # without staging their contents as a real commit.
+        untracked: list[str] = []
+        for line in status["stdout"].splitlines():
+            if line.startswith("?? "):
+                untracked.append(line[3:])
+        if untracked:
+            git(worktree, "add", "-N", "--", *untracked, check=False)
+
+        diff = git(worktree, "diff", "--binary", check=False)
+        (run_dir / "final.diff").write_text(diff["stdout"], encoding="utf-8")
 
         record["trace_path"] = str(trace_path)
         record["trace_present"] = trace_path.exists() and trace_path.stat().st_size > 0
