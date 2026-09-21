@@ -23,6 +23,7 @@ def main() -> int:
     ap.add_argument("--run-dir", required=True, type=Path)
     ap.add_argument("--expected-profile-id")
     ap.add_argument("--expected-benchmark-sha")
+    ap.add_argument("--expected-formal-plan-sha256")
     args = ap.parse_args()
 
     run_dir = args.run_dir.resolve()
@@ -59,6 +60,10 @@ def main() -> int:
         errors.append("seal/run benchmark definition mismatch")
     if seal.get("execution_profile_id") != admissibility.get("execution_profile_id"):
         errors.append("seal/run execution profile mismatch")
+    if seal.get("formal_plan_sha256") != admissibility.get("formal_plan_sha256"):
+        errors.append("seal/run formal plan mismatch")
+    if seal.get("formal_plan_id") != admissibility.get("formal_plan_id"):
+        errors.append("seal/run formal plan ID mismatch")
 
     if args.expected_profile_id and seal.get("execution_profile_id") != args.expected_profile_id:
         errors.append(
@@ -69,6 +74,14 @@ def main() -> int:
         errors.append(
             f"benchmark SHA mismatch: {seal.get('benchmark_definition_sha')} != "
             f"{args.expected_benchmark_sha}"
+        )
+    if (
+        args.expected_formal_plan_sha256
+        and seal.get("formal_plan_sha256") != args.expected_formal_plan_sha256
+    ):
+        errors.append(
+            f"formal plan SHA mismatch: {seal.get('formal_plan_sha256')} != "
+            f"{args.expected_formal_plan_sha256}"
         )
 
     artifacts = seal.get("artifacts")
