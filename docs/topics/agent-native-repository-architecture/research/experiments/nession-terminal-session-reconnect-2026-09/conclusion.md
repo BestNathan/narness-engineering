@@ -1,8 +1,8 @@
 # Conclusion
 
-> Status: Experiment not yet executed.
+> Status: Benchmark and analysis plan frozen; reportable formal collection not yet executed.
 
-No empirical conclusion is recorded.
+No empirical conclusion is recorded. Final classification must follow the pre-registered metric hierarchy, practical-effect thresholds, matched-task reductions, and bootstrap procedure in `ANALYSIS-PLAN.md`.
 
 The final report must evaluate:
 
