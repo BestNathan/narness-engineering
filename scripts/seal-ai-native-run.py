@@ -273,6 +273,15 @@ def main() -> int:
         "__research_",
         ".research/ai-native/acceptance",
     )
+    usage_events = [
+        event for event in trace_events if event.get("type") == "usage"
+    ]
+    if len(usage_events) != 1:
+        errors.append(
+            "expected exactly one usage event for one ephemeral Codex turn; "
+            f"captured {len(usage_events)}"
+        )
+
     for event in trace_events:
         if event.get("type") not in {"command", "search", "glob", "read"}:
             continue
