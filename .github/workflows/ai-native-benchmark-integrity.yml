@@ -41,6 +41,7 @@ jobs:
             scripts/review-ai-native-run.py \
             scripts/aggregate-ai-native-failures.py \
             scripts/finalize-ai-native-research.py \
+            scripts/publish-ai-native-research.py \
             scripts/validate-ai-native-conclusion.py \
             scripts/freeze-ai-native-execution-profile.py \
             scripts/generate-ai-native-formal-schedule.py \
