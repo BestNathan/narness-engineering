@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "task_id": "T05",
+  "prompt": "A peer that explicitly refuses the post-open handshake should leave the transport disconnected without entering the normal socket-loss reconnect loop.",
+  "fixtures": {
+    "A": {
+      "patch": "../fixtures/T05-AB.patch"
+    },
+    "B": {
+      "patch": "../fixtures/T05-AB.patch"
+    },
+    "C": {
+      "patch": "../fixtures/T05-C.patch"
+    }
+  },
+  "acceptance_commands": [
+    "cd web && npm test"
+  ],
+  "verification_commands": [
+    "cd web && npm run build",
+    "cd web && npm run lint"
+  ]
+}
