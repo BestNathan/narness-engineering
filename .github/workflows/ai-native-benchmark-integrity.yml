@@ -4,9 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'scripts/ai-native-repo-experiment.py'
-      - 'scripts/score-ai-native-run.py'
-      - 'scripts/validate-ai-native-benchmark.py'
+      - 'scripts/*ai-native*'
       - 'docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/**'
       - '.github/workflows/ai-native-benchmark-integrity.yml'
 
@@ -22,7 +20,15 @@ jobs:
 
       - name: Compile research scripts
         run: |
-          python -m py_compile             scripts/ai-native-repo-experiment.py             scripts/score-ai-native-run.py             scripts/validate-ai-native-benchmark.py
+          python -m py_compile \
+            scripts/ai-native-repo-experiment.py \
+            scripts/score-ai-native-run.py \
+            scripts/validate-ai-native-benchmark.py \
+            scripts/validate-ai-native-pilot.py \
+            scripts/ai-native-codex-adapter.py \
+            scripts/selftest-ai-native-runner.py \
+            scripts/seal-ai-native-run.py \
+            scripts/aggregate-ai-native-results.py
 
       - name: Run isolated runner/scorer selftest
         run: python scripts/selftest-ai-native-runner.py
