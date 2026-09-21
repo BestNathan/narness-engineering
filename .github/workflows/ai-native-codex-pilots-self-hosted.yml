@@ -38,6 +38,7 @@ jobs:
           NESSION_PATH: ${{ inputs.nession_path }}
         run: |
           set -euo pipefail
+          test "${{ github.ref_name }}" = "research/ai-native-execution-prepilot-r3"
           test -d "$NESSION_PATH/.git"
           test -z "${OPENAI_API_KEY:-}"
           test -z "${CODEX_ACCESS_TOKEN:-}"
