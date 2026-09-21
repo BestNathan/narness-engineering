@@ -184,15 +184,28 @@ The finalizer writes `research-artifact-manifest.json` after generating the rese
 Its `artifact_set_digest_sha256` is a compact content identity for the assembled research artifact. It is a tamper-evident content digest, not a digital signature.
 
 
-## 7. Publish the completed study back into Narness
+## 7. Archive the sealed raw collection
 
 After strict finalization succeeds:
+
+```bash
+python3 scripts/archive-ai-native-raw-runs.py \
+  --runs-root /path/to/formal-runs \
+  --collection-manifest /path/to/research-results/collection-manifest.json \
+  --output /path/to/archives/nession-ai-native-r2.zip
+```
+
+Retain both the archive and its generated `.manifest.json` sidecar in durable
+storage. See `DATA-RETENTION.md`.
+
+## 8. Publish the completed study back into Narness
 
 ```bash
 python3 scripts/publish-ai-native-research.py \
   --runs-root /path/to/formal-runs \
   --results-dir /path/to/research-results \
-  --conclusions /path/to/conclusion-r2.json
+  --conclusions /path/to/conclusion-r2.json \
+  --raw-archive-manifest /path/to/archives/nession-ai-native-r2.zip.manifest.json
 ```
 
 The default destination is:
