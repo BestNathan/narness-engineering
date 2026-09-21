@@ -7,6 +7,7 @@ on:
       - 'scripts/*ai-native*'
       - 'docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/**'
       - '.github/workflows/ai-native-benchmark-integrity.yml'
+      - '.github/workflows/ai-native-codex-pilots-self-hosted.yml'
 
 jobs:
   validate:
@@ -292,6 +293,24 @@ jobs:
 
       - name: Validate pilot shell syntax
         run: bash -n scripts/run-ai-native-codex-pilots.sh
+
+      - name: Validate self-hosted pilot workflow contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text=Path('.github/workflows/ai-native-codex-pilots-self-hosted.yml').read_text()
+          required=[
+            'runs-on: [self-hosted, ai-native-research]',
+            'persist-credentials: false',
+            'research/ai-native-execution-prepilot-r3',
+            'codex login status',
+            'OPENAI_API_KEY',
+            'CODEX_ACCESS_TOKEN',
+            './scripts/run-ai-native-codex-pilots.sh',
+          ]
+          missing=[value for value in required if value not in text]
+          assert not missing, missing
+          PY
 
       - name: Validate Codex execution isolation contract
         run: |
