@@ -12,6 +12,7 @@ OUTPUT_DIR="${2:-$ROOT/research-runs/pilots}"
 EXP="$ROOT/docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
 PROFILE_OUT="$EXP/runner/execution-profile-r1.json"
 SCHEDULE_OUT="$EXP/runner/formal-schedule-r1.json"
+PLAN_OUT="$EXP/runner/formal-plan-r1.lock.json"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -73,9 +74,18 @@ python3 "$ROOT/scripts/generate-ai-native-formal-schedule.py" \
   --profile-id codex-gpt-5.6-sol-high-r1 \
   --output "$SCHEDULE_OUT"
 
+python3 "$ROOT/scripts/freeze-ai-native-formal-plan.py" \
+  --execution-profile "$PROFILE_OUT" \
+  --schedule "$SCHEDULE_OUT" \
+  --benchmark-lock "$EXP/BENCHMARK-LOCK.json" \
+  --analysis-lock "$EXP/ANALYSIS-LOCK.json" \
+  --output "$PLAN_OUT" \
+  --plan-id formal-plan-r1
+
 echo
 echo "All three instrumentation pilots passed."
 echo "Execution profile written to: $PROFILE_OUT"
 echo "Pre-registered 216-run schedule written to: $SCHEDULE_OUT"
+echo "Frozen formal plan written to: $PLAN_OUT"
 echo
-echo "NEXT: review and commit those two generated files before starting formal runs."
+echo "NEXT: review and commit all three generated files before starting formal runs."
