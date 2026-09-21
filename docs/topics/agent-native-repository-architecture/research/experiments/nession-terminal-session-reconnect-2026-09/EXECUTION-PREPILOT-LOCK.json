@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "execution_prepilot_revision": 3,
+  "execution_prepilot_revision": 4,
   "status": "frozen-before-real-pilots",
-  "branch": "research/ai-native-execution-prepilot-r3",
-  "repository_sha": "1519adcb31bc66d5741e4cd0e67e54c79b19eef1",
+  "branch": "research/ai-native-execution-prepilot-r4",
+  "repository_sha": "d01117beb44e57c24cb6b73ae8c4c9f89100e825",
   "benchmark_revision": 2,
   "benchmark_definition_sha": "194bf5dc1a28f4e4c10491d7326891ba157d325b",
   "analysis_revision": 2,
@@ -29,17 +29,17 @@
     }
   ],
   "integrity": {
-    "benchmark_workflow_run_id": 35629539218,
+    "benchmark_workflow_run_id": 35630413932,
     "benchmark_workflow_conclusion": "success",
-    "general_ci_run_id": 35629539165,
+    "general_ci_run_id": 35630413911,
     "general_ci_conclusion": "success"
   },
   "supersedes": {
-    "execution_prepilot_revision": 2,
-    "repository_sha": "6072a096e2ea8899930056d876c4b4679421c9b3",
-    "reason": "Codex execution isolation was strengthened before any real pilot: custom workspace-only permissions deny filesystem root and temp roots outside the workspace, shell-command environment is allowlisted, and the self-hosted workflow is pinned to Revision 3."
+    "execution_prepilot_revision": 3,
+    "repository_sha": "1519adcb31bc66d5741e4cd0e67e54c79b19eef1",
+    "reason": "Linked Git worktrees shared the source repository object database/refs, creating a hidden-oracle and research-branch leakage channel. Revision 4 replaces them with standalone single-ref repositories that preserve only the treatment commit ancestry, expose no remote, retain no source path, and exclude hidden/non-ancestor objects."
   },
-  "promotion_rule": "A pilot handoff is promotable only if all three pilot run records and the generated execution profile identify repository_sha 1519adcb31bc66d5741e4cd0e67e54c79b19eef1, the profile records the narness-research permission profile with workspace-only filesystem scope, and the profile/schedule/formal-plan identities agree.",
+  "promotion_rule": "A pilot handoff is promotable only if all three pilot run records and the generated execution profile identify repository_sha d01117beb44e57c24cb6b73ae8c4c9f89100e825, use checkout_isolation single-ref-standalone-git-no-remote, satisfy the Revision-3 Codex permission profile requirements, and the profile/schedule/formal-plan identities agree.",
   "required_agent_config": {
     "permission_profile": "narness-research",
     "filesystem_read_scope": "workspace-only-plus-minimal-runtime; temp roots denied",
@@ -58,5 +58,8 @@
       "SHELL",
       "USER"
     ]
+  },
+  "required_environment": {
+    "checkout_isolation": "single-ref-standalone-git-no-remote"
   }
 }
