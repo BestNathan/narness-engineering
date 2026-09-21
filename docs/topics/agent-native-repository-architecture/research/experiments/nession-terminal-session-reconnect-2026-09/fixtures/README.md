@@ -37,3 +37,10 @@ That distinction matters for the final analysis:
 
 - **visible feedback quality** is part of the treatment environment and can affect repair loops;
 - **hidden acceptance** is only the experiment oracle and determines whether the final behavior is correct.
+
+
+## Feature-absence validation
+
+| Task range | Treatment A result | Detail |
+|---|---|---|
+| T07–T12 | ACCEPTED | [Feature absence validation](validation-T07-T12-A.md) |
