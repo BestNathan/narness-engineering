@@ -176,6 +176,11 @@ trace.write_text(''.join(json.dumps(x) + '\\n' for x in events), encoding='utf-8
 
         score = json.loads((run_dir / "score.json").read_text(encoding="utf-8"))
         assert score["metrics"]["files_read"] == 1
+        assert score["metrics"]["navigation_events_before_first_edit"] == 1
+        assert score["metrics"]["files_read_before_first_edit"] == 1
+        assert score["metrics"]["search_calls_before_first_edit"] == 0
+        assert score["metrics"]["important_artifacts_missed_count"] == 0
+        assert score["metrics"]["out_of_scope_edit_count"] == 0
         assert score["metrics"]["patch_count"] == 1
         assert score["metrics"]["first_hit_correct"] is True
 
