@@ -92,8 +92,12 @@ def main() -> int:
         definition_sha = lock.get("definition_sha")
         require(bool(definition_sha), "benchmark lock has no definition_sha", errors)
         if definition_sha:
-            rel_root = root.relative_to(definition_repo)
-            semantic_paths = [str(rel_root / item) for item in SEMANTIC_FREEZE_PATHS]
+            explicit_paths = lock.get("frozen_paths")
+            if explicit_paths:
+                semantic_paths = [str(item) for item in explicit_paths]
+            else:
+                rel_root = root.relative_to(definition_repo)
+                semantic_paths = [str(rel_root / item) for item in SEMANTIC_FREEZE_PATHS]
             frozen = git(
                 definition_repo,
                 "diff",
