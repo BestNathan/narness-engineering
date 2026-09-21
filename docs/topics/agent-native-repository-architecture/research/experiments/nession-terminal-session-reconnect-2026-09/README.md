@@ -127,6 +127,7 @@ Pilot task success itself is not required. Complete, trustworthy instrumentation
 - [Pre-registered analysis plan](ANALYSIS-PLAN.md)
 - [Failure review protocol](FAILURE-REVIEW-PROTOCOL.md)
 - [Raw data retention policy](DATA-RETENTION.md)
+- [Pre-registered threats to validity](THREATS-TO-VALIDITY.md)
 - [Results placeholder](results.md)
 - [Conclusion contract](conclusion.md)
 - [Treatment construction cost](treatments/construction-cost.md)
