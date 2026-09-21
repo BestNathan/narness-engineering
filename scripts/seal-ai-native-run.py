@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -17,6 +18,29 @@ def load(path: Path) -> dict[str, Any]:
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    return sha256_bytes(path.read_bytes())
+
+
+def artifact_digests(run_dir: Path) -> dict[str, str]:
+    names = [
+        "run.json",
+        "score.json",
+        "trace.jsonl",
+        "final.diff",
+        "git-status.txt",
+        "prompt.txt",
+        "agent.stdout.log",
+        "agent.stderr.log",
+        "codex.raw.jsonl",
+    ]
+    return {
+        name: sha256_file(run_dir / name)
+        for name in names
+        if (run_dir / name).exists()
+    }
 
 
 def git_show(repo: Path, ref: str, path: str) -> bytes:
@@ -203,9 +227,26 @@ def main() -> int:
     }
     run_path.write_text(json.dumps(run, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
+    seal = {
+        "schema_version": 1,
+        "run_id": run["run_id"],
+        "task_id": run["task_id"],
+        "treatment": run["treatment"],
+        "benchmark_revision": lock["benchmark_revision"],
+        "benchmark_definition_sha": definition_sha,
+        "execution_profile_id": profile["profile_id"],
+        "sealed_at": datetime.now(timezone.utc).isoformat(),
+        "artifacts": artifact_digests(run_dir),
+    }
+    (run_dir / "seal.json").write_text(
+        json.dumps(seal, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
     print("Formal run admissible")
     print(f"  run: {run['run_id']}")
     print(f"  profile: {profile['profile_id']}")
+    print(f"  seal: {run_dir / 'seal.json'}")
     return 0
 
 
