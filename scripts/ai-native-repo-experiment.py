@@ -3,9 +3,9 @@
 Isolated runner for the AI-native repository experiment.
 
 The runner deliberately knows nothing about a specific coding agent. It creates
-an isolated Git worktree, applies a frozen task fixture, invokes an operator-
-supplied agent command, runs hidden acceptance/verification commands, and writes
-an auditable JSON record.
+an isolated single-ref Git repository, applies a frozen task fixture, invokes an
+operator-supplied agent command, runs hidden acceptance/verification commands,
+and writes an auditable JSON record.
 
 Python stdlib only.
 """
@@ -126,6 +126,66 @@ def git(repo: Path, *args: str, check: bool = True) -> dict[str, Any]:
     return run(["git", *args], cwd=repo, check=check)
 
 
+def create_isolated_checkout(
+    source_repo: Path,
+    destination: Path,
+    commit_sha: str,
+) -> None:
+    """Fetch only one frozen ref and its ancestry into a standalone repository.
+
+    A linked Git worktree shares the source repository object database and refs,
+    which would let a coding agent inspect research-only descendant/sibling
+    commits such as treatment construction or hidden-oracle history. This
+    checkout intentionally has its own object database and no remote.
+    """
+    destination.mkdir(parents=True)
+    git(destination, "init", "--quiet")
+    source_url = source_repo.resolve().as_uri()
+
+    fetched = run(
+        [
+            "git",
+            "-c",
+            "protocol.file.allow=always",
+            "fetch",
+            "--no-tags",
+            "--force",
+            source_url,
+            commit_sha,
+        ],
+        cwd=destination,
+    )
+    if fetched["exit_code"] != 0:
+        raise RuntimeError(
+            "isolated treatment fetch failed: " + fetched["stderr"]
+        )
+
+    git(destination, "checkout", "--quiet", "--detach", "FETCH_HEAD")
+    actual = probe_command(["git", "rev-parse", "HEAD"], cwd=destination)
+    if actual != commit_sha:
+        raise RuntimeError(
+            f"isolated checkout resolved unexpected HEAD: {actual} != {commit_sha}"
+        )
+
+    # Do not leave the source checkout path or fetch ref as agent-visible Git
+    # metadata. There is intentionally no configured remote.
+    for name in ("FETCH_HEAD", "ORIG_HEAD"):
+        candidate = destination / ".git" / name
+        if candidate.exists():
+            candidate.unlink()
+
+    alternates = destination / ".git" / "objects" / "info" / "alternates"
+    if alternates.exists():
+        raise RuntimeError(
+            "isolated checkout unexpectedly shares an object database"
+        )
+    remotes = probe_command(["git", "remote"], cwd=destination)
+    if remotes:
+        raise RuntimeError(
+            f"isolated checkout unexpectedly has remotes: {remotes}"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-repo", required=True, type=Path)
@@ -192,6 +252,7 @@ def main() -> int:
             "npm": probe_command(["npm", "--version"], cwd=source_repo),
             "harness_repository_sha": probe_command(["git", "rev-parse", "HEAD"], cwd=harness_root),
             "runner_file_sha256": sha256_file(Path(__file__).resolve()),
+            "checkout_isolation": "single-ref-standalone-git-no-remote",
             "harness_repository_dirty": bool(
                 probe_command(["git", "status", "--porcelain"], cwd=harness_root)
             ),
@@ -218,8 +279,8 @@ def main() -> int:
     }
 
     try:
-        # Never reuse an existing checkout or branch: each run gets detached HEAD.
-        git(source_repo, "worktree", "add", "--detach", str(worktree), treatment["sha"])
+        # Never expose the source repository's refs/object database to the agent.
+        create_isolated_checkout(source_repo, worktree, treatment["sha"])
 
         for command in args.setup_cmd:
             result = run(render(command, values), cwd=worktree, shell=True)
@@ -442,12 +503,7 @@ def main() -> int:
         if args.keep_worktree:
             print(f"kept worktree: {worktree}", file=sys.stderr)
         else:
-            # Remove through git first so source-repo worktree metadata is cleaned.
-            if worktree.exists():
-                run(
-                    ["git", "worktree", "remove", "--force", str(worktree)],
-                    cwd=source_repo,
-                )
+            # Standalone checkout has no source-repository worktree metadata.
             shutil.rmtree(tmp_root, ignore_errors=True)
 
 
