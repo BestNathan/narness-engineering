@@ -295,33 +295,25 @@ R12 architecture treatment introduced accidental complexity
 - freeze hidden semantic gold set;
 - document the protocol.
 
-### Stage 1 — Baseline characterization
+### Stage 1 — Treatment construction and freeze
 
-Run Treatment A first.
+Treatment A was frozen first. Treatments B and C were then constructed and validated **before any reportable formal outcome was observed**. B/C may not be retuned from formal A failures during revision 1.
 
-This is important: B/C must not be tuned against individual baseline failures after seeing task results unless that tuning is explicitly recorded as a second experiment.
+### Stage 2 — Instrumentation pilots
 
-### Stage 2 — Implement Treatment B
+Run the three non-reportable T05/A, T08/B, and T20/C pilots to freeze the exact execution profile. Pilot outcomes are excluded from the formal treatment comparison.
 
-Build the semantic index/resolver from repository facts.
+### Stage 3 — Pre-register formal schedule
 
-Do not restructure implementation merely to make the index easier.
+Generate a balanced cyclic Latin-square treatment order within each task. With three repetitions this yields 216 entries. Every entry launches a fresh ephemeral agent.
 
-### Stage 3 — Run B
+Formal collection does **not** execute all A runs, then all B runs, then all C runs. Interleaving the already-frozen treatments reduces temporal/backend drift while preserving within-task matching.
 
-Use the same task set and controls.
+### Stage 4 — Formal collection
 
-### Stage 4 — Implement Treatment C
+Execute the pre-registered schedule without changing task, treatment, oracle, gold, scoring semantics, or execution profile.
 
-Restructure the selected semantic slice using the pre-declared AI-native principles.
-
-Record every structural decision.
-
-### Stage 5 — Run C
-
-Use the same task set and controls.
-
-### Stage 6 — Analysis
+### Stage 5 — Analysis
 
 Compare:
 
@@ -331,7 +323,7 @@ B vs C → value of code shape/locality beyond metadata
 A vs C → end-to-end value of the complete treatment
 ```
 
-### Stage 7 — Conclusion
+### Stage 6 — Conclusion
 
 Each hypothesis must be classified:
 
