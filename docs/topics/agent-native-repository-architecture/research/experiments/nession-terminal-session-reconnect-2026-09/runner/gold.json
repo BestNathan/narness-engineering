@@ -1,0 +1,2533 @@
+{
+  "schema_version": 1,
+  "experiment": "nession-terminal-session-reconnect-2026-09",
+  "note": "Hidden scorer data. Do not copy into an agent worktree or task prompt.",
+  "tasks": {
+    "T01": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/app/useVisibilityReconnect.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/app/useVisibilityReconnect.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts",
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T02": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T03": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T04": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T05": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T06": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T07": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T08": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/app/useVisibilityReconnect.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/app/useVisibilityReconnect.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/app/useVisibilityReconnect.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/app/useVisibilityReconnect.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T09": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/app/useVisibilityReconnect.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/app/useVisibilityReconnect.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts",
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T10": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T11": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T12": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T13": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/app/useVisibilityReconnect.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/app/useVisibilityReconnect.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/app/useVisibilityReconnect.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/visibility-wake/useVisibilityReconnect.ts",
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T14": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T15": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T16": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/product/terminal/useTerminalAttach.ts",
+            "web/src/product/terminal/useTerminalOrchestration.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/product/terminal/useTerminalAttach.ts",
+            "web/src/product/terminal/useTerminalOrchestration.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/product/terminal/useTerminalAttach.ts",
+            "web/src/product/terminal/useTerminalOrchestration.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/product/terminal/useTerminalAttach.ts",
+            "web/src/product/terminal/useTerminalOrchestration.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/runtime-projection/useTerminalAttach.ts",
+            "web/src/units/terminal-session/runtime-projection/useTerminalOrchestration.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/runtime-projection/useTerminalAttach.ts",
+            "web/src/units/terminal-session/runtime-projection/useTerminalOrchestration.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T17": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/attach/AttachStateMachine.ts"
+          ],
+          "relevant": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/AttachStateMachine.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/attach/AttachStateMachine.ts"
+          ],
+          "relevant": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/AttachStateMachine.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/attach/state.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/attach/state.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T18": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T19": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/product/terminal/agent.ts",
+            "web/src/product/terminal/types.ts",
+            "web/src/product/terminal/index.ts",
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T20": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/attach/AttachStateMachine.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/AttachStateMachine.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/attach/AttachStateMachine.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/AttachStateMachine.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/attach/state.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/attach/state.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T21": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "relevant": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/attach/SessionAttachController.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/attach/controller.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T22": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T23": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    },
+    "T24": {
+      "treatments": {
+        "A": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "B": {
+          "primary": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "relevant": [
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/platform/session-runtime/SessionRuntime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/platform/session-runtime/SessionRuntime.ts",
+            "web/src/platform/socket/WebSocketService.ts",
+            "web/src/platform/socket/types.ts",
+            "web/src/platform/attach/AttachStateMachine.ts",
+            "web/src/platform/attach/SessionAttachController.ts",
+            "web/src/platform/socket/__tests__/unit/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/app/__tests__/integration/",
+            "web/src/product/terminal/__tests__/"
+          ]
+        },
+        "C": {
+          "primary": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "relevant": [
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ],
+          "adjacent": [
+            ".ai-native/",
+            "docs/"
+          ],
+          "required_artifacts": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts"
+          ],
+          "allowed_edit_prefixes": [
+            "web/src/units/terminal-session/route-recovery/runtime.ts",
+            "web/src/units/terminal-session/transport-reconnect/service.ts",
+            "web/src/units/terminal-session/transport-reconnect/types.ts",
+            "web/src/units/terminal-session/attach/state.ts",
+            "web/src/units/terminal-session/attach/controller.ts",
+            "web/src/units/terminal-session/transport-reconnect/__tests__/",
+            "web/src/units/terminal-session/attach/__tests__/",
+            "web/src/units/terminal-session/route-recovery/__tests__/",
+            "web/src/units/terminal-session/runtime-projection/__tests__/",
+            "web/src/app/__tests__/integration/",
+            "web/src/platform/attach/__tests__/unit/",
+            "web/src/platform/session-runtime/__tests__/unit/",
+            "web/src/platform/socket/__tests__/unit/"
+          ]
+        }
+      }
+    }
+  }
+}
