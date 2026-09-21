@@ -127,6 +127,21 @@ def main() -> int:
         None,
     )
     first_edit = edits[0] if edits else None
+    first_edit_line = first_edit["_line"] if first_edit else float("inf")
+    navigation_before_first_edit = [
+        e for e in trace
+        if e["_line"] < first_edit_line
+        and e["type"] in {"search", "glob", "read", "resolver"}
+    ]
+    searches_before_first_edit = [
+        e for e in searches if e["_line"] < first_edit_line
+    ]
+    reads_before_first_edit = [
+        e for e in reads if e["_line"] < first_edit_line
+    ]
+    resolvers_before_first_edit = [
+        e for e in resolvers if e["_line"] < first_edit_line
+    ]
     timed_events = [timestamp(e) for e in trace if timestamp(e) is not None]
     origin = min(timed_events) if timed_events else None
 
@@ -197,9 +212,15 @@ def main() -> int:
         ) if first_artifact else None,
         "time_to_first_relevant_artifact_ms": delta_ms(first_relevant, origin),
         "time_to_first_edit_ms": delta_ms(first_edit, origin),
+        "navigation_events_before_first_edit": len(navigation_before_first_edit),
+        "search_calls_before_first_edit": len(searches_before_first_edit),
+        "files_read_before_first_edit": len(reads_before_first_edit),
+        "resolver_calls_before_first_edit": len(resolvers_before_first_edit),
         "important_artifacts_missed": missed_required,
+        "important_artifacts_missed_count": len(missed_required),
         "patch_count": len(edits),
         "out_of_scope_edits": out_of_scope_edits,
+        "out_of_scope_edit_count": len(out_of_scope_edits),
         "validation_failures": len(failed_validations),
         "repair_loops": repair_loops,
         "input_tokens": input_tokens or None,
