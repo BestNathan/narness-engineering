@@ -41,8 +41,8 @@ def check_command_list(
         errors.append(f"{name}: no command records")
         return
     for item in commands:
-        if item.get("exit_code") != 0:
-            errors.append(f"{name}: command failed: {item.get('command')}")
+        if "exit_code" not in item:
+            errors.append(f"{name}: command has no recorded exit code: {item.get('command')}")
 
 
 def main() -> int:
@@ -107,22 +107,13 @@ def main() -> int:
 
     if run.get("runner_error"):
         errors.append(f"runner_error present: {run['runner_error']}")
-    if not run.get("agent_exit_ok"):
-        errors.append("agent process did not exit successfully")
     agent = run.get("commands", {}).get("agent") or {}
-    if agent.get("timed_out"):
-        errors.append("agent exceeded the formal time budget")
+    if not agent:
+        errors.append("agent command record is missing")
     if not run.get("trace_present") or not run.get("trace_complete"):
         errors.append("structured trace is absent or was not scored")
-    if not run.get("task_success"):
-        errors.append("task_success is false")
-    if not run.get("acceptance_ok"):
-        errors.append("hidden acceptance failed")
-    if not run.get("verification_ok"):
-        errors.append("repository verification failed")
-    if not run.get("mutation_checks_ok"):
-        errors.append("required mutation-strength checks failed")
-
+    # Task/acceptance/verification/mutation failures are benchmark outcomes,
+    # not admissibility failures. Excluding them would inflate success rates.
     commands = run.get("commands", {})
     check_command_list(commands.get("acceptance", []), name="acceptance", errors=errors)
     check_command_list(commands.get("verification", []), name="verification", errors=errors)
@@ -145,7 +136,10 @@ def main() -> int:
     metrics = score.get("metrics", {})
     for metric in profile.get("required_metrics", []):
         if metrics.get(metric) is None:
-            errors.append(f"required metric missing: {metric}")
+            # A hard wall-clock timeout is a valid benchmark outcome. The
+            # interrupted agent may not emit final usage/accounting events.
+            if not agent.get("timed_out"):
+                errors.append(f"required metric missing: {metric}")
 
     trace_events = [
         json.loads(raw)
@@ -200,6 +194,9 @@ def main() -> int:
         "benchmark_definition_sha": definition_sha,
         "execution_profile_id": profile["profile_id"],
         "sealed": True,
+        "agent_exit_ok": run.get("agent_exit_ok"),
+        "agent_timed_out": bool(agent.get("timed_out")),
+        "task_success": run.get("task_success"),
     }
     run_path.write_text(json.dumps(run, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
