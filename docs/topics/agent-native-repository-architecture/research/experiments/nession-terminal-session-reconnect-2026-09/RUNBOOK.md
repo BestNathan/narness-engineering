@@ -17,9 +17,10 @@ It writes:
 ```text
 runner/execution-profile-r1.json
 runner/formal-schedule-r1.json
+runner/formal-plan-r1.lock.json
 ```
 
-Review and commit those two generated metadata files before formal collection.
+Review and commit all three generated metadata files before formal collection. `formal-plan-r1.lock.json` freezes the exact profile and schedule bytes.
 
 ## 2. Run formal collection
 
@@ -28,6 +29,7 @@ python3 scripts/run-ai-native-formal.py \
   --source-repo /path/to/nession \
   --schedule docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-schedule-r1.json \
   --execution-profile docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/execution-profile-r1.json \
+  --formal-plan-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-plan-r1.lock.json \
   --runs-root /path/to/formal-runs
 ```
 
@@ -44,7 +46,8 @@ python3 scripts/inspect-ai-native-formal-progress.py \
   --runs-root /path/to/formal-runs \
   --schedule docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-schedule-r1.json \
   --execution-profile docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/execution-profile-r1.json \
-  --benchmark-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/BENCHMARK-LOCK.json
+  --benchmark-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/BENCHMARK-LOCK.json \
+  --formal-plan-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-plan-r1.lock.json
 ```
 
 The inspector distinguishes `sealed`, `pending`, `incomplete`, and `tampered` entries. A tampered sealed run is always a hard error.
@@ -144,6 +147,7 @@ benchmark semantics  -> BENCHMARK-LOCK.json
 analysis semantics   -> ANALYSIS-LOCK.json
 execution mechanics  -> execution-profile-r1.json (after pilots)
 formal order         -> formal-schedule-r1.json (after pilots)
+execution + order    -> formal-plan-r1.lock.json (after pilots)
 ```
 
 Do not change a frozen boundary after observing reportable outcomes. Create a new revision instead.
