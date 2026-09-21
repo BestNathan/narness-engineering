@@ -77,10 +77,12 @@ Every failed admissible run receives one primary R1–R12 failure code.
 python3 scripts/review-ai-native-run.py \
   --run-dir /path/to/formal-runs/Txx-A-01 \
   --primary R5 \
-  --notes 'Missed the stale-generation invariant.'
+  --notes 'Missed the stale-generation invariant.' \
+  --evidence 'trace.jsonl: invariant was never inspected' \
+  --evidence 'acceptance: stale-generation case failed'
 ```
 
-Secondary codes may be supplied with repeated `--secondary` arguments.
+Secondary codes may be supplied with repeated `--secondary` arguments. Failed reviews require a non-empty rationale and at least one evidence reference, and are content-bound to the run's `seal.json`. Follow `FAILURE-REVIEW-PROTOCOL.md` and complete causal reviews before using aggregate A/B/C results to explain failure-mode differences.
 
 ## 4. Generate interim analysis
 
