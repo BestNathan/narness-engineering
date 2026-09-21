@@ -226,7 +226,10 @@ def main() -> int:
             "balanced_within_task_blocks": True,
             "latin_square_positions": replications == 3,
             "deterministic_task_permutations": True,
-            "distinct_task_orders_across_replications": replications != 3 or True,
+            "distinct_task_orders_across_replications": (
+                replications != 3
+                or len({tuple(v) for v in observed_orders.values()}) == 3
+            ),
             "task_order_seed": task_order_seed,
         },
         "freeze_rule": (
