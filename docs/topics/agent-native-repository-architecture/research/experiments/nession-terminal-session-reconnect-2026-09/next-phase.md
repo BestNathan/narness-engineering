@@ -1,6 +1,6 @@
 # Next Phase — Freeze Benchmark and Treatments
 
-> Status: Benchmark revision 1 and analysis revision 1 frozen; instrumentation plumbing and preflight green; three real Codex pilots pending.
+> Status: Benchmark revision 1 and analysis revision 2 frozen; instrumentation plumbing and preflight green; three real Codex pilots pending.
 
 Benchmark revision 1 and all three treatments are now frozen. Formal A/B/C data collection is still blocked on the three non-reportable instrumentation pilots.
 
@@ -161,8 +161,8 @@ pre-registered 216-run schedule.
 Before seeing any formal outcome, the analysis plan has also been frozen.
 
 ```text
-analysis definition SHA     b7772c8f5ce63f55ddc311dd47bc880b7c8102a0
-analysis branch             research/ai-native-analysis-r1
+analysis definition SHA     357c38c9b10a3eb668b15aead703a5f5200b2858
+analysis branch             research/ai-native-analysis-r2
 paired task analysis        READY
 task-cluster bootstrap      READY
 failure taxonomy pipeline   READY
