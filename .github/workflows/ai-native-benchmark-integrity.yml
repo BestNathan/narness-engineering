@@ -31,7 +31,8 @@ jobs:
             scripts/selftest-ai-native-runner.py \
             scripts/seal-ai-native-run.py \
             scripts/aggregate-ai-native-results.py \
-            scripts/freeze-ai-native-execution-profile.py
+            scripts/freeze-ai-native-execution-profile.py \
+            scripts/generate-ai-native-formal-schedule.py
 
       - name: Run isolated runner/scorer selftest
         run: python scripts/selftest-ai-native-runner.py
