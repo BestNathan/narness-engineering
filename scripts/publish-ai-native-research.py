@@ -42,17 +42,20 @@ def main() -> int:
     ap.add_argument("--runs-root", required=True, type=Path)
     ap.add_argument("--results-dir", required=True, type=Path)
     ap.add_argument("--conclusions", required=True, type=Path)
+    ap.add_argument("--raw-archive-manifest", required=True, type=Path)
     ap.add_argument("--destination", type=Path, default=DEFAULT_DESTINATION)
     args = ap.parse_args()
 
     runs_root = args.runs_root.resolve()
     results = args.results_dir.resolve()
     conclusions = args.conclusions.resolve()
+    raw_archive_manifest_path = args.raw_archive_manifest.resolve()
     destination = args.destination.resolve()
 
     completeness = load(results / "research-completeness.json")
     collection = load(results / "collection-manifest.json")
     artifact = load(results / "research-artifact-manifest.json")
+    raw_archive = load(raw_archive_manifest_path)
 
     required_complete = {
         "run_count_complete": completeness.get("run_count_complete"),
@@ -75,6 +78,13 @@ def main() -> int:
         raise RuntimeError("collection manifest is not complete")
     if artifact.get("complete") is not True:
         raise RuntimeError("research artifact manifest is not complete")
+    if (
+        raw_archive.get("collection_digest_sha256")
+        != artifact.get("collection_digest_sha256")
+    ):
+        raise RuntimeError("raw archive manifest belongs to a different collection")
+    if not raw_archive.get("archive_sha256"):
+        raise RuntimeError("raw archive manifest has no archive_sha256")
 
     validate = subprocess.run(
         [
@@ -120,6 +130,10 @@ def main() -> int:
         destination / "collection-start.json",
     )
     copy_required(conclusions, destination / "conclusion-r2.json")
+    copy_required(
+        raw_archive_manifest_path,
+        destination / "raw-archive-manifest.json",
+    )
 
     frozen_inputs = {
         "BENCHMARK-LOCK.json": EXPERIMENT / "BENCHMARK-LOCK.json",
@@ -162,6 +176,8 @@ def main() -> int:
         "analysis_definition_sha": artifact["analysis_definition_sha"],
         "execution_profile_id": artifact.get("execution_profile_id"),
         "collection_digest_sha256": artifact.get("collection_digest_sha256"),
+        "raw_archive_filename": raw_archive.get("archive_filename"),
+        "raw_archive_sha256": raw_archive.get("archive_sha256"),
         "research_artifact_set_digest_sha256": artifact.get(
             "artifact_set_digest_sha256"
         ),
@@ -208,7 +224,9 @@ taxonomy, reviewed H1-H5 conclusion, collection identity, execution/profile/orde
 locks, and the final research artifact manifest.
 
 Full per-run traces and diffs are intentionally not duplicated into Git. Their
-content identity is preserved by the formal run seals and collection-manifest.json.
+content identity is preserved by the formal run seals, collection-manifest.json,
+and raw-archive-manifest.json. The deterministic raw archive should be retained
+as a release/object-storage artifact using the published SHA-256 identity.
 """
     (destination / "README.md").write_text(readme, encoding="utf-8")
 
