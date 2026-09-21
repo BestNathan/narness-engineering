@@ -114,6 +114,11 @@ def main() -> int:
                 "bytes": len(data),
             }
 
+    content_material = "\n".join(
+        f"{name}:{item['sha256']}:{item['bytes']}"
+        for name, item in sorted(file_manifest.items())
+    ).encode("utf-8")
+
     archive_manifest = {
         "schema_version": 1,
         "experiment_id": collection["experiment_id"],
@@ -125,6 +130,8 @@ def main() -> int:
         "formal_plan_sha256": collection.get("formal_plan_sha256"),
         "collection_digest_sha256": collection["collection_digest_sha256"],
         "collection_manifest_sha256": sha256_file(collection_path),
+        "archiver_file_sha256": sha256_file(Path(__file__).resolve()),
+        "content_set_digest_sha256": hashlib.sha256(content_material).hexdigest(),
         "archive_filename": output.name,
         "archive_sha256": sha256_file(output),
         "archive_bytes": output.stat().st_size,
