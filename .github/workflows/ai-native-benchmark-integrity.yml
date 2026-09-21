@@ -197,6 +197,7 @@ jobs:
           out=Path('/tmp/finalize-results')
           assert (out/'research-report.md').exists()
           assert (out/'paired-effects.json').exists()
+          assert (out/'research-artifact-manifest.json').exists()
           failures=json.loads((out/'failure-summary.json').read_text())
           assert failures['failed_admissible_runs'] == 1
           assert failures['missing_review_count'] == 0
