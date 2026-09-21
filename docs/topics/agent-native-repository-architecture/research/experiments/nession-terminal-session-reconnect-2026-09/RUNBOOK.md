@@ -31,7 +31,7 @@ python3 scripts/run-ai-native-formal.py \
   --runs-root /path/to/formal-runs
 ```
 
-The orchestrator validates benchmark/analysis integrity before model spending, enforces the frozen runner/adapter/scorer bytes, runs the balanced schedule, scores every run, and seals admissible outcomes.
+The orchestrator validates benchmark/analysis integrity before model spending, enforces the frozen execution-tool bytes, runs the balanced schedule, scores every run, and writes a tamper-evident `seal.json` for every admissible outcome. Existing runs are never skipped merely because `run.json` says they are sealed; their artifact hashes are re-verified first.
 
 Failed tasks remain in the dataset when the run itself is admissible.
 
@@ -109,6 +109,7 @@ paired-effects.md
 failure-summary.json
 failure-summary.md
 research-completeness.json
+collection-manifest.json
 research-report.md
 ```
 
@@ -122,3 +123,17 @@ formal order         -> formal-schedule-r1.json (after pilots)
 ```
 
 Do not change a frozen boundary after observing reportable outcomes. Create a new revision instead.
+
+## Tamper-evident research data
+
+Each admissible formal run has a `seal.json` containing SHA-256 digests for the run record, score, trace, final diff, and other execution artifacts.
+
+Before final analysis, `scripts/verify-ai-native-collection.py` checks every scheduled run against its seal and the pre-registered schedule/profile, then emits:
+
+```text
+collection-manifest.json
+```
+
+The collection manifest contains the schedule/profile/benchmark hashes, every verified run-seal hash, optional review hashes, and one deterministic collection digest.
+
+Changing an already sealed trace, score, run record, prompt, diff, or other sealed artifact therefore causes final collection verification to fail instead of silently changing the study data.
