@@ -126,8 +126,8 @@ search-result path normalization                PASS
 runner/scorer selftest                          PASS
 benchmark semantic-drift gate                   PASS
 local pilot preflight (Codex skipped in CI)     PASS
-AI Native Benchmark Integrity run               35609845199 PASS
-general repository CI                           35609845214 PASS
+AI Native Benchmark Integrity run               35629539218 PASS
+general repository CI                           35629539165 PASS
 ```
 
 The remaining transition is external execution, not benchmark design:
@@ -175,3 +175,17 @@ structured H1-H5 review     READY
 ```
 
 `RUNBOOK.md` now defines the complete operational path from the three external Codex pilots through 216 formal runs, failure review, paired analysis, and final research report generation.
+
+
+## Active execution handoff
+
+```text
+Execution Pre-Pilot Revision 3
+branch  research/ai-native-execution-prepilot-r3
+SHA     1519adcb31bc66d5741e4cd0e67e54c79b19eef1
+```
+
+Revision 3 supersedes Revision 2 before any real pilot. It adds workspace-only
+Codex filesystem permissions, root/temp denial, shell-environment allowlisting,
+and static CI verification of the exact isolation argv. The three real pilots
+must run from this exact revision.
