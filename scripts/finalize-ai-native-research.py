@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -28,6 +29,10 @@ def run(cmd: list[str], *, allow_codes: set[int] | None = None) -> int:
 
 def load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main() -> int:
@@ -153,8 +158,79 @@ def main() -> int:
             if collection_manifest else None
         ),
     }
-    (out / "research-completeness.json").write_text(
+    completeness_path = out / "research-completeness.json"
+    completeness_path.write_text(
         json.dumps(completeness, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    benchmark_lock = load(EXPERIMENT / "BENCHMARK-LOCK.json")
+    analysis_lock = load(EXPERIMENT / "ANALYSIS-LOCK.json")
+    artifact_candidates = [
+        out / "raw-runs.csv",
+        out / "summary.json",
+        out / "summary.md",
+        out / "paired-effects.json",
+        out / "paired-effects.md",
+        out / "failure-summary.json",
+        out / "failure-summary.md",
+        out / "collection-manifest.json",
+        completeness_path,
+        out / "research-report.md",
+        EXPERIMENT / "BENCHMARK-LOCK.json",
+        EXPERIMENT / "ANALYSIS-LOCK.json",
+        schedule_path,
+        profile_path,
+        ROOT / "scripts" / "aggregate-ai-native-results.py",
+        ROOT / "scripts" / "analyze-ai-native-effects.py",
+        ROOT / "scripts" / "generate-ai-native-research-report.py",
+        ROOT / "scripts" / "finalize-ai-native-research.py",
+    ]
+    if args.conclusions:
+        artifact_candidates.append(args.conclusions.resolve())
+
+    artifact_hashes: dict[str, str] = {}
+    for path in artifact_candidates:
+        if not path.exists():
+            continue
+        try:
+            label = str(path.relative_to(ROOT))
+        except ValueError:
+            try:
+                label = "results/" + str(path.relative_to(out))
+            except ValueError:
+                label = "external/" + path.name
+        artifact_hashes[label] = sha256_file(path)
+
+    digest_material = "\n".join(
+        f"{name}:{digest}" for name, digest in sorted(artifact_hashes.items())
+    ).encode("utf-8")
+    artifact_manifest = {
+        "schema_version": 1,
+        "experiment_id": benchmark_lock["experiment_id"],
+        "benchmark_revision": benchmark_lock["benchmark_revision"],
+        "benchmark_definition_sha": benchmark_lock["definition_sha"],
+        "analysis_revision": analysis_lock["analysis_revision"],
+        "analysis_definition_sha": analysis_lock["definition_sha"],
+        "execution_profile_id": (
+            load(profile_path).get("profile_id") if profile_path.exists() else None
+        ),
+        "collection_digest_sha256": (
+            collection_manifest.get("collection_digest_sha256")
+            if collection_manifest else None
+        ),
+        "complete": (
+            completeness["run_count_complete"]
+            and completeness["all_24_tasks_present_per_treatment"]
+            and completeness["missing_failure_reviews"] == 0
+            and completeness["hypothesis_classification_complete"]
+            and completeness["collection_complete"]
+        ),
+        "artifacts": dict(sorted(artifact_hashes.items())),
+        "artifact_set_digest_sha256": hashlib.sha256(digest_material).hexdigest(),
+    }
+    (out / "research-artifact-manifest.json").write_text(
+        json.dumps(artifact_manifest, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
@@ -183,6 +259,7 @@ def main() -> int:
     print("Research data artifacts generated")
     print(f"  runs: {total_runs}")
     print(f"  report: {out / 'research-report.md'}")
+    print(f"  artifact manifest: {out / 'research-artifact-manifest.json'}")
     return 0
 
 
