@@ -189,6 +189,8 @@ def main() -> int:
         EXPERIMENT / "treatments" / "construction-cost-r1.json",
         EXPERIMENT / "treatments" / "construction-cost.md",
         EXPERIMENT / "FAILURE-REVIEW-PROTOCOL.md",
+        EXPERIMENT / "THREATS-TO-VALIDITY.md",
+        EXPERIMENT / "DATA-RETENTION.md",
         schedule_path,
         profile_path,
         plan_path,
