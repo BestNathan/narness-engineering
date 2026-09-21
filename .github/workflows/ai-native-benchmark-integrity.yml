@@ -307,7 +307,7 @@ jobs:
           required=[
             'runs-on: [self-hosted, ai-native-research]',
             'persist-credentials: false',
-            'research/ai-native-execution-prepilot-r3',
+            'research/ai-native-execution-prepilot-r4',
             'codex login status',
             'OPENAI_API_KEY',
             'CODEX_ACCESS_TOKEN',
