@@ -89,7 +89,7 @@ This produces raw run data, treatment summaries, paired effects, failure taxonom
 Copy:
 
 ```text
-conclusion-r1.template.json
+conclusion-r2.template.json
 ```
 
 to a working conclusion file. Fill exactly one classification for H1–H5:
