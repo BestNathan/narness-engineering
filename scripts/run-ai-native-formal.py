@@ -98,6 +98,27 @@ def main() -> int:
         raise RuntimeError("formal plan run count differs from schedule")
 
     ensure_clean(ROOT)
+    collection_start_path = runs_root / "_collection" / "collection-start.json"
+    readiness = run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "prepare-ai-native-formal-collection.py"),
+            "--source-repo",
+            str(source),
+            "--schedule",
+            str(schedule_path),
+            "--execution-profile",
+            str(profile_path),
+            "--formal-plan-lock",
+            str(plan_path),
+            "--output",
+            str(collection_start_path),
+        ],
+        check=True,
+    )
+    if readiness.returncode != 0:
+        raise RuntimeError("formal collection readiness gate failed")
+
     tooling = profile.get("tooling", {})
     tool_paths = {
         "runner_file_sha256": ROOT / "scripts" / "ai-native-repo-experiment.py",
@@ -106,6 +127,7 @@ def main() -> int:
         "seal_file_sha256": ROOT / "scripts" / "seal-ai-native-run.py",
         "run_seal_verifier_file_sha256": ROOT / "scripts" / "verify-ai-native-run-seal.py",
         "formal_orchestrator_file_sha256": ROOT / "scripts" / "run-ai-native-formal.py",
+        "formal_readiness_file_sha256": ROOT / "scripts" / "prepare-ai-native-formal-collection.py",
     }
     for key, tool_path in tool_paths.items():
         expected = tooling.get(key)
