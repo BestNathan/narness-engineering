@@ -105,3 +105,28 @@ A separate post-run review marks a run admissible only after:
 The runner materializes `oracle.files` only **after the agent process exits**. After acceptance completes, those files are removed before repository verification and final diff capture.
 
 Therefore the coding agent cannot discover the hidden acceptance implementation through filesystem search, while the run remains locally reproducible from the frozen oracle Git SHA.
+
+
+## Mutation-strength acceptance
+
+Evidence tasks can add `mutation_checks` to their manifest:
+
+```json
+{
+  "mutation_checks": [
+    {
+      "name": "duplicate-force-relay",
+      "ref": "<frozen mutation source SHA/ref>",
+      "patch_source": ".research/ai-native/mutations/T23-A.patch",
+      "expected": "failure",
+      "commands": [
+        "cd web && npm test -- <agent-added-test-or-suite>"
+      ]
+    }
+  ]
+}
+```
+
+The runner materializes and applies the mutation **after** the agent has finished and clean verification has passed. A mutation with `expected: "failure"` is considered killed when its command returns non-zero. The patch is then reverted before final diff capture.
+
+This makes evidence-task success stronger than merely adding a passing test.
