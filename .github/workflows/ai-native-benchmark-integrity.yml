@@ -26,6 +26,7 @@ jobs:
             scripts/ai-native-repo-experiment.py \
             scripts/score-ai-native-run.py \
             scripts/validate-ai-native-benchmark.py \
+            scripts/validate-ai-native-treatment-isolation.py \
             scripts/validate-ai-native-pilot.py \
             scripts/ai-native-codex-adapter.py \
             scripts/preflight-ai-native-codex-pilots.py \
@@ -300,6 +301,19 @@ jobs:
         run: |
           python scripts/validate-ai-native-benchmark.py \
             --source-repo /tmp/nession
+
+      - name: Validate treatment variable isolation
+        run: |
+          python scripts/validate-ai-native-treatment-isolation.py \
+            --source-repo /tmp/nession \
+            --output /tmp/treatment-isolation.json
+          python - <<'PY'
+          import json
+          x=json.load(open('/tmp/treatment-isolation.json'))
+          assert x['status'] == 'pass'
+          assert x['capability_count'] == 6
+          assert all(x['checks'].values()), x['checks']
+          PY
 
       - name: Validate Codex pilot preflight without Codex
         run: |
