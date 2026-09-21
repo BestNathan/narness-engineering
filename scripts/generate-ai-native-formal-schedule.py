@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -17,17 +18,35 @@ def rotate(items: list[str], n: int) -> list[str]:
     return items[n:] + items[:n]
 
 
+def task_order(replication: int, seed: int) -> list[str]:
+    """Return a deterministic pseudo-random task permutation.
+
+    SHA-256 ordering avoids relying on language-runtime PRNG/shuffle details.
+    """
+    return sorted(
+        TASKS,
+        key=lambda task: hashlib.sha256(
+            f"{seed}:{replication}:{task}".encode("utf-8")
+        ).hexdigest(),
+    )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--replications", type=int, choices=[1, 3], required=True)
     ap.add_argument("--output", required=True, type=Path)
     ap.add_argument("--profile-id", required=True)
+    ap.add_argument("--task-order-seed", type=int, default=20260921)
     args = ap.parse_args()
 
     entries = []
     sequence = 0
+    task_orders: dict[str, list[str]] = {}
     for replication in range(1, args.replications + 1):
-        for task_index, task_id in enumerate(TASKS):
+        ordered_tasks = task_order(replication, args.task_order_seed)
+        task_orders[str(replication)] = ordered_tasks
+        for task_id in ordered_tasks:
+            task_index = TASKS.index(task_id)
             # Latin-square rotation balances treatment position by task and,
             # with three replications, by replication as well.
             order = rotate(TREATMENTS, task_index + replication - 1)
@@ -48,7 +67,13 @@ def main() -> int:
         "profile_id": args.profile_id,
         "replications": args.replications,
         "run_count": len(entries),
-        "design": "balanced cyclic Latin-square order within each task",
+        "design": (
+            "deterministically permuted task blocks per replication + "
+            "balanced cyclic Latin-square treatment order within each task"
+        ),
+        "task_order_policy": "sha256(seed:replication:task)",
+        "task_order_seed": args.task_order_seed,
+        "task_orders": task_orders,
         "entries": entries,
     }
 
