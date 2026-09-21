@@ -150,7 +150,15 @@ def main() -> int:
         "codex_version",
         "adapter_file_sha256",
     ]
-    env_keys = ["python", "platform", "git", "node", "npm", "runner_file_sha256"]
+    env_keys = [
+        "python",
+        "platform",
+        "git",
+        "node",
+        "npm",
+        "runner_file_sha256",
+        "checkout_isolation",
+    ]
 
     agent_profile = {key: first["cfg"].get(key) for key in agent_keys}
     environment = {
