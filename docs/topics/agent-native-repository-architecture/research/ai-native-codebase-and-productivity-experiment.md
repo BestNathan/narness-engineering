@@ -1121,16 +1121,19 @@ The present conclusion is only methodological:
 
 ## Active experiment
 
-The first concrete experiment is now frozen against Nession:
+The first concrete experiment is now frozen against Nession under **Benchmark Revision 2 / Analysis Revision 2**:
 
+- [Experiment Entry Point](experiments/nession-terminal-session-reconnect-2026-09/README.md)
 - [Nession Terminal / Session Reconnect Experiment Protocol](experiments/nession-terminal-session-reconnect-2026-09/protocol.md)
+- [Operational Runbook](experiments/nession-terminal-session-reconnect-2026-09/RUNBOOK.md)
+- [Treatment Construction Cost](experiments/nession-terminal-session-reconnect-2026-09/treatments/construction-cost.md)
 - [Frozen Task Set](experiments/nession-terminal-session-reconnect-2026-09/tasks/README.md)
 - [Hidden Semantic Gold Set](experiments/nession-terminal-session-reconnect-2026-09/gold/README.md)
 - [Runs](experiments/nession-terminal-session-reconnect-2026-09/runs/README.md)
 - [Results](experiments/nession-terminal-session-reconnect-2026-09/results.md)
 - [Conclusion](experiments/nession-terminal-session-reconnect-2026-09/conclusion.md)
 
-The Nession source snapshot is pinned at `0dc28d5e768f3a0421cb17ebc2a88f0e6a84d664`. Three isolated research branches represent baseline, semantic-index, and agent-native-structure treatments.
+The baseline source is pinned at `0dc28d5e768f3a0421cb17ebc2a88f0e6a84d664`; frozen B and C treatment SHAs are recorded in the experiment lock. The remaining gate before reportable data is three real, fresh Codex instrumentation pilots.
 
 ## Related work
 
