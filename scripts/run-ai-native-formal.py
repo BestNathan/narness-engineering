@@ -305,6 +305,8 @@ def main() -> int:
                 str(run_dir),
                 "--benchmark-lock",
                 str(lock_path),
+                "--analysis-lock",
+                str(analysis_lock_path),
                 "--definition-repo",
                 str(ROOT),
                 "--execution-profile",
