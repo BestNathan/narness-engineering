@@ -354,7 +354,28 @@ def main() -> int:
         assert value["verified_run_count"] == 1
         assert len(value["collection_digest_sha256"]) == 64
 
-    print("Run sealer / tamper verification / collection seal selftest OK")
+        archiver = ROOT / "scripts" / "archive-ai-native-raw-runs.py"
+        archive_a = root / "raw-a.zip"
+        archive_b = root / "raw-b.zip"
+        for archive in (archive_a, archive_b):
+            proc([
+                sys.executable,
+                str(archiver),
+                "--runs-root",
+                str(runs),
+                "--collection-manifest",
+                str(manifest),
+                "--output",
+                str(archive),
+            ])
+        assert sha(archive_a) == sha(archive_b)
+        archive_manifest = json.loads(
+            (root / "raw-a.zip.manifest.json").read_text(encoding="utf-8")
+        )
+        assert archive_manifest["collection_digest_sha256"] == value["collection_digest_sha256"]
+        assert archive_manifest["archive_sha256"] == sha(archive_a)
+
+    print("Run sealer / tamper verification / collection seal / archive selftest OK")
     return 0
 
 
