@@ -1,6 +1,6 @@
 # Next Phase — Freeze Benchmark and Treatments
 
-> Status: Benchmark revision 1 frozen; instrumentation pilots pending.
+> Status: Benchmark revision 1 frozen; instrumentation plumbing and preflight green; three real Codex pilots pending.
 
 Benchmark revision 1 and all three treatments are now frozen. Formal A/B/C data collection is still blocked on the three non-reportable instrumentation pilots.
 
@@ -112,3 +112,46 @@ Preferred study if compute budget allows:
 If B/C are modified after observing where A fails, the experiment stops measuring repository architecture and starts measuring benchmark-specific optimization.
 
 The next phase therefore optimizes for experimental validity, not fast headline numbers.
+
+
+## Current instrumentation gate
+
+The benchmark semantics remain frozen at the revision-1 definition SHA. Post-freeze work has only hardened measurement mechanics.
+
+Latest validated instrumentation state:
+
+```text
+structured Codex adapter replay                 PASS
+search-result path normalization                PASS
+runner/scorer selftest                          PASS
+benchmark semantic-drift gate                   PASS
+local pilot preflight (Codex skipped in CI)     PASS
+AI Native Benchmark Integrity run               35565009798 PASS
+general repository CI                           35565009794 PASS
+```
+
+The remaining transition is external execution, not benchmark design:
+
+```text
+authenticated local Codex CLI
+        ↓
+T05 / A pilot
+T08 / B pilot
+T20 / C pilot
+        ↓
+freeze execution-profile-r1.json
+        ↓
+generate + commit formal-schedule-r1.json
+        ↓
+formal collection may begin
+```
+
+The one-command entry point is:
+
+```bash
+./scripts/run-ai-native-codex-pilots.sh /path/to/nession
+```
+
+The command now preflights both repositories before spending model budget and,
+after all three pilots pass, emits the frozen execution profile plus the
+pre-registered 216-run schedule.
