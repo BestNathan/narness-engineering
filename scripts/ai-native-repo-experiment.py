@@ -223,6 +223,7 @@ def main() -> int:
                 "source": source,
                 "destination": str(destination),
                 "git_show_exit_code": shown["exit_code"],
+                "installed_at_unix": time.time(),
             })
             if shown["exit_code"] != 0:
                 raise RuntimeError(f"failed to materialize hidden oracle: {source}")
