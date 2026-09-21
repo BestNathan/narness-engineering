@@ -123,3 +123,36 @@ time/token limits
 ```
 
 Only then may reportable runs begin.
+
+
+## One-command pilot gate
+
+The pilot path is now intentionally one command:
+
+```bash
+./scripts/run-ai-native-codex-pilots.sh /path/to/nession
+```
+
+Before spending model budget, the script runs
+`scripts/preflight-ai-native-codex-pilots.py` and rejects:
+
+- dirty tracked state in either repository;
+- missing frozen treatment/oracle commits;
+- benchmark-integrity failure;
+- missing Git/Node/npm/Codex executables;
+- pre-existing pilot output directories.
+
+After all three pilots pass, the same command writes:
+
+```text
+runner/execution-profile-r1.json
+runner/formal-schedule-r1.json
+```
+
+The formal schedule contains 216 pre-registered entries
+(24 tasks × 3 treatments × 3 repetitions).
+
+These two generated metadata files must be reviewed and committed before formal
+collection. Formal execution pins runner/adapter/scorer bytes from the pilot-
+derived execution profile, so committing metadata afterward does not alter the
+measured tooling.
