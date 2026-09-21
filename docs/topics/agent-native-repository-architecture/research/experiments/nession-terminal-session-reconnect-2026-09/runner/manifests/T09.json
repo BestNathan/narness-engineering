@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "T09",
+  "prompt": "Add structured telemetry for an immediate visibility-wake reconnect. Emit one observable event when wake actually causes an immediate reconnect, and emit nothing when wake reconnect is skipped.",
+  "fixtures": {
+    "A": {},
+    "B": {},
+    "C": {}
+  },
+  "oracle": {
+    "ref": "70d8074e7c50f3865771fabd714e811ae440e09d",
+    "files": [
+      {
+        "source": ".research/ai-native/acceptance/T09.test.ts",
+        "destination": "web/src/app/__tests__/integration/__research_T09.test.ts"
+      }
+    ]
+  },
+  "acceptance_commands": [
+    "cd web && npm test"
+  ],
+  "verification_commands": [
+    "cd web && npm run build",
+    "cd web && npm run lint"
+  ]
+}
