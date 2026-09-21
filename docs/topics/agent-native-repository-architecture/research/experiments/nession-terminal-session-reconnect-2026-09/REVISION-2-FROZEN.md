@@ -8,6 +8,7 @@ revision:           2
 definition SHA:     194bf5dc1a28f4e4c10491d7326891ba157d325b
 definition branch:  research/ai-native-benchmark-r2
 formal runs seen:   0
+integrity run:      35609845199 — PASS
 
 Treatment A: 0dc28d5e768f3a0421cb17ebc2a88f0e6a84d664
 Treatment B: 8fb6e8707f2dc967a900e227bb899b0c75336d2e
