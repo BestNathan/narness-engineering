@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "T07",
+  "prompt": "Expose the live transport reconnect-attempt count through the session runtime snapshot so higher layers can observe it without reaching into the WebSocket service. Keep it distinct from the attach-level reconnect count.",
+  "fixtures": {
+    "A": {},
+    "B": {},
+    "C": {}
+  },
+  "oracle": {
+    "ref": "70d8074e7c50f3865771fabd714e811ae440e09d",
+    "files": [
+      {
+        "source": ".research/ai-native/acceptance/T07.test.ts",
+        "destination": "web/src/platform/session-runtime/__tests__/unit/__research_T07.test.ts"
+      }
+    ]
+  },
+  "acceptance_commands": [
+    "cd web && npm test"
+  ],
+  "verification_commands": [
+    "cd web && npm run build",
+    "cd web && npm run lint"
+  ]
+}
