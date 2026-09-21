@@ -164,6 +164,10 @@ runner/formal-plan-r1.lock.json
 The formal schedule contains 216 pre-registered entries
 (24 tasks × 3 treatments × 3 repetitions).
 
+Treatment position is Latin-square balanced within each task, while task blocks
+are deterministically SHA-256-permuted with seed `20260921` independently for
+each replication. The exact resulting order is stored in the schedule itself.
+
 These three generated metadata files must be reviewed and committed before formal
 collection. The formal-plan lock content-addresses the exact execution-profile and
 schedule bytes so they cannot drift after pre-registration. Formal execution pins runner/adapter/scorer bytes from the pilot-
