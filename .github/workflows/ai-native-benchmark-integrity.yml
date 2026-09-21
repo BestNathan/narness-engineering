@@ -31,6 +31,9 @@ jobs:
             scripts/preflight-ai-native-codex-pilots.py \
             scripts/selftest-ai-native-runner.py \
             scripts/seal-ai-native-run.py \
+            scripts/verify-ai-native-run-seal.py \
+            scripts/verify-ai-native-collection.py \
+            scripts/selftest-ai-native-seals.py \
             scripts/aggregate-ai-native-results.py \
             scripts/analyze-ai-native-effects.py \
             scripts/generate-ai-native-research-report.py \
@@ -222,6 +225,9 @@ jobs:
 
       - name: Run isolated runner/scorer selftest
         run: python scripts/selftest-ai-native-runner.py
+
+      - name: Run tamper-evident seal selftest
+        run: python scripts/selftest-ai-native-seals.py
 
       - name: Validate pilot shell syntax
         run: bash -n scripts/run-ai-native-codex-pilots.sh
