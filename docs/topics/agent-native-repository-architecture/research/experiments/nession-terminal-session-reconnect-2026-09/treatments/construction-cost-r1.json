@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "status": "recorded-before-formal-collection",
+  "source_repository": "BestNathan/nession",
+  "treatments": {
+    "A": "0dc28d5e768f3a0421cb17ebc2a88f0e6a84d664",
+    "B": "8fb6e8707f2dc967a900e227bb899b0c75336d2e",
+    "C": "3e544761d5b89dc09a631533659dca4862f9e559"
+  },
+  "comparisons": {
+    "A_to_B": {
+      "commits": 3,
+      "changed_files": 3,
+      "additions": 348,
+      "deletions": 0,
+      "net_lines": 348,
+      "classification": {
+        "semantic_index_files": 3,
+        "semantic_index_additions": 348
+      }
+    },
+    "A_to_C": {
+      "commits": 35,
+      "changed_files": 25,
+      "additions": 2453,
+      "deletions": 2050,
+      "raw_churn": 4503,
+      "net_lines": 403,
+      "classification": {
+        "semantic_index": {
+          "files": 3,
+          "additions": 366,
+          "deletions": 0
+        },
+        "unit_documentation": {
+          "files": 1,
+          "additions": 15,
+          "deletions": 0
+        },
+        "implementation_relocation": {
+          "old_owner_files": 8,
+          "new_owner_files": 8,
+          "additions": 2042,
+          "deletions": 2042,
+          "note": "The relocated implementation bodies balance exactly in line count across old and new owner paths."
+        },
+        "compatibility_projection_glue": {
+          "legacy_owner_files": 8,
+          "additions": 22,
+          "note": "Thin legacy projections remain for compatibility after the 2042 implementation lines are removed from old owners."
+        },
+        "primary_test_renames": {
+          "files": 5,
+          "additions": 8,
+          "deletions": 8,
+          "note": "GitHub classified these as renames with import/path edits."
+        }
+      }
+    }
+  },
+  "derived": {
+    "C_non_semantic_index_changed_files": 22,
+    "C_non_semantic_index_additions": 2087,
+    "C_non_semantic_index_deletions": 2050,
+    "C_non_semantic_index_raw_churn": 4137,
+    "C_net_new_lines_excluding_semantic_index": 37,
+    "interpretation": "Raw C churn is dominated by relocation. Relative to A, 2042 implementation lines are removed from legacy owners and re-added under behavior-localized owners; five tests are renamed with 8/8 line edits. Net new lines are 403 = 366 semantic-index lines + 15 unit-documentation lines + 22 compatibility-projection lines."
+  },
+  "caveats": [
+    "Commit count is construction-history metadata, not an effort/time metric.",
+    "Git line churn does not measure cognitive or agent effort.",
+    "A-to-C classification is based on frozen GitHub compare file statistics and declared Treatment C ownership semantics.",
+    "C was constructed independently from the frozen A lineage while inheriting the same semantic design intent as B; a three-dot B-to-C GitHub compare is therefore not used as incremental structural cost."
+  ]
+}
