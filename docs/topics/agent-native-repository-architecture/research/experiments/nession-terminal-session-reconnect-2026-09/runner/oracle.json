@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "repository": "BestNathan/nession",
+  "ref": "research/ai-native-ci-base",
+  "sha": "70d8074e7c50f3865771fabd714e811ae440e09d",
+  "purpose": "Hidden acceptance oracle source for experiment revision 1",
+  "coverage": {
+    "hidden_acceptance": [
+      "T01-T22"
+    ],
+    "mutation_evidence": [
+      "T23",
+      "T24"
+    ]
+  },
+  "freeze_rule": "Formal revision-1 runs must materialize hidden oracle files from this exact SHA. Later oracle changes require experiment revision 2 or an explicitly versioned benchmark revision."
+}
