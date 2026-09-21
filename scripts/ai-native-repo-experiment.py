@@ -118,6 +118,7 @@ def main() -> int:
         "commands": {
             "fixture_preflight": [],
             "agent": None,
+            "oracle_install": [],
             "acceptance": [],
             "verification": [],
         },
@@ -190,12 +191,40 @@ def main() -> int:
         (run_dir / "agent.stdout.log").write_text(agent["stdout"], encoding="utf-8")
         (run_dir / "agent.stderr.log").write_text(agent["stderr"], encoding="utf-8")
 
+        # Hidden oracles are materialized only after the coding agent exits.
+        # This keeps the oracle out of the agent's discoverable worktree while
+        # still making local/reproducible acceptance possible.
+        installed_oracles: list[Path] = []
+        oracle = task.get("oracle", {})
+        oracle_ref = oracle.get("ref")
+        for item in oracle.get("files", []):
+            if not oracle_ref:
+                raise RuntimeError("oracle.files requires oracle.ref")
+            source = item["source"]
+            destination = worktree / item["destination"]
+            shown = git(source_repo, "show", f"{oracle_ref}:{source}", check=False)
+            record["commands"]["oracle_install"].append({
+                "source": source,
+                "destination": str(destination),
+                "git_show_exit_code": shown["exit_code"],
+            })
+            if shown["exit_code"] != 0:
+                raise RuntimeError(f"failed to materialize hidden oracle: {source}")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(shown["stdout"], encoding="utf-8")
+            installed_oracles.append(destination)
+
         # Hidden acceptance is deliberately outside the agent prompt.
         acceptance_ok = True
         for command in task.get("acceptance_commands", []):
             result = run(render(command, values), cwd=worktree, shell=True)
             record["commands"]["acceptance"].append(result)
             acceptance_ok = acceptance_ok and result["exit_code"] == 0
+
+        # Remove hidden oracle files before repository verification/diff capture.
+        # They are experiment infrastructure, not part of the agent's change.
+        for oracle_path in installed_oracles:
+            oracle_path.unlink(missing_ok=True)
 
         verification_ok = True
         for command in task.get("verification_commands", []):
