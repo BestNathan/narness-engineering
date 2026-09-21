@@ -33,6 +33,7 @@ jobs:
             scripts/seal-ai-native-run.py \
             scripts/aggregate-ai-native-results.py \
             scripts/analyze-ai-native-effects.py \
+            scripts/generate-ai-native-research-report.py \
             scripts/freeze-ai-native-execution-profile.py \
             scripts/generate-ai-native-formal-schedule.py \
             scripts/run-ai-native-formal.py
@@ -78,6 +79,25 @@ jobs:
           assert ab['irrelevant_files_read']['median_oriented_improvement'] > 0
           assert ab['agent_duration_ms']['median_oriented_improvement'] > 0
           PY
+      - name: Validate generated research report
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          out=Path('/tmp/paired-effects')
+          summary={
+              'A': {'n': 2, 'tasks': 2, 'task_success_rate': 0.5},
+              'B': {'n': 2, 'tasks': 2, 'task_success_rate': 1.0},
+              'C': {'n': 2, 'tasks': 2, 'task_success_rate': 1.0},
+          }
+          (out/'summary.json').write_text(json.dumps(summary))
+          PY
+          python scripts/generate-ai-native-research-report.py \
+            --results-dir /tmp/paired-effects \
+            --output /tmp/paired-effects/research-report.md
+          grep -q 'H1 Retrieval precision' /tmp/paired-effects/research-report.md
+          grep -q 'REVIEW REQUIRED' /tmp/paired-effects/research-report.md
+
       - name: Validate formal schedule generator
         run: |
           python scripts/generate-ai-native-formal-schedule.py \
