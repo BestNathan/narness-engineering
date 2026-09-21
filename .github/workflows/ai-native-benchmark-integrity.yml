@@ -259,6 +259,14 @@ jobs:
           assert checks['balanced_task_treatment_cells'] is True
           assert checks['balanced_within_task_blocks'] is True
           assert checks['latin_square_positions'] is True
+          assert checks['deterministic_task_permutations'] is True
+          assert checks['distinct_task_orders_across_replications'] is True
+          assert schedule['task_order_policy'] == 'sha256(seed:replication:task)'
+          assert schedule['task_order_seed'] == 20260921
+          assert len({tuple(v) for v in schedule['task_orders'].values()}) == 3
+          for replication in ('1','2','3'):
+              assert len(schedule['task_orders'][replication]) == 24
+              assert len(set(schedule['task_orders'][replication])) == 24
           for task in {e['task_id'] for e in schedule['entries']}:
               rows=[e for e in schedule['entries'] if e['task_id']==task]
               assert len(rows)==9
