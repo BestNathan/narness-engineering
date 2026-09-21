@@ -4,9 +4,17 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 EXPECTED_PILOTS = {("T05", "A"), ("T08", "B"), ("T20", "C")}
@@ -172,6 +180,13 @@ def main() -> int:
             "runner_file_sha256": environment.get("runner_file_sha256"),
             "adapter_file_sha256": agent_profile.get("adapter_file_sha256"),
             "scorer_file_sha256": scorer_file_sha256,
+            "seal_file_sha256": file_sha256(ROOT / "scripts" / "seal-ai-native-run.py"),
+            "run_seal_verifier_file_sha256": file_sha256(
+                ROOT / "scripts" / "verify-ai-native-run-seal.py"
+            ),
+            "formal_orchestrator_file_sha256": file_sha256(
+                ROOT / "scripts" / "run-ai-native-formal.py"
+            ),
         },
         "pilot_repository_sha": pilot_repository_sha,
         "required_metrics": REQUIRED_METRICS,
