@@ -1,6 +1,6 @@
-# Benchmark Revision 1 — Frozen
+# Benchmark Revision 1 — Superseded Before Formal Collection
 
-The benchmark definition is frozen.
+The original benchmark definition was frozen, then superseded before any reportable formal run.
 
 ```text
 experiment:       nession-terminal-session-reconnect-2026-09
@@ -56,3 +56,13 @@ integrity                 PASS
 instrumentation pilots    PENDING
 formal A/B/C collection   NOT STARTED
 ```
+
+## Supersession
+
+Revision 1 remains as an audit artifact.
+
+After the freeze, the scorer gained implementations for metrics that had already been declared by the research protocol/analysis design, including pre-edit acquisition and missed-artifact counts. The task prompts, treatments, fixtures, hidden oracle, and gold semantic scope did not change.
+
+Because Revision 1 explicitly treated scoring semantics as part of the freeze boundary, the study creates Benchmark Revision 2 rather than silently accepting that drift.
+
+No reportable formal run was observed under Benchmark Revision 1.
