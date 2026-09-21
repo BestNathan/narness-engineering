@@ -35,6 +35,29 @@ The orchestrator validates benchmark/analysis integrity before model spending, e
 
 Failed tasks remain in the dataset when the run itself is admissible.
 
+### Progress and interruption recovery
+
+Inspect a long-running collection without mutating it:
+
+```bash
+python3 scripts/inspect-ai-native-formal-progress.py \
+  --runs-root /path/to/formal-runs \
+  --schedule docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-schedule-r1.json \
+  --execution-profile docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/execution-profile-r1.json \
+  --benchmark-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/BENCHMARK-LOCK.json
+```
+
+The inspector distinguishes `sealed`, `pending`, `incomplete`, and `tampered` entries. A tampered sealed run is always a hard error.
+
+If execution was interrupted before a run was sealed, restart the selected schedule range with:
+
+```bash
+python3 scripts/run-ai-native-formal.py ... --recover-incomplete
+```
+
+The incomplete directory is moved under `_incomplete/` with a `recovery.json` forensic record before the scheduled run is restarted. Existing valid seals are re-verified and skipped; they are never overwritten.
+
+
 ## 3. Review failed runs
 
 Every failed admissible run receives one primary R1–R12 failure code.
