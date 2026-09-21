@@ -1,6 +1,6 @@
 # Results
 
-> Status: No runs yet.
+> Status: Benchmark revision 1 frozen; no reportable formal runs yet.
 
 This file will hold aggregate A/B/C measurements after runs are collected.
 
