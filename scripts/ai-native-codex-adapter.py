@@ -213,6 +213,25 @@ def parse_command_result_paths(command: str, output: str) -> list[str]:
     if kind not in {"search", "glob", "resolver"}:
         return []
 
+    cwd_prefix = ""
+    for tool, args, prefix in simple_segments(command):
+        if kind == "resolver" and ".ai-native/resolve.mjs" in unwrap_shell(command):
+            cwd_prefix = prefix
+            break
+        if kind == "search" and (
+            tool in SEARCH_TOOLS or (tool == "git" and args and args[0] == "grep")
+        ):
+            cwd_prefix = prefix
+            break
+        if kind == "glob" and (
+            tool in GLOB_TOOLS
+            or tool == "ls"
+            or (tool == "rg" and "--files" in args)
+            or (tool == "git" and args and args[0] == "ls-files")
+        ):
+            cwd_prefix = prefix
+            break
+
     paths: set[str] = set()
     for raw in output.splitlines():
         line = raw.strip()
@@ -239,7 +258,7 @@ def parse_command_result_paths(command: str, output: str) -> list[str]:
                 candidate = str(Path(candidate).resolve().relative_to(Path.cwd().resolve()))
             except (ValueError, OSError):
                 continue
-        candidate = candidate.lstrip("./")
+        candidate = normalize_repo_path(candidate, cwd_prefix)
         if candidate and not candidate.startswith("-"):
             paths.add(candidate)
 
