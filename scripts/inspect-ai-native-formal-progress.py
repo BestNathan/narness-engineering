@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -19,6 +20,10 @@ def load(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def run_id_for(entry: dict[str, Any]) -> str:
     return f"{entry['task_id']}-{entry['treatment']}-{int(entry['attempt']):02d}"
 
@@ -29,13 +34,25 @@ def main() -> int:
     ap.add_argument("--schedule", required=True, type=Path)
     ap.add_argument("--execution-profile", required=True, type=Path)
     ap.add_argument("--benchmark-lock", required=True, type=Path)
+    ap.add_argument("--formal-plan-lock", required=True, type=Path)
     ap.add_argument("--json-output", type=Path)
     args = ap.parse_args()
 
     runs_root = args.runs_root.resolve()
-    schedule = load(args.schedule.resolve())
-    profile = load(args.execution_profile.resolve())
+    schedule_path = args.schedule.resolve()
+    profile_path = args.execution_profile.resolve()
+    plan_path = args.formal_plan_lock.resolve()
+    schedule = load(schedule_path)
+    profile = load(profile_path)
     lock = load(args.benchmark_lock.resolve())
+    plan = load(plan_path)
+    formal_plan_sha256 = sha256_file(plan_path)
+    if plan.get("execution_profile_sha256") != sha256_file(profile_path):
+        raise RuntimeError("execution profile bytes differ from frozen formal plan")
+    if plan.get("schedule_sha256") != sha256_file(schedule_path):
+        raise RuntimeError("schedule bytes differ from frozen formal plan")
+    if plan.get("benchmark_definition_sha") != lock.get("definition_sha"):
+        raise RuntimeError("formal plan benchmark definition mismatch")
     verifier = ROOT / "scripts" / "verify-ai-native-run-seal.py"
 
     rows: list[dict[str, Any]] = []
@@ -66,6 +83,8 @@ def main() -> int:
                         str(profile["profile_id"]),
                         "--expected-benchmark-sha",
                         str(lock["definition_sha"]),
+                        "--expected-formal-plan-sha256",
+                        str(formal_plan_sha256),
                     ],
                     cwd=ROOT,
                     text=True,
