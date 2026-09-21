@@ -65,8 +65,15 @@ def main() -> int:
         fail("no navigation event captured", errors)
     if "edit" not in types:
         fail("no edit event captured", errors)
-    if "usage" not in types:
+    usage_count = types.count("usage")
+    if usage_count == 0:
         fail("no usage event captured", errors)
+    elif usage_count != 1:
+        fail(
+            f"expected exactly one usage event for one ephemeral Codex turn; "
+            f"captured {usage_count}",
+            errors,
+        )
     if "agent-exit" not in types:
         fail("no agent-exit event captured", errors)
     if args.require_resolver and "resolver" not in types:
