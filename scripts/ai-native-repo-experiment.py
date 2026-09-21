@@ -83,6 +83,12 @@ def main() -> int:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--attempt", type=int, default=1)
     parser.add_argument(
+        "--setup-cmd",
+        action="append",
+        default=[],
+        help="Repeatable environment-setup command run before the agent (for example npm ci).",
+    )
+    parser.add_argument(
         "--keep-worktree",
         action="store_true",
         help="Keep the isolated worktree for debugging after the run.",
@@ -116,6 +122,7 @@ def main() -> int:
         "task_manifest": str(task_path),
         "started_at_unix": time.time(),
         "commands": {
+            "setup": [],
             "fixture_preflight": [],
             "agent": None,
             "oracle_install": [],
@@ -138,6 +145,12 @@ def main() -> int:
     try:
         # Never reuse an existing checkout or branch: each run gets detached HEAD.
         git(source_repo, "worktree", "add", "--detach", str(worktree), treatment["sha"])
+
+        for command in args.setup_cmd:
+            result = run(render(command, values), cwd=worktree, shell=True)
+            record["commands"]["setup"].append(result)
+            if result["exit_code"] != 0:
+                raise RuntimeError("environment setup failed")
 
         # Apply the treatment-specific fixture, if one exists.
         fixture = task.get("fixtures", {}).get(args.treatment, {})
