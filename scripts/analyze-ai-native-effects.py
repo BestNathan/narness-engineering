@@ -24,21 +24,35 @@ HIGHER_BETTER = {
     "first_hit_correct",
     "navigation_precision",
     "navigation_recall",
+    "acceptance_ok",
+    "verification_ok",
+    "mutation_checks_ok",
 }
 LOWER_BETTER = {
     "irrelevant_files_read",
     "files_read",
     "search_calls",
+    "search_result_false_positive_rate",
     "navigation_events_before_first_edit",
+    "search_calls_before_first_edit",
+    "files_read_before_first_edit",
+    "resolver_calls_before_first_edit",
     "time_to_first_relevant_artifact_ms",
     "time_to_first_edit_ms",
+    "important_artifacts_missed_count",
     "input_tokens",
     "repair_loops",
     "validation_failures",
     "out_of_scope_edit_count",
     "agent_duration_ms",
 }
-BOOLEAN_METRICS = {"task_success", "first_hit_correct"}
+BOOLEAN_METRICS = {
+    "task_success",
+    "first_hit_correct",
+    "acceptance_ok",
+    "verification_ok",
+    "mutation_checks_ok",
+}
 
 
 def parse_scalar(value: str | None) -> Any:
