@@ -1,6 +1,6 @@
 # Conclusion
 
-> Status: Benchmark and analysis plan frozen; reportable formal collection not yet executed.
+> Status: Benchmark Revision 2 and Analysis Revision 2 frozen; reportable formal collection not yet executed.
 
 No empirical conclusion is recorded. Final classification must follow the pre-registered metric hierarchy, practical-effect thresholds, matched-task reductions, and bootstrap procedure in `ANALYSIS-PLAN.md`.
 
