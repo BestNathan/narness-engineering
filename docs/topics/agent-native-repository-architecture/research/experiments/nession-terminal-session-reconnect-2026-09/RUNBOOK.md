@@ -134,6 +134,7 @@ failure-summary.md
 research-completeness.json
 collection-manifest.json
 research-report.md
+research-artifact-manifest.json
 ```
 
 ## Frozen boundaries
@@ -160,3 +161,9 @@ collection-manifest.json
 The collection manifest contains the schedule/profile/benchmark hashes, every verified run-seal hash, optional review hashes, and one deterministic collection digest.
 
 Changing an already sealed trace, score, run record, prompt, diff, or other sealed artifact therefore causes final collection verification to fail instead of silently changing the study data.
+
+## Final artifact identity
+
+The finalizer writes `research-artifact-manifest.json` after generating the research outputs. It records SHA-256 identities for the frozen benchmark/analysis inputs, execution metadata, collection manifest, core analysis/reporting tools, conclusion file when supplied, and generated result files.
+
+Its `artifact_set_digest_sha256` is a compact content identity for the assembled research artifact. It is a tamper-evident content digest, not a digital signature.
