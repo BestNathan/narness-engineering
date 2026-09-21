@@ -1,6 +1,6 @@
-# Execution Pre-Pilot Revision 3
+# Execution Pre-Pilot Revision 3 — Superseded Before Real Pilots
 
-> Status: active and frozen before any real Codex instrumentation pilot.
+> Status: superseded by Revision 4 before any real Codex instrumentation pilot.
 
 ## Identity
 
@@ -156,3 +156,15 @@ runner/formal-plan-r1.lock.json
 
 Any later execution-mechanics change requires a new pre-pilot revision and fresh
 pilots before it can define a formal plan.
+
+
+## Supersession
+
+Revision 3 correctly isolated Codex filesystem/tool access, but the benchmark
+runner still created a linked Git worktree. A linked worktree shares the source
+Nession object database and refs, so a coding agent could potentially discover
+research-only treatment/oracle commits through Git history/ref inspection.
+
+Revision 4 removes that channel by creating a standalone Git repository per run
+and fetching only the frozen treatment commit plus its reachable ancestry. No
+real pilot was executed from Revision 3.
