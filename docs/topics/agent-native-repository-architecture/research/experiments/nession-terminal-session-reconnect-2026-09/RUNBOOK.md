@@ -232,3 +232,11 @@ retention policy.
 The generated `publication-manifest.json` content-addresses the published file
 set and records the source research-artifact digest. Review the bundle, then
 commit it as the permanent Narness research record.
+
+
+## Usage-event invariant
+
+Every formal run is one fresh ephemeral Codex task and must emit exactly one
+`usage` event. This keeps token accounting unambiguous under the frozen scorer.
+A run with zero or multiple usage events is instrumentation-invalid and cannot be
+sealed for final analysis.
