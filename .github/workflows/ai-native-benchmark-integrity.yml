@@ -127,6 +127,80 @@ jobs:
           python scripts/validate-ai-native-conclusion.py \
             --conclusions /tmp/conclusion.json
 
+      - name: Validate end-to-end research finalization
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('/tmp/finalize-runs')
+          def write(treatment, success, precision, tokens, duration):
+              d=root/f'T01-{treatment}-01'
+              d.mkdir(parents=True, exist_ok=True)
+              run={
+                'run_id':f'T01-{treatment}-01',
+                'task_id':'T01',
+                'treatment':treatment,
+                'attempt':1,
+                'admissible_for_final_analysis':True,
+                'task_success':success,
+                'acceptance_ok':success,
+                'verification_ok':True,
+                'mutation_checks_ok':True,
+                'agent_exit_ok':True,
+                'wall_time_ms':duration+1000,
+                'commands':{'agent':{'duration_ms':duration,'timed_out':False},'setup':[]},
+              }
+              score={
+                'run_id':run['run_id'],'task_id':'T01','treatment':treatment,
+                'metrics':{
+                  'first_hit_correct': treatment!='A',
+                  'navigation_precision':precision,
+                  'navigation_recall':1.0,
+                  'irrelevant_files_read': 4 if treatment=='A' else 1,
+                  'files_read': 8 if treatment=='A' else 5,
+                  'search_calls': 5 if treatment=='A' else 2,
+                  'navigation_events_before_first_edit': 10 if treatment=='A' else 5,
+                  'time_to_first_relevant_artifact_ms': 1000 if treatment=='A' else 500,
+                  'time_to_first_edit_ms': 2000 if treatment=='A' else 1000,
+                  'input_tokens':tokens,
+                  'repair_loops':2 if treatment=='A' else 0,
+                  'validation_failures':2 if treatment=='A' else 0,
+                  'out_of_scope_edit_count':1 if treatment=='A' else 0,
+                },
+              }
+              (d/'run.json').write_text(json.dumps(run))
+              (d/'score.json').write_text(json.dumps(score))
+              if not success:
+                  review={
+                    'schema_version':1,'run_id':run['run_id'],'task_id':'T01',
+                    'treatment':treatment,'task_success':False,
+                    'primary_failure_code':'R5','primary_failure':'invariant missed',
+                    'secondary_failure_codes':[],'secondary_failures':[],
+                    'notes':'synthetic CI review','evidence':[],
+                  }
+                  (d/'review.json').write_text(json.dumps(review))
+          write('A',False,0.5,10000,5000)
+          write('B',True,0.75,8000,4000)
+          write('C',True,0.85,7000,3500)
+          PY
+          python scripts/finalize-ai-native-research.py \
+            --runs-root /tmp/finalize-runs \
+            --output-dir /tmp/finalize-results \
+            --allow-incomplete
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          out=Path('/tmp/finalize-results')
+          assert (out/'research-report.md').exists()
+          assert (out/'paired-effects.json').exists()
+          failures=json.loads((out/'failure-summary.json').read_text())
+          assert failures['failed_admissible_runs'] == 1
+          assert failures['missing_review_count'] == 0
+          completeness=json.loads((out/'research-completeness.json').read_text())
+          assert completeness['sealed_admissible_runs'] == 3
+          assert completeness['hypothesis_classification_complete'] is False
+          PY
+
       - name: Validate formal schedule generator
         run: |
           python scripts/generate-ai-native-formal-schedule.py \
