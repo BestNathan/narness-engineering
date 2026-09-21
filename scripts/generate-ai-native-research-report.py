@@ -91,6 +91,10 @@ def main() -> int:
     benchmark = load(experiment / "BENCHMARK-LOCK.json")
     analysis = load(experiment / "ANALYSIS-LOCK.json")
     strata = load(experiment / "analysis-strata.json")
+    construction_cost_path = experiment / "treatments" / "construction-cost-r1.json"
+    construction_cost = (
+        load(construction_cost_path) if construction_cost_path.exists() else None
+    )
     summary = load(results / "summary.json")
     effects = load(results / "paired-effects.json")
     failure_path = results / "failure-summary.json"
@@ -221,8 +225,47 @@ def main() -> int:
         "",
         "## Construction cost",
         "",
-        "Treatment C migration cost is a real architectural cost and must be reported alongside per-task productivity effects. See treatments/C-construction.md.",
-        "",
+    ])
+
+    if construction_cost is None:
+        lines.extend([
+            "Treatment construction-cost metadata is unavailable.",
+            "",
+        ])
+    else:
+        ab = construction_cost["comparisons"]["A_to_B"]
+        ac = construction_cost["comparisons"]["A_to_C"]
+        structural = construction_cost["derived"]
+        lines.extend([
+            "Up-front repository cost was recorded before reportable formal collection.",
+            "",
+            "| Treatment delta | Commits | Changed files | Additions | Deletions | Raw churn | Net lines |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+            f"| A → B | {ab['commits']} | {ab['changed_files']} | {ab['additions']} | {ab['deletions']} | {ab['additions'] + ab['deletions']} | {ab['net_lines']} |",
+            f"| A → C | {ac['commits']} | {ac['changed_files']} | {ac['additions']} | {ac['deletions']} | {ac['raw_churn']} | {ac['net_lines']} |",
+            "",
+            (
+                "For C, raw churn is dominated by relocation: 2042 implementation "
+                "lines are deleted from legacy owners and re-added under localized "
+                "owners, while five primary tests contribute 8 additions and 8 "
+                "deletions of rename/import churn. The +403 net lines are exactly "
+                "366 semantic-index lines + 15 unit-documentation lines + 22 "
+                "compatibility-projection lines."
+            ),
+            "",
+            (
+                "Excluding the semantic index, C changes "
+                f"{structural['C_non_semantic_index_changed_files']} files with "
+                f"{structural['C_non_semantic_index_raw_churn']} lines of raw churn "
+                f"and only {structural['C_net_new_lines_excluding_semantic_index']} "
+                "net new lines."
+            ),
+            "",
+            "Construction commit count is reported as repository-history metadata, not as an estimate of engineering time.",
+            "",
+        ])
+
+    lines.extend([
         "## Failure analysis",
         "",
     ])
