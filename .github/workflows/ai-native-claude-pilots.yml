@@ -125,7 +125,7 @@ jobs:
                   for stream in ('stdout', 'stderr'):
                       value=redact(str(setup.get(stream, '')))
                       if value:
-                          print(f"{stream} (last 4000 chars):\\n{value}")
+                          print(f"{stream} (last 4000 chars):\n{value}")
           PY
 
       - name: Retain pilot evidence
