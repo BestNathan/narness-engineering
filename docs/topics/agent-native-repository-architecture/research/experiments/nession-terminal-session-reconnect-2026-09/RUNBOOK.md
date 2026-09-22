@@ -1,120 +1,57 @@
 # Experiment Runbook
 
+> Active execution: direct Claude Code pre-pilot R6. Follow
+> [EXECUTION-PREPILOT-R6.md](EXECUTION-PREPILOT-R6.md) for client installation,
+> environment variables, pilots, isolation, and promotion. The Codex R4 and
+> containerized Claude R5 instructions below are historical and must not be used
+> for the new execution profile. Formal collection, analysis, and publication
+> procedures still apply after R6 freeze.
+
 This is the operational path from the frozen benchmark to the final research report.
 
-## 1. Run the three non-reportable pilots
+## 1. Run the three non-reportable pilots on GitHub-hosted Actions
 
-Use a trusted machine with a clean Nession checkout and a **stored authenticated
-Codex session**. The preflight executes `codex login status` and rejects
-`OPENAI_API_KEY` / `CODEX_ACCESS_TOKEN` when exported into the experiment
-process environment; the coding agent must not inherit authentication secrets.
+The active R6 path is `.github/workflows/ai-native-claude-pilots.yml`. It uses a
+GitHub-hosted `ubuntu-24.04` machine, checks out the exact execution SHA recorded
+in `EXECUTION-PREPILOT-LOCK.json`, installs the pinned Claude Code CLI, and runs
+T05/A, T08/B, and T20/C in fresh isolated subject checkouts. There is no active
+self-hosted-runner or local execution path for R6; the old Codex workflows remain
+disabled historical records only.
 
-### Local path
-
-```bash
-git switch --detach d01117beb44e57c24cb6b73ae8c4c9f89100e825
-bash ./scripts/run-ai-native-codex-pilots.sh /path/to/nession
-```
-
-### Trusted self-hosted GitHub Actions path
-
-A second entry point is:
+Configure the repository once:
 
 ```text
-.github/workflows/ai-native-codex-pilots-self-hosted.yml
+Actions secret: ANTHROPIC_API_KEY
+Actions variable: CLAUDE_MODEL (an explicit model ID, not sonnet/opus/haiku/default)
+Actions variable: ANTHROPIC_BASE_URL (optional; defaults to https://api.anthropic.com)
 ```
 
-It runs only on a self-hosted runner carrying the `ai-native-research` label.
-The runner must already have Codex authenticated in its credential store and must
-have a clean local Nession checkout. Dispatch the workflow with the absolute
-`nession_path`. Select `main` when dispatching the repaired workflow; it
-explicitly checks out the frozen R4 SHA rather than executing the selected branch.
+Dispatch **AI Native Claude Code Pilots** from the Actions tab. The workflow
+retains a non-reportable handoff artifact containing the three traces and the
+generated `execution-profile-r1.json`, `formal-schedule-r1.json`, and
+`formal-plan-r1.lock.json`. It validates the handoff against the registered R6
+controller before the job can succeed.
 
-The workflow deliberately:
+After reviewing the artifact, dispatch **AI Native Claude Pilot Promotion** with
+the source run ID and exact artifact name. That hosted workflow validates the
+handoff, writes `PILOT-FREEZE.json`, and opens a draft pull request containing
+the four required freeze files. Merge that pull request before formal collection;
+no local checkout is needed for promotion.
 
-```text
-uses persist-credentials: false for actions/checkout
-rejects OPENAI_API_KEY
-rejects CODEX_ACCESS_TOKEN
-checks codex login status
-uses the normal benchmark preflight
-uploads pilot traces + generated freeze metadata as a non-reportable artifact
-```
+The active formal path is `.github/workflows/ai-native-claude-formal.yml`. It is
+manual, requires the committed R6 profile/schedule/formal-plan lock, installs the
+same pinned client on `ubuntu-24.04`, runs the registered schedule, verifies run
+seals, and uploads the formal collection artifact. The default dispatch covers all
+216 entries; sequence inputs allow a documented partial/recovery run.
 
-This path is intended for a trusted private runner, not a public or untrusted CI
-executor.
+The first three generated files are the hard collection-start gate. The fourth
+records promotion provenance. Never synthesize a profile or promote replay/selftest
+evidence. Keep the source pilot artifact in Actions retention until the formal
+plan has been reviewed.
 
-
-### Validate and promote using the R4 registration checkout
-
-The execution commit `d01117beb44e57c24cb6b73ae8c4c9f89100e825` still
-contains the earlier R3 registration lock. Its own handoff validator therefore
-cannot authorize R4 evidence. Run pilots at that exact execution commit, then
-validate/promote using the separate, pinned registration checkout
-`88d08dd95b69a217f9433b84b35179663ace4e09`. Both self-hosted workflows use
-that checkout under `pilot-control` after pilot execution. Never overlay the
-registration files onto the pilot checkout before running pilots.
-
-After downloading/unzipping the workflow artifact, use a separate checkout:
-
-```bash
-git clone https://github.com/BestNathan/narness-engineering.git /path/to/formal-control
-cd /path/to/formal-control
-git switch -c research/ai-native-formal-execution-r1 88d08dd95b69a217f9433b84b35179663ace4e09
-python3 scripts/promote-ai-native-pilot-handoff.py \
-  --handoff-dir /path/to/pilot-handoff
-```
-
-The promoter first validates the handoff. It requires all three run records and
-the execution profile to identify R4, checks the isolated checkout and permission
-profile, compares result-producing tool hashes with R4, revalidates the pilot
-traces and artifact hashes, and verifies profile/schedule/formal-plan identity.
-Task semantic success is not required; instrumentation acceptance is required.
-
-Review the generated metadata, then commit it:
-
-```bash
-EXP=docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09
-for name in execution-profile-r1.json formal-schedule-r1.json formal-plan-r1.lock.json PILOT-FREEZE.json; do
-  python3 -m json.tool "$EXP/runner/$name"
-done
-# Commit only after reviewing the displayed metadata and validation report.
-git add "$EXP/runner/execution-profile-r1.json" \
-  "$EXP/runner/formal-schedule-r1.json" \
-  "$EXP/runner/formal-plan-r1.lock.json" \
-  "$EXP/runner/PILOT-FREEZE.json"
-git commit -m "research: freeze pilot-derived formal execution plan r1"
-```
-
-The first three files are required by the collection-start gate. The fourth
-records promotion provenance. The formal branch descends from R4 via the pinned
-registration commit; the result-producing execution tools remain byte-identical
-to R4 and are checked against the pilot profile. Keep the pilot handoff in durable
-storage. Never synthesize a profile or treat a replay/selftest as pilot evidence.
-
-For local pilots, assemble `pilot-handoff` outside the execution checkout by
-copying the three generated JSON files into it and the complete pilot output
-directory into `pilot-handoff/pilot-runs`, then follow the same promotion steps.
-The optional workflow metadata file is not needed for local execution.
-
-### Runner readiness
-
-A queued Actions job with `runner_id=0` has not begun pilot execution. Bring an
-eligible trusted runner online with both `self-hosted` and `ai-native-research`
-labels, or use the local path above. The runner account must have a working
-`codex login status`, Git, Python, Node/npm, and a clean Nession checkout containing
-the frozen treatment/oracle commits. Do not export `OPENAI_API_KEY` or
-`CODEX_ACCESS_TOKEN` into the experiment process.
-
-Do not launch duplicate pilot jobs. A queued run keeps its original workflow
-version; after an entrypoint repair, cancel the obsolete queued run in Actions
-before using the repaired manual workflow. If an old run already generated real
-evidence but failed only at the R3 handoff check, retain its artifact and validate
-it with the R4 registration checkout before deciding whether pilots must rerun.
-
-The command performs preflight, executes T05/A, T08/B, and T20/C with fresh ephemeral sessions, scores the traces, validates instrumentation, freezes the execution profile, and generates the pre-registered 216-run schedule.
-
-It writes:
+The command-level details, isolation policy, and promotion checks are specified
+in [EXECUTION-PREPILOT-R6.md](EXECUTION-PREPILOT-R6.md). The pilot workflow
+writes:
 
 ```text
 runner/execution-profile-r1.json
@@ -122,23 +59,22 @@ runner/formal-schedule-r1.json
 runner/formal-plan-r1.lock.json
 ```
 
-Review and commit all three generated metadata files before formal collection. `formal-plan-r1.lock.json` freezes the exact profile and schedule bytes.
+Review and merge the hosted promotion pull request before formal collection.
+`formal-plan-r1.lock.json` freezes the exact profile and schedule bytes.
 
 The execution profile embeds a `pilot_set_digest_sha256` plus per-pilot artifact
 hashes. Keep the pilot directories until the profile has been reviewed; afterward
 the committed profile is the provenance record that binds the formal plan to the
 exact pilot evidence.
 
-## 2. Run formal collection
+## 2. Dispatch formal collection on GitHub-hosted Actions
 
-```bash
-python3 scripts/run-ai-native-formal.py \
-  --source-repo /path/to/nession \
-  --schedule docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-schedule-r1.json \
-  --execution-profile docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/execution-profile-r1.json \
-  --formal-plan-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-plan-r1.lock.json \
-  --runs-root /path/to/formal-runs
-```
+Use `.github/workflows/ai-native-claude-formal.yml` after the promotion PR is
+merged. Its default inputs execute all 216 pre-registered entries on a fresh
+GitHub-hosted `ubuntu-24.04` job. The workflow installs the same pinned Claude
+Code client, runs the readiness gate before model spending, verifies every seal,
+and uploads the collection artifact. Sequence inputs are available only for a
+documented partial/recovery run; a partial artifact is not a complete study.
 
 The orchestrator validates benchmark/analysis integrity before model spending, enforces the frozen execution-tool bytes, runs the balanced schedule, scores every run, and writes a tamper-evident `seal.json` for every admissible outcome. Existing runs are never skipped merely because `run.json` says they are sealed; their artifact hashes are re-verified first.
 
@@ -148,7 +84,7 @@ Before the first reportable run, the orchestrator also creates:
 /formal-runs/_collection/collection-start.json
 ```
 
-The collection-start lock requires the execution profile, formal schedule, and formal-plan lock to already be Git-tracked and byte-identical to the current Narness HEAD. It freezes that Narness commit, local runtime/tool versions, Codex CLI version, metadata hashes, and result-producing tool hashes. Resuming the same collection from a different harness commit or execution environment is rejected.
+The collection-start lock requires the execution profile, formal schedule, and formal-plan lock to already be Git-tracked and byte-identical to the current Narness HEAD. It freezes that Narness commit, hosted runtime/tool versions, Claude Code version, metadata hashes, and result-producing tool hashes. Resuming the same collection from a different harness commit or execution environment is rejected.
 
 Failed tasks remain in the dataset when the run itself is admissible.
 
@@ -338,7 +274,7 @@ commit it as the permanent Narness research record.
 
 ## Usage-event invariant
 
-Every formal run is one fresh ephemeral Codex task and must emit exactly one
+Every formal run is one fresh ephemeral Claude Code task and must emit exactly one
 `usage` event. This keeps token accounting unambiguous under the frozen scorer.
 A run with zero or multiple usage events is instrumentation-invalid and cannot be
 sealed for final analysis.
