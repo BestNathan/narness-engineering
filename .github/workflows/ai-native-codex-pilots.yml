@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     env:
-      OPENAI_API_KEY: \${{ secrets.OPENAI_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - name: Checkout Narness Engineering
         uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "\${OPENAI_API_KEY:-}" ]]; then
+          if [[ -z "${OPENAI_API_KEY:-}" ]]; then
             echo "::error::Repository secret OPENAI_API_KEY is not configured."
             echo "::error::Formal research execution cannot proceed without real Codex authentication."
             exit 78
@@ -68,7 +68,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./scripts/run-ai-native-codex-pilots.sh \
+          bash ./scripts/run-ai-native-codex-pilots.sh \
             "$GITHUB_WORKSPACE/nession" \
             "$GITHUB_WORKSPACE/research-runs/pilots"
 
@@ -99,7 +99,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ai-native-codex-pilots-\${{ github.run_id }}
+          name: ai-native-codex-pilots-${{ github.run_id }}
           if-no-files-found: warn
           retention-days: 30
           path: |
