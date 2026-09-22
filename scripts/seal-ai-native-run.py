@@ -36,6 +36,8 @@ def artifact_digests(run_dir: Path) -> dict[str, str]:
         "agent.stderr.log",
         "codex.raw.jsonl",
         "codex.stderr.log",
+        "claude.raw.jsonl",
+        "claude.stderr.log",
     }
     names.update(path.name for path in run_dir.glob("mutation-*.patch"))
     return {
@@ -278,7 +280,7 @@ def main() -> int:
     ]
     if len(usage_events) != 1:
         errors.append(
-            "expected exactly one usage event for one ephemeral Codex turn; "
+            "expected exactly one usage event for one fresh agent task; "
             f"captured {len(usage_events)}"
         )
 
@@ -313,6 +315,13 @@ def main() -> int:
             "shell_environment_allowlist",
             "harness_environment_scrubbed",
             "codex_version",
+            "claude_version",
+            "container_image_id",
+            "proxy_image_id",
+            "upstream_base_url",
+            "max_turns",
+            "command_mapper_sha256",
+            "raw_trace_file",
             "adapter_file_sha256",
         ):
             expected = profile.get("agent", {}).get(key)
@@ -321,6 +330,10 @@ def main() -> int:
                     f"agent profile mismatch for {key}: "
                     f"{agent_config.get(key)!r} != {expected!r}"
                 )
+
+    if profile.get("agent", {}).get("agent") == "claude-code":
+        if not (run_dir / "claude.raw.jsonl").is_file():
+            errors.append("Claude raw stream is missing")
 
     env = run.get("environment", {})
     for key, expected in profile.get("environment", {}).items():
