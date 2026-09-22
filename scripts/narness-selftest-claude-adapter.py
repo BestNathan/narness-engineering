@@ -26,7 +26,10 @@ with tempfile.TemporaryDirectory() as td:
     t.process(read);t.process(read) # Repeated assistant envelope is not a second call.
     t.process(result('r','source'))
     t.process(call('e','Edit',{'file_path':'/workspace/web/app.ts'}));t.process(result('e','ok'))
-    t.process(call('b','Bash',{'command':'npm run build'}));t.process(result('b','failure',True))
+    t.process(call('b','Bash',{'command':'npm run build'}))
+    t.process({'type':'tool_progress','parent_tool_use_id':'b',
+                'tool_use_id':'b-heartbeat-0','tool_name':'Bash'})
+    t.process(result('b','failure',True))
     t.process(done());t.finish()
     events=[json.loads(x) for x in trace.read_text().splitlines()]
     assert [e['type'] for e in events]==['read','edit','command','validation','usage']
@@ -35,7 +38,10 @@ with tempfile.TemporaryDirectory() as td:
     assert events[3]['exit_code']==1
     assert events[-1]['input_tokens']==60 and events[-1]['cached_tokens']==30
     assert events[-1]['output_tokens']==5 and events[-1]['reasoning_tokens_available'] is False
-    for bad in [done(), {'type':'assistant','parent_tool_use_id':'nested'},call('x','WebFetch',{}),result('unknown')]:
+    for bad in [done(), {'type':'assistant','parent_tool_use_id':'nested'},
+                {'type':'tool_progress','parent_tool_use_id':'nested',
+                 'tool_use_id':'nested-heartbeat-0','tool_name':'Bash'},
+                call('x','WebFetch',{}),result('unknown')]:
         try: t.process(bad)
         except RuntimeError: pass
         else: raise AssertionError('invalid event was accepted')
@@ -52,7 +58,7 @@ args=adapter.cli_args('claude-test-model','high',100)
 assert '--no-session-persistence' in args and '--strict-mcp-config' in args
 assert '--disable-slash-commands' in args and '--setting-sources' in args
 assert 'Agent' not in adapter.TOOLS.split(',')
-print('Claude stream translation, cache accounting, replay failure cases, and CLI contract: PASS')
+print('Claude stream translation, Bash progress heartbeats, cache accounting, replay rejection, and CLI contract: PASS')
 
 # The common freezer must bind Claude raw evidence and reject image drift.
 spec=importlib.util.spec_from_file_location('profile_test',ROOT/'scripts/selftest-ai-native-execution-profile.py')

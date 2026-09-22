@@ -112,9 +112,22 @@ class Translator:
         return value.removeprefix('/workspace/').removeprefix('./')
 
     def process(self, event):
-        if event.get('parent_tool_use_id'):
-            raise RuntimeError('Unexpected subagent event')
         kind = event.get('type')
+        parent_id = event.get('parent_tool_use_id')
+        if parent_id:
+            parent = self.pending.get(parent_id)
+            heartbeat_id = event.get('tool_use_id', '')
+            if (
+                kind == 'tool_progress'
+                and parent is not None
+                and parent.get('name') == event.get('tool_name')
+                and event.get('tool_name') in TOOLS.split(',')
+                and heartbeat_id.startswith(f'{parent_id}-heartbeat-')
+            ):
+                # Claude Code emits progress heartbeats for active root tool calls.
+                # They are not subagent messages and carry no experiment event.
+                return
+            raise RuntimeError('Unexpected subagent event')
         if kind == 'assistant':
             message = event.get('message', {})
             for block in message.get('content', []):

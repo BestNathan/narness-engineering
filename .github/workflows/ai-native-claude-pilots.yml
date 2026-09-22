@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ai-native-claude-pilots-r7
+  group: ai-native-claude-pilots-r8
   cancel-in-progress: false
 
 jobs:
@@ -47,7 +47,7 @@ jobs:
           import json, os
           from pathlib import Path
           lock=json.loads(Path('docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/EXECUTION-PREPILOT-LOCK.json').read_text())
-          assert lock['execution_prepilot_revision'] == 7, 'Claude direct R7 is not registered yet'
+          assert lock['execution_prepilot_revision'] == 8, 'Claude direct R8 is not registered yet'
           assert lock['required_agent_config']['agent'] == 'claude-code'
           assert os.environ['CLAUDE_MODEL'], 'Set repository variable CLAUDE_MODEL to an explicit model ID'
           assert os.environ['CLAUDE_MODEL'] not in ('sonnet', 'opus', 'haiku', 'default'), 'Moving model aliases are not allowed'
@@ -141,7 +141,7 @@ jobs:
           echo "repository_sha=$(git -C execution rev-parse HEAD)" > "$HANDOFF/workflow-metadata.txt"
           echo "workflow_run_id=$GITHUB_RUN_ID" >> "$HANDOFF/workflow-metadata.txt"
 
-      - name: Validate handoff with registered R6 controller
+      - name: Validate handoff with registered R8 controller
         if: success()
         run: |
           python3 scripts/validate-ai-native-pilot-handoff.py \
@@ -151,7 +151,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ai-native-claude-r6-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ai-native-claude-r8-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ steps.paths.outputs.handoff }}
           retention-days: 30
           if-no-files-found: error
