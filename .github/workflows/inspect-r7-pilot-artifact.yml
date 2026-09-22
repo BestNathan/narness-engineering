@@ -58,7 +58,18 @@ jobs:
                           event = json.loads(line)
                       except json.JSONDecodeError:
                           continue
-                      if event.get('type') == 'result':
+                      if event.get('parent_tool_use_id'):
+                          message = event.get('message') or {}
+                          blocks = message.get('content') or []
+                          print('parent-event=' + json.dumps({
+                              'type': event.get('type'),
+                              'parent_tool_use_id': event.get('parent_tool_use_id'),
+                              'subtype': event.get('subtype'),
+                              'tool_names': [block.get('name') for block in blocks if block.get('type') == 'tool_use'],
+                              'content_types': [block.get('type') for block in blocks],
+                              'stop_reason': message.get('stop_reason'),
+                          }, sort_keys=True))
+                      elif event.get('type') == 'result':
                           print('result-event=' + json.dumps({
                               key: event.get(key) for key in ('type','subtype','is_error','usage','modelUsage','duration_ms','cost_usd','error')
                               if key in event
