@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   pilots:
+    if: ${{ false }} # Superseded by the Claude Code R5 execution revision.
     runs-on: ubuntu-latest
     timeout-minutes: 180
     env:
