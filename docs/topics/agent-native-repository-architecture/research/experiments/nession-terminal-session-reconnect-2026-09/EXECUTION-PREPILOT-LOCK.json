@@ -3,7 +3,7 @@
   "execution_prepilot_revision": 6,
   "status": "frozen-before-real-pilots",
   "branch": "main",
-  "repository_sha": "d35abcbf632c7a89af707d7c0fe15e5554c36c9b",
+  "repository_sha": "a5710d13a96011c338e8c7a0e325b535b6128f15",
   "benchmark_revision": 2,
   "benchmark_definition_sha": "194bf5dc1a28f4e4c10491d7326891ba157d325b",
   "analysis_revision": 2,
@@ -38,7 +38,7 @@
     "repository_sha": "8bab203034f97345541783c32c9e646d923b40a7",
     "reason": "The requested execution path is an installed Claude Code client receiving ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL directly. The containerized R5 gateway is retained as historical design only; benchmark and analysis semantics remain frozen."
   },
-  "promotion_rule": "Only real direct Claude Code T05/A, T08/B, T20/C evidence from repository_sha d35abcbf632c7a89af707d7c0fe15e5554c36c9b may freeze the R6 profile. Require isolated subject checkout, registered agent policy, exact installed CLI/model/base URL, exact tool hashes, and profile/schedule/formal-plan identity. Synthetic replay evidence cannot be promoted.",
+  "promotion_rule": "Only real direct Claude Code T05/A, T08/B, T20/C evidence from repository_sha a5710d13a96011c338e8c7a0e325b535b6128f15 may freeze the R6 profile. Require isolated subject checkout, registered agent policy, exact installed CLI/model/base URL, exact tool hashes, and profile/schedule/formal-plan identity. Synthetic replay evidence cannot be promoted.",
   "required_agent_config": {
     "agent": "claude-code",
     "network": "provider-direct",
