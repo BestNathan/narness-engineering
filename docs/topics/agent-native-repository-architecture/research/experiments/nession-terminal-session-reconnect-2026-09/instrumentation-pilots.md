@@ -1,5 +1,12 @@
 # Instrumentation Pilot Plan
 
+> Active execution: direct Claude Code pre-pilot R6. Follow
+> [EXECUTION-PREPILOT-R6.md](EXECUTION-PREPILOT-R6.md) for client installation,
+> environment variables, pilots, isolation, and promotion. The Codex R4 and
+> containerized Claude R5 instructions below are historical and must not be used
+> for the new execution profile. Formal collection, analysis, and publication
+> procedures still apply after R6 freeze.
+
 > Non-reportable. These runs validate measurement plumbing only.
 
 Benchmark revision 2 and Analysis revision 2 are frozen. The remaining gate before formal A/B/C collection
@@ -7,7 +14,8 @@ is to prove that a real coding-agent harness produces complete, scoreable traces
 
 ## Pilot matrix
 
-Use one fresh Codex CLI process per run:
+Use one fresh Claude Code CLI process per run through the GitHub-hosted R6
+workflow:
 
 | Pilot | Task | Treatment | Why |
 |---|---|---|---|
@@ -23,59 +31,30 @@ reportable experiment results.
 Candidate profile:
 
 ```text
-agent:              Codex CLI
-model:              gpt-5.6-sol
+agent:              Claude Code CLI
+model:              repository variable CLAUDE_MODEL (explicit ID)
 reasoning effort:   high
 session:            ephemeral / fresh
-permission profile: narness-research
-approval:           never
-network in agent:   disabled
-user config:        ignored
-exec policy rules:  ignored
+permission profile: claude-direct-narness-r6
+approval:           dontAsk
+network in agent:   provider-direct (Anthropic endpoint only)
+user/project config: ignored
+hooks/MCP/subagents/web: disabled
 dependency setup:   cd web && npm ci
 ```
 
 Do not change the profile between P1/P2/P3.
 
-The Codex non-interactive JSONL stream is translated by
-`scripts/ai-native-codex-adapter.py` into the benchmark's structured
+The Claude Code `stream-json` stream is retained as `claude.raw.jsonl` and
+translated by `scripts/narness-claude-adapter.py` into the benchmark's structured
 `trace.jsonl`.
 
-## Example
+## Hosted workflow
 
-From a checkout of `narness-engineering`, with a local checkout of Nession at
-`../nession` and Codex already authenticated:
-
-```bash
-EXP=docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09
-
-python3 scripts/ai-native-repo-experiment.py \
-  --source-repo ../nession \
-  --task "$EXP/runner/manifests/T05.json" \
-  --treatments "$EXP/runner/treatments.json" \
-  --treatment A \
-  --attempt 1 \
-  --setup-cmd 'cd web && npm ci' \
-  --agent-cmd 'python3 /ABS/PATH/narness-engineering/scripts/ai-native-codex-adapter.py' \
-  --output-dir ./research-runs
-```
-
-Then score the run:
-
-```bash
-python3 scripts/score-ai-native-run.py \
-  --run-dir ./research-runs/T05-A-01 \
-  --gold "$EXP/runner/gold.json" \
-  --treatment A \
-  --update-run-json
-```
-
-Repeat for:
-
-```text
-T08 / B
-T20 / C
-```
+Run the **AI Native Claude Code Pilots** workflow from the repository Actions
+tab with `ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL`, and an explicit
+`CLAUDE_MODEL`. It executes T05/A, T08/B, and T20/C, scores each run, validates
+the handoff, and uploads all evidence as a non-reportable artifact.
 
 ## Pilot acceptance
 
@@ -87,10 +66,10 @@ setup succeeded
 fixture applied if required
 agent completed without harness failure
 trace.jsonl present and parseable
-raw Codex JSONL preserved
+raw Claude Code JSONL preserved as `claude.raw.jsonl`
 at least one navigation event captured
 at least one edit event captured
-exactly one usage event captured for the one ephemeral Codex turn
+exactly one usage event captured for the one ephemeral Claude Code turn
 hidden acceptance ran after agent exit
 build/lint verification completed
 score.json generated
@@ -102,7 +81,7 @@ standalone checkout destroyed after run
 Task success itself is **not** required for a pilot to validate instrumentation.
 
 However, if a metric is missing because the adapter cannot observe the relevant
-Codex event, repair the adapter before formal collection. Adapter changes during
+Claude Code event, repair the adapter before formal collection. Adapter changes during
 pilot stage must not alter benchmark semantics.
 
 ## Freeze after pilot
@@ -110,7 +89,7 @@ pilot stage must not alter benchmark semantics.
 When P1/P2/P3 pass instrumentation acceptance, freeze an execution profile with:
 
 ```text
-Codex CLI version
+Claude Code CLI version
 model
 reasoning effort
 adapter SHA
@@ -126,7 +105,7 @@ Only then may reportable runs begin.
 
 The generated execution profile also content-addresses the exact three pilot
 evidence sets. For each pilot it records SHA-256 identities for the prompt, run
-record, score, structured trace, raw Codex JSONL, final diff, Git status, and
+record, score, structured trace, raw Claude Code JSONL, final diff, Git status, and
 agent logs, plus the common Narness harness commit. Those per-pilot hashes are
 collapsed into one `pilot_set_digest_sha256`.
 
@@ -136,13 +115,11 @@ the execution profile. Re-running or editing a pilot requires a newly generated
 execution profile/formal plan before formal collection.
 
 
-## One-command pilot gate
+## Hosted pilot gate
 
-The pilot path is now intentionally one command:
-
-```bash
-bash ./scripts/run-ai-native-codex-pilots.sh /path/to/nession
-```
+The active pilot path is the manually dispatched GitHub Actions workflow
+`.github/workflows/ai-native-claude-pilots.yml`; its local shell entry point is
+implementation detail, not an execution instruction.
 
 Before spending model budget, the script runs
 `scripts/preflight-ai-native-codex-pilots.py` and rejects:
@@ -150,10 +127,10 @@ Before spending model budget, the script runs
 - dirty tracked state in either repository;
 - missing frozen treatment/oracle commits;
 - benchmark-integrity failure;
-- missing Git/Node/npm/Codex executables;
+- missing Git/Node/npm/Claude Code executables;
 - pre-existing pilot output directories.
 
-After all three pilots pass, the same command writes:
+After all three pilots pass, the workflow writes:
 
 ```text
 runner/execution-profile-r1.json
@@ -178,11 +155,11 @@ measured tooling.
 ## Usage-accounting guard
 
 The formal scorer aggregates `usage` events. The execution profile therefore
-requires one ephemeral Codex task to produce exactly one completed-turn usage
+requires one ephemeral Claude Code task to produce exactly one completed-turn usage
 record. Pilot validation and formal sealing reject zero or multiple usage events
 instead of silently changing token-accounting semantics.
 
-If a future Codex CLI version emits multiple completed-turn usage records for one
+If a future Claude Code CLI version emits multiple completed-turn usage records for one
 task, do not patch the scorer in place after data collection begins. Resolve the
 instrumentation semantics before formal collection or create a new benchmark
 revision.
