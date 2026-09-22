@@ -37,7 +37,7 @@ for pair in T05:A T08:B T20:C; do
   python3 "$ROOT/scripts/ai-native-repo-experiment.py" \
     --source-repo "$SOURCE_REPO" --task "$EXP/runner/manifests/$task.json" \
     --treatments "$EXP/runner/treatments.json" --treatment "$treatment" --attempt 1 \
-    --setup-cmd 'cd web && npm ci' --agent-cmd "$AGENT_CMD" --output-dir "$OUTPUT_DIR"
+    --setup-cmd 'cd web && npm ci --legacy-peer-deps' --agent-cmd "$AGENT_CMD" --output-dir "$OUTPUT_DIR"
   rc=$?
   set -e
   if [[ "$rc" != 0 && "$rc" != 2 ]]; then exit "$rc"; fi
