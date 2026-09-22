@@ -27,7 +27,7 @@ agent:              Codex CLI
 model:              gpt-5.6-sol
 reasoning effort:   high
 session:            ephemeral / fresh
-sandbox:            workspace-write
+permission profile: narness-research
 approval:           never
 network in agent:   disabled
 user config:        ignored
@@ -82,7 +82,7 @@ T20 / C
 All three pilots must satisfy:
 
 ```text
-fresh detached worktree created
+fresh standalone single-ref checkout created (no remote or object alternates)
 setup succeeded
 fixture applied if required
 agent completed without harness failure
@@ -96,7 +96,7 @@ build/lint verification completed
 score.json generated
 gold classification completed
 no hidden oracle visible before agent exit
-worktree destroyed after run
+standalone checkout destroyed after run
 ```
 
 Task success itself is **not** required for a pilot to validate instrumentation.
@@ -141,7 +141,7 @@ execution profile/formal plan before formal collection.
 The pilot path is now intentionally one command:
 
 ```bash
-./scripts/run-ai-native-codex-pilots.sh /path/to/nession
+bash ./scripts/run-ai-native-codex-pilots.sh /path/to/nession
 ```
 
 Before spending model budget, the script runs

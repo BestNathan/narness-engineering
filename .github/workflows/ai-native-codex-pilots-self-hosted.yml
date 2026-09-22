@@ -13,8 +13,11 @@ on:
         default: '14'
         type: string
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ai-native-codex-pilots-r2
+  group: ai-native-codex-pilots-r2-frozen
   cancel-in-progress: false
 
 jobs:
@@ -25,9 +28,10 @@ jobs:
     timeout-minutes: 240
 
     steps:
-      - name: Checkout Narness Engineering
+      - name: Checkout frozen Narness pre-pilot revision
         uses: actions/checkout@v4
         with:
+          ref: d01117beb44e57c24cb6b73ae8c4c9f89100e825
           clean: true
           fetch-depth: 0
           persist-credentials: false
@@ -38,7 +42,7 @@ jobs:
           NESSION_PATH: ${{ inputs.nession_path }}
         run: |
           set -euo pipefail
-          test "${{ github.ref_name }}" = "research/ai-native-execution-prepilot-r4"
+          test "$(git rev-parse HEAD)" = "d01117beb44e57c24cb6b73ae8c4c9f89100e825"
           test -d "$NESSION_PATH/.git"
           test -z "${OPENAI_API_KEY:-}"
           test -z "${CODEX_ACCESS_TOKEN:-}"
@@ -50,24 +54,24 @@ jobs:
         shell: bash
         env:
           NESSION_PATH: ${{ inputs.nession_path }}
-          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots
+          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
-          ./scripts/run-ai-native-codex-pilots.sh "$NESSION_PATH" "$PILOT_OUTPUT"
+          bash ./scripts/run-ai-native-codex-pilots.sh "$NESSION_PATH" "$PILOT_OUTPUT"
 
       - name: Capture pilot handoff metadata
         if: always()
         shell: bash
         env:
-          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots
+          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
           EXP="docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
-          HANDOFF="${{ runner.temp }}/pilot-handoff"
+          HANDOFF="${{ runner.temp }}/pilot-handoff-${{ github.run_id }}-${{ github.run_attempt }}"
           mkdir -p "$HANDOFF"
           {
             echo "workflow_run_id=${{ github.run_id }}"
-            echo "repository_sha=${{ github.sha }}"
+            echo "repository_sha=$(git rev-parse HEAD)"
             echo "runner_name=${{ runner.name }}"
             echo "runner_os=${{ runner.os }}"
             echo "codex_version=$(codex --version 2>/dev/null || true)"
@@ -85,12 +89,31 @@ jobs:
             cp -R "$PILOT_OUTPUT" "$HANDOFF/pilot-runs"
           fi
 
+      - name: Checkout registered R4 handoff validator
+        if: success()
+        uses: actions/checkout@v4
+        with:
+          ref: 88d08dd95b69a217f9433b84b35179663ace4e09
+          path: pilot-control
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate generated pilot handoff
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          HANDOFF="${{ runner.temp }}/pilot-handoff-${{ github.run_id }}-${{ github.run_attempt }}"
+          python3 pilot-control/scripts/validate-ai-native-pilot-handoff.py \
+            --handoff-dir "$HANDOFF" \
+            --output "$HANDOFF/promotion-validation.json"
+
       - name: Upload non-reportable pilot handoff
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ai-native-codex-pilots-r2-${{ github.run_id }}
-          path: ${{ runner.temp }}/pilot-handoff
+          path: ${{ runner.temp }}/pilot-handoff-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: ${{ fromJSON(inputs.artifact_retention_days) }}
 

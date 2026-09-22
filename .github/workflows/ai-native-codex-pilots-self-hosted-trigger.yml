@@ -1,6 +1,7 @@
 name: AI Native Codex Pilots - Frozen Self Hosted Trigger
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -51,20 +52,29 @@ jobs:
       - name: Run three non-reportable instrumentation pilots
         shell: bash
         env:
-          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots
+          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
           bash ./scripts/run-ai-native-codex-pilots.sh             "$GITHUB_WORKSPACE/nession"             "$PILOT_OUTPUT"
+
+      - name: Checkout registered R4 handoff validator
+        if: success()
+        uses: actions/checkout@v4
+        with:
+          ref: 88d08dd95b69a217f9433b84b35179663ace4e09
+          path: pilot-control
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Validate generated pilot handoff
         if: success()
         shell: bash
         env:
-          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots
+          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
           EXP="docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
-          HANDOFF="${{ runner.temp }}/pilot-handoff"
+          HANDOFF="${{ runner.temp }}/pilot-handoff-${{ github.run_id }}-${{ github.run_attempt }}"
           mkdir -p "$HANDOFF"
           {
             echo "workflow_run_id=${{ github.run_id }}"
@@ -79,17 +89,17 @@ jobs:
           cp "$EXP/runner/formal-plan-r1.lock.json" "$HANDOFF/"
           cp -R "$PILOT_OUTPUT" "$HANDOFF/pilot-runs"
 
-          python3 scripts/validate-ai-native-pilot-handoff.py             --handoff-dir "$HANDOFF"             --output "$HANDOFF/promotion-validation.json"
+          python3 pilot-control/scripts/validate-ai-native-pilot-handoff.py             --handoff-dir "$HANDOFF"             --output "$HANDOFF/promotion-validation.json"
 
       - name: Capture failed pilot handoff
         if: failure()
         shell: bash
         env:
-          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots
+          PILOT_OUTPUT: ${{ runner.temp }}/ai-native-codex-pilots-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
           EXP="docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
-          HANDOFF="${{ runner.temp }}/pilot-handoff"
+          HANDOFF="${{ runner.temp }}/pilot-handoff-${{ github.run_id }}-${{ github.run_attempt }}"
           mkdir -p "$HANDOFF"
           {
             echo "workflow_run_id=${{ github.run_id }}"
@@ -100,15 +110,17 @@ jobs:
             echo "created_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > "$HANDOFF/workflow-metadata.txt"
           for file in             "$EXP/runner/execution-profile-r1.json"             "$EXP/runner/formal-schedule-r1.json"             "$EXP/runner/formal-plan-r1.lock.json"; do
-            [[ -f "$file" ]] && cp "$file" "$HANDOFF/"
+            if [[ -f "$file" ]]; then cp "$file" "$HANDOFF/"; fi
           done
-          [[ -d "$PILOT_OUTPUT" ]] && cp -R "$PILOT_OUTPUT" "$HANDOFF/pilot-runs"
+          if [[ -d "$PILOT_OUTPUT" && ! -d "$HANDOFF/pilot-runs" ]]; then
+            cp -R "$PILOT_OUTPUT" "$HANDOFF/pilot-runs"
+          fi
 
       - name: Upload pilot handoff
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ai-native-codex-pilots-r2-${{ github.run_id }}
-          path: ${{ runner.temp }}/pilot-handoff
+          path: ${{ runner.temp }}/pilot-handoff-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: 30

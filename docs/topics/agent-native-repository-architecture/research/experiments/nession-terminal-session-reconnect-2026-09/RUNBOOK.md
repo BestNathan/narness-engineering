@@ -12,7 +12,8 @@ process environment; the coding agent must not inherit authentication secrets.
 ### Local path
 
 ```bash
-./scripts/run-ai-native-codex-pilots.sh /path/to/nession
+git switch --detach d01117beb44e57c24cb6b73ae8c4c9f89100e825
+bash ./scripts/run-ai-native-codex-pilots.sh /path/to/nession
 ```
 
 ### Trusted self-hosted GitHub Actions path
@@ -26,7 +27,8 @@ A second entry point is:
 It runs only on a self-hosted runner carrying the `ai-native-research` label.
 The runner must already have Codex authenticated in its credential store and must
 have a clean local Nession checkout. Dispatch the workflow with the absolute
-`nession_path`.
+`nession_path`. Select `main` when dispatching the repaired workflow; it
+explicitly checks out the frozen R4 SHA rather than executing the selected branch.
 
 The workflow deliberately:
 
@@ -43,19 +45,72 @@ This path is intended for a trusted private runner, not a public or untrusted CI
 executor.
 
 
-After downloading/unzipping the workflow artifact, validate the handoff before
-promoting any generated freeze file:
+### Validate and promote using the R4 registration checkout
+
+The execution commit `d01117beb44e57c24cb6b73ae8c4c9f89100e825` still
+contains the earlier R3 registration lock. Its own handoff validator therefore
+cannot authorize R4 evidence. Run pilots at that exact execution commit, then
+validate/promote using the separate, pinned registration checkout
+`88d08dd95b69a217f9433b84b35179663ace4e09`. Both self-hosted workflows use
+that checkout under `pilot-control` after pilot execution. Never overlay the
+registration files onto the pilot checkout before running pilots.
+
+After downloading/unzipping the workflow artifact, use a separate checkout:
 
 ```bash
-python3 scripts/validate-ai-native-pilot-handoff.py \
-  --handoff-dir /path/to/pilot-handoff \
-  --output /tmp/pilot-handoff-validation.json
+git clone https://github.com/BestNathan/narness-engineering.git /path/to/formal-control
+cd /path/to/formal-control
+git switch -c research/ai-native-formal-execution-r1 88d08dd95b69a217f9433b84b35179663ace4e09
+python3 scripts/promote-ai-native-pilot-handoff.py \
+  --handoff-dir /path/to/pilot-handoff
 ```
 
-The validator requires all three pilot runs to identify the active execution
-pre-pilot SHA from `EXECUTION-PREPILOT-LOCK.json`, re-runs each pilot
-instrumentation validator, re-checks pilot artifact hashes from the frozen
-execution profile, and verifies profile → schedule → formal-plan identity.
+The promoter first validates the handoff. It requires all three run records and
+the execution profile to identify R4, checks the isolated checkout and permission
+profile, compares result-producing tool hashes with R4, revalidates the pilot
+traces and artifact hashes, and verifies profile/schedule/formal-plan identity.
+Task semantic success is not required; instrumentation acceptance is required.
+
+Review the generated metadata, then commit it:
+
+```bash
+EXP=docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09
+for name in execution-profile-r1.json formal-schedule-r1.json formal-plan-r1.lock.json PILOT-FREEZE.json; do
+  python3 -m json.tool "$EXP/runner/$name"
+done
+# Commit only after reviewing the displayed metadata and validation report.
+git add "$EXP/runner/execution-profile-r1.json" \
+  "$EXP/runner/formal-schedule-r1.json" \
+  "$EXP/runner/formal-plan-r1.lock.json" \
+  "$EXP/runner/PILOT-FREEZE.json"
+git commit -m "research: freeze pilot-derived formal execution plan r1"
+```
+
+The first three files are required by the collection-start gate. The fourth
+records promotion provenance. The formal branch descends from R4 via the pinned
+registration commit; the result-producing execution tools remain byte-identical
+to R4 and are checked against the pilot profile. Keep the pilot handoff in durable
+storage. Never synthesize a profile or treat a replay/selftest as pilot evidence.
+
+For local pilots, assemble `pilot-handoff` outside the execution checkout by
+copying the three generated JSON files into it and the complete pilot output
+directory into `pilot-handoff/pilot-runs`, then follow the same promotion steps.
+The optional workflow metadata file is not needed for local execution.
+
+### Runner readiness
+
+A queued Actions job with `runner_id=0` has not begun pilot execution. Bring an
+eligible trusted runner online with both `self-hosted` and `ai-native-research`
+labels, or use the local path above. The runner account must have a working
+`codex login status`, Git, Python, Node/npm, and a clean Nession checkout containing
+the frozen treatment/oracle commits. Do not export `OPENAI_API_KEY` or
+`CODEX_ACCESS_TOKEN` into the experiment process.
+
+Do not launch duplicate pilot jobs. A queued run keeps its original workflow
+version; after an entrypoint repair, cancel the obsolete queued run in Actions
+before using the repaired manual workflow. If an old run already generated real
+evidence but failed only at the R3 handoff check, retain its artifact and validate
+it with the R4 registration checkout before deciding whether pilots must rerun.
 
 The command performs preflight, executes T05/A, T08/B, and T20/C with fresh ephemeral sessions, scores the traces, validates instrumentation, freezes the execution profile, and generates the pre-registered 216-run schedule.
 
