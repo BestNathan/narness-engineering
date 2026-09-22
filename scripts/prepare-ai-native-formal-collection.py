@@ -199,17 +199,32 @@ def main() -> int:
                 f"environment drift for {key}: {env.get(key)!r} != {expected!r}"
             )
 
-    codex_path = shutil.which(args.codex_bin)
+    claude_runtime = None
     codex_version = None
-    if codex_path is None:
-        errors.append(f"Codex executable not found: {args.codex_bin!r}")
+    if profile.get("agent", {}).get("agent") == "claude-code":
+        result = subprocess.run([
+            sys.executable, str(ROOT / "scripts/narness-claude-adapter.py"),
+            "--model", profile["agent"]["model"], "--inspect-runtime",
+        ], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode:
+            errors.append("Claude Code runtime inspection failed")
+        else:
+            claude_runtime = json.loads(result.stdout)
+            for key, value in claude_runtime.items():
+                if value != profile["agent"].get(key):
+                    errors.append(f"Claude runtime drift: {key}")
     else:
-        codex_version = version([args.codex_bin, "--version"])
-        expected_codex = profile.get("agent", {}).get("codex_version")
-        if expected_codex is not None and codex_version != expected_codex:
-            errors.append(
-                f"Codex CLI drift: {codex_version!r} != {expected_codex!r}"
-            )
+        codex_path = shutil.which(args.codex_bin)
+        codex_version = None
+        if codex_path is None:
+            errors.append(f"Codex executable not found: {args.codex_bin!r}")
+        else:
+            codex_version = version([args.codex_bin, "--version"])
+            expected_codex = profile.get("agent", {}).get("codex_version")
+            if expected_codex is not None and codex_version != expected_codex:
+                errors.append(
+                    f"Codex CLI drift: {codex_version!r} != {expected_codex!r}"
+                )
 
     if profile.get("agent", {}).get("harness_environment_scrubbed") is not True:
         errors.append("execution profile does not prove harness environment scrubbing")
@@ -226,12 +241,16 @@ def main() -> int:
 
     tooling_paths = {
         "runner_file_sha256": ROOT / "scripts" / "ai-native-repo-experiment.py",
-        "adapter_file_sha256": ROOT / "scripts" / "ai-native-codex-adapter.py",
+        "adapter_file_sha256": ROOT / "scripts" / ("narness-claude-adapter.py" if profile.get("agent", {}).get("agent") == "claude-code" else "ai-native-codex-adapter.py"),
         "scorer_file_sha256": ROOT / "scripts" / "score-ai-native-run.py",
         "seal_file_sha256": ROOT / "scripts" / "seal-ai-native-run.py",
         "run_seal_verifier_file_sha256": ROOT / "scripts" / "verify-ai-native-run-seal.py",
         "formal_orchestrator_file_sha256": ROOT / "scripts" / "run-ai-native-formal.py",
     }
+    if profile.get("agent", {}).get("agent") == "claude-code":
+        tooling_paths.update({
+            "command_mapper_file_sha256": ROOT / "scripts/ai-native-codex-adapter.py",
+        })
     current_tooling = {}
     for key, path in tooling_paths.items():
         actual = sha256_file(path)
@@ -261,6 +280,7 @@ def main() -> int:
         "narness_repository_sha": head,
         "environment": env,
         "codex_version": codex_version,
+        "claude_runtime": claude_runtime,
         "tooling": current_tooling,
         "tracked_metadata": tracked,
     }
