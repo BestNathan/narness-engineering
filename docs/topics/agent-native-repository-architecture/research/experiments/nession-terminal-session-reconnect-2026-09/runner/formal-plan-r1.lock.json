@@ -1,0 +1,29 @@
+{
+  "analysis_definition_sha": "357c38c9b10a3eb668b15aead703a5f5200b2858",
+  "analysis_revision": 2,
+  "benchmark_definition_sha": "194bf5dc1a28f4e4c10491d7326891ba157d325b",
+  "benchmark_revision": 2,
+  "design": "deterministically permuted task blocks per replication + balanced cyclic Latin-square treatment order within each task",
+  "execution_profile_id": "claude-code-r8-r1",
+  "execution_profile_sha256": "67e9fea5e94d054d1759e0add9d551ab433a3eb00b2952e54fa5038f5c0422dc",
+  "experiment_id": "nession-terminal-session-reconnect-2026-09",
+  "freeze_rule": "Any change to execution-profile or formal-schedule bytes after this lock is created invalidates this plan and requires a new formal plan.",
+  "plan_id": "formal-plan-r1",
+  "replications": 3,
+  "run_count": 216,
+  "schedule_design_validation": {
+    "balanced_task_treatment_cells": true,
+    "balanced_within_task_blocks": true,
+    "contiguous_sequence": true,
+    "deterministic_task_permutations": true,
+    "distinct_task_orders_across_replications": true,
+    "latin_square_positions": true,
+    "task_order_seed": 20260921,
+    "tasks": 24,
+    "treatments": 3,
+    "unique_run_ids": true
+  },
+  "schedule_sha256": "1a33fe43bd30c7603764ce3f782540e0e06e6bf18ecf91d5823830e4a112f86f",
+  "schema_version": 1,
+  "status": "frozen"
+}

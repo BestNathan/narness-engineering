@@ -1,0 +1,151 @@
+{
+  "agent": {
+    "adapter_file_sha256": "cba363d5b90fd0b43876d37deeff7661d20ee5477c7b7cef68560c158f768261",
+    "agent": "claude-code",
+    "base_url": "https://api.deepseek.com/anthropic",
+    "claude_bin": "/opt/hostedtoolcache/node/22.14.0/x64/bin/claude",
+    "claude_version": "2.1.278 (Claude Code)",
+    "codex_version": null,
+    "command_mapper_sha256": "04f13188f8282bbfbd801a1815686acde3167bb64391eebf7eec3c1ffe302966",
+    "credential_env": "ANTHROPIC_API_KEY",
+    "filesystem_read_scope": "isolated standalone subject checkout",
+    "harness_environment_scrubbed": true,
+    "max_turns": 100,
+    "model": "deepseek-flash",
+    "network": "provider-direct",
+    "permission_profile": "claude-direct-narness-r6",
+    "raw_trace_file": "claude.raw.jsonl",
+    "reasoning_effort": "high",
+    "runtime_mode": "direct-host",
+    "shell_environment_allowlist": [
+      "PATH",
+      "HOME",
+      "TMPDIR",
+      "TMP",
+      "TEMP",
+      "LANG",
+      "LC_*",
+      "SHELL",
+      "USER",
+      "ANTHROPIC_BASE_URL",
+      "ANTHROPIC_API_KEY"
+    ],
+    "subagents_enabled": false,
+    "web_search": "disabled"
+  },
+  "agent_timeout_seconds": 1800,
+  "environment": {
+    "checkout_isolation": "single-ref-standalone-git-no-remote",
+    "git": "git version 2.55.0",
+    "node": "v22.14.0",
+    "npm": "10.9.2",
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "python": "3.13.2",
+    "runner_file_sha256": "4d2b5b873742d192080c50a34707a0773cc7be0c4aae44e713c9da90c326764f"
+  },
+  "notes": {
+    "formal_task_success_required_for_admissibility": false,
+    "network_policy": "offline coding agent; dependency install occurs before agent",
+    "pilot_task_success_required": false
+  },
+  "pilot_repository_sha": "bb402f208c73ada458ddc36da73f3e59dca2a7d7",
+  "pilot_set_digest_sha256": "acbae24dfd0bbe7789748a56237bbb878bc58fd22008ae53973d383d2ee617aa",
+  "profile_id": "claude-code-r8-r1",
+  "required_metrics": [
+    "search_calls",
+    "glob_calls",
+    "resolver_calls",
+    "files_read",
+    "unique_files_read",
+    "irrelevant_files_read",
+    "navigation_precision",
+    "navigation_recall",
+    "first_hit_correct",
+    "time_to_first_relevant_artifact_ms",
+    "time_to_first_edit_ms",
+    "navigation_events_before_first_edit",
+    "search_calls_before_first_edit",
+    "files_read_before_first_edit",
+    "important_artifacts_missed_count",
+    "out_of_scope_edit_count",
+    "validation_failures",
+    "patch_count",
+    "repair_loops",
+    "input_tokens",
+    "output_tokens"
+  ],
+  "schema_version": 1,
+  "setup_commands": [
+    "cd web && npm ci --legacy-peer-deps"
+  ],
+  "source_pilots": [
+    {
+      "artifacts": {
+        "agent.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "agent.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "claude.raw.jsonl": "983b1ecee67a1e127f4e0245dd07f89fc75253bc7258fc85a9ef41f7bd0774e7",
+        "claude.stderr.log": "237f355dd4c52386530c0359232c9173d42e303fab8bd6cdbe7a305e2c4803a2",
+        "final.diff": "fabf3c2c9203f8f2f70badd5817eacbec8f313e234b08cd3b30f738ff0b8c5c2",
+        "git-status.txt": "9eeb27f7e6fb83d2b275b7740aff6458dbc0d2ab1124501a8afde415a85e052e",
+        "prompt.txt": "e62b0a1f60f2a861bd7b8bb79f229db187418e5c4f9a4e181ba5e54c653cfea9",
+        "run.json": "a5d599420ae321220291f350784a417e485351073f8fac3b422732d1dd84881d",
+        "score.json": "0ee1a8fa85931e782911e751cbdfd9f001d4f1511c4858427b2bdee2fa3ca9ff",
+        "trace.jsonl": "6d9b9948df56932ca8754acc9165504695ba129d32dd1de12f5d433ac543dfd8"
+      },
+      "harness_repository_sha": "bb402f208c73ada458ddc36da73f3e59dca2a7d7",
+      "run_id": "T05-A-01",
+      "task_id": "T05",
+      "task_success": true,
+      "treatment": "A"
+    },
+    {
+      "artifacts": {
+        "agent.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "agent.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "claude.raw.jsonl": "248e5c2804f5e775927f074efc49281d878ad18f37eead1d63d32fa44d4223e1",
+        "claude.stderr.log": "237f355dd4c52386530c0359232c9173d42e303fab8bd6cdbe7a305e2c4803a2",
+        "final.diff": "b4be151dcc0876d30c0f041ad4f4ce0057c944b25c3b2ccbdcc271750faf0838",
+        "git-status.txt": "ca8803393e3bafde3cb464879cf1a0f19e8d2619e9334e6f389370c7288a49b7",
+        "prompt.txt": "dec9b42d89ffb9370c4c3a67486b18c9c62c352ea513019395a9989025718c84",
+        "run.json": "8edd75b463fe727d54dc6f6689134350a1bd2eb8d98f8c8963d8fc2abf61c51c",
+        "score.json": "10996d784248f4c2c1c0143e2d3014dc10b9a03f792b9b4d66d834bb2b3a4756",
+        "trace.jsonl": "7a26b80b9847b68ae915287109bd1da471fb70bb28196479fba5390d1fa9e133"
+      },
+      "harness_repository_sha": "bb402f208c73ada458ddc36da73f3e59dca2a7d7",
+      "run_id": "T08-B-01",
+      "task_id": "T08",
+      "task_success": true,
+      "treatment": "B"
+    },
+    {
+      "artifacts": {
+        "agent.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "agent.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "claude.raw.jsonl": "8e979489c23f3a9644642778fe23b289ce93f73d3db9eefa468205c59691d448",
+        "claude.stderr.log": "237f355dd4c52386530c0359232c9173d42e303fab8bd6cdbe7a305e2c4803a2",
+        "final.diff": "47eb4a835ed92d216acb184e9a515855edc18fad8e026d4fe46b3843f6d60bd4",
+        "git-status.txt": "912becadb3bd56633799e1fdcb26981cb38acb1c975799c7c7e38a6518e1e882",
+        "prompt.txt": "e940dcff8ba681030ae391e5c1647207b19d215f26f7b328683dcb2a55025618",
+        "run.json": "e1f3a997fdb03f0ed37913d4053a3d75bdbcfec52479febb2bb673cf684cedee",
+        "score.json": "1306c97742ea5173d4931e86b5da1fed84fa7b51517b3873f1220713ce492579",
+        "trace.jsonl": "e4dd9adfd5b9a583cff4c9cd15d9c13fc43521fe2dbc199f92b07b8640d39092"
+      },
+      "harness_repository_sha": "bb402f208c73ada458ddc36da73f3e59dca2a7d7",
+      "run_id": "T20-C-01",
+      "task_id": "T20",
+      "task_success": false,
+      "treatment": "C"
+    }
+  ],
+  "status": "frozen",
+  "tooling": {
+    "adapter_file_sha256": "cba363d5b90fd0b43876d37deeff7661d20ee5477c7b7cef68560c158f768261",
+    "command_mapper_file_sha256": "04f13188f8282bbfbd801a1815686acde3167bb64391eebf7eec3c1ffe302966",
+    "formal_orchestrator_file_sha256": "32b62b01d3541a9c414b9523084a369b3578056952bc432a8f461024e435e82e",
+    "formal_readiness_file_sha256": "d51c7f2b30bdb3b48052f1b7f6abb8c439c6c3d7502d901bb03a2fbbc435d5bb",
+    "run_seal_verifier_file_sha256": "ffbaa46d93e2aa4493ff17e7e40cf8829f0ebb778ea81a7e500b2bb86e0f7e46",
+    "runner_file_sha256": "4d2b5b873742d192080c50a34707a0773cc7be0c4aae44e713c9da90c326764f",
+    "scorer_file_sha256": "d71eb2f7993433aee9987e7308d74fc469607d53e572dd490cc111b5537987c3",
+    "seal_file_sha256": "880f4069c5d12257cc8966d86e9431090fa09ed50aac264a956e4e0960deb591"
+  }
+}
