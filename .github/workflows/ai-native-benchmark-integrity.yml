@@ -315,11 +315,11 @@ jobs:
           from pathlib import Path
           import json
           lock=json.loads(Path('docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/EXECUTION-PREPILOT-LOCK.json').read_text())
-          assert lock['execution_prepilot_revision'] == 7
+          assert lock['execution_prepilot_revision'] == 8
           assert lock['required_agent_config']['agent'] == 'claude-code'
           pilot_runner=Path('scripts/narness-run-claude-pilots.sh').read_text()
           assert "--setup-cmd 'cd web && npm ci --legacy-peer-deps'" in pilot_runner
-          assert '--profile-id claude-code-r7-r1' in pilot_runner
+          assert '--profile-id claude-code-r8-r1' in pilot_runner
           active=Path('.github/workflows/ai-native-claude-pilots.yml').read_text()
           for required in (
               'runs-on: ubuntu-24.04',
