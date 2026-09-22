@@ -64,24 +64,34 @@ jobs:
                           print('parent-event=' + json.dumps({
                               'type': event.get('type'),
                               'parent_tool_use_id': event.get('parent_tool_use_id'),
+                              'tool_use_id': event.get('tool_use_id'),
+                              'tool_name': event.get('tool_name'),
                               'subtype': event.get('subtype'),
                               'tool_names': [block.get('name') for block in blocks if block.get('type') == 'tool_use'],
                               'content_types': [block.get('type') for block in blocks],
                               'stop_reason': message.get('stop_reason'),
                           }, sort_keys=True))
-                      elif event.get('type') == 'result':
-                          print('result-event=' + json.dumps({
-                              key: event.get(key) for key in ('type','subtype','is_error','usage','modelUsage','duration_ms','cost_usd','error')
-                              if key in event
-                          }, sort_keys=True))
                       elif event.get('type') == 'assistant':
                           message = event.get('message') or {}
+                          blocks = message.get('content') or []
+                          for block in blocks:
+                              if block.get('type') == 'tool_use':
+                                  print('root-tool=' + json.dumps({
+                                      'id': block.get('id'),
+                                      'name': block.get('name'),
+                                  }, sort_keys=True))
                           if message.get('usage') or message.get('stop_reason'):
                               print('assistant-usage=' + json.dumps({
                                   'usage': message.get('usage'),
                                   'stop_reason': message.get('stop_reason'),
                                   'model': message.get('model'),
                               }, sort_keys=True))
+                      elif event.get('type') == 'result':
+                          print('result-event=' + json.dumps({
+                              key: event.get(key) for key in ('type','subtype','is_error','usage','modelUsage','duration_ms','cost_usd','error')
+                              if key in event
+                          }, sort_keys=True))
+
               for name in ('claude.stderr.log', 'agent.stderr.log'):
                   path = run_dir / name
                   if path.exists():
