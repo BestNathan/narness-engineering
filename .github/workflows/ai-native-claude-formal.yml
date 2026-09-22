@@ -38,12 +38,20 @@ concurrency:
 jobs:
   collection:
     runs-on: ubuntu-24.04
+    environment: ds
     timeout-minutes: 360
     env:
       CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
       ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
-      RUNS_ROOT: ${{ runner.temp }}/ai-native-claude-formal-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
+      - name: Set formal run root
+        id: paths
+        run: |
+          set -euo pipefail
+          runs_root="$RUNNER_TEMP/ai-native-claude-formal-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          echo "RUNS_ROOT=$runs_root" >> "$GITHUB_ENV"
+          echo "runs_root=$runs_root" >> "$GITHUB_OUTPUT"
+
       - name: Checkout the committed formal plan
         uses: actions/checkout@v4
         with:
@@ -101,7 +109,7 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ inputs.previous_run_id }}
           name: ${{ inputs.previous_artifact_name }}
-          path: ${{ env.RUNS_ROOT }}
+          path: ${{ steps.paths.outputs.runs_root }}
 
       - name: Install the pinned Claude Code client
         run: |
@@ -159,6 +167,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ai-native-claude-formal-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.start_sequence }}-${{ inputs.end_sequence }}
-          path: ${{ env.RUNS_ROOT }}
+          path: ${{ steps.paths.outputs.runs_root }}
           retention-days: 90
           if-no-files-found: warn
