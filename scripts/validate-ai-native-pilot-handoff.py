@@ -121,13 +121,17 @@ def main() -> int:
 
     frozen_tool_paths = {
         "runner_file_sha256": "scripts/ai-native-repo-experiment.py",
-        "adapter_file_sha256": "scripts/ai-native-codex-adapter.py",
+        "adapter_file_sha256": ("scripts/narness-claude-adapter.py" if profile.get("agent", {}).get("agent") == "claude-code" else "scripts/ai-native-codex-adapter.py"),
         "scorer_file_sha256": "scripts/score-ai-native-run.py",
         "seal_file_sha256": "scripts/seal-ai-native-run.py",
         "run_seal_verifier_file_sha256": "scripts/verify-ai-native-run-seal.py",
         "formal_orchestrator_file_sha256": "scripts/run-ai-native-formal.py",
         "formal_readiness_file_sha256": "scripts/prepare-ai-native-formal-collection.py",
     }
+    if profile.get("agent", {}).get("agent") == "claude-code":
+        frozen_tool_paths.update({
+            "command_mapper_file_sha256": "scripts/ai-native-codex-adapter.py",
+        })
     profile_tooling = profile.get("tooling", {})
     for key, repo_path in frozen_tool_paths.items():
         expected = git_blob_sha256(expected_repo_sha, repo_path)
