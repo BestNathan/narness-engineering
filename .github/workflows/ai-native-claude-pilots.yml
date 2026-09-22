@@ -1,6 +1,8 @@
 name: AI Native Claude Code Pilots
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -98,6 +100,33 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/narness-run-claude-pilots.sh "$GITHUB_WORKSPACE/nession" "$PILOT_OUTPUT"
+
+      - name: Report pilot setup diagnostics
+        if: failure()
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          output=Path(os.environ['PILOT_OUTPUT'])
+          secrets=[os.environ.get(name, '') for name in ('ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN')]
+          secrets=[value for value in secrets if value]
+          def redact(value):
+              for secret in secrets:
+                  value=value.replace(secret, '***')
+              return value[-4000:]
+          for path in sorted(output.glob('*/run.json')):
+              record=json.loads(path.read_text())
+              print(f"pilot setup diagnostics: {path.parent.name}")
+              for setup in record.get('commands', {}).get('setup', []):
+                  print(f"command={setup.get('command')} exit_code={setup.get('exit_code')} timed_out={setup.get('timed_out')}")
+                  for stream in ('stdout', 'stderr'):
+                      value=redact(str(setup.get(stream, '')))
+                      if value:
+                          print(f"{stream} (last 4000 chars):\n{value}")
+          PY
 
       - name: Retain pilot evidence
         if: always()
