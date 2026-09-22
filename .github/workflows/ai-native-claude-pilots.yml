@@ -2,14 +2,6 @@ name: AI Native Claude Code Pilots
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/ai-native-claude-pilots.yml'
-      - 'scripts/narness-claude-adapter.py'
-      - 'scripts/narness-run-claude-pilots.sh'
-      - 'scripts/validate-ai-native-pilot-handoff.py'
-      - 'docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/EXECUTION-PREPILOT-LOCK.json'
 
 permissions:
   contents: read
