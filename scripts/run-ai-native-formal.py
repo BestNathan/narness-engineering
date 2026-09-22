@@ -122,13 +122,17 @@ def main() -> int:
     tooling = profile.get("tooling", {})
     tool_paths = {
         "runner_file_sha256": ROOT / "scripts" / "ai-native-repo-experiment.py",
-        "adapter_file_sha256": ROOT / "scripts" / "ai-native-codex-adapter.py",
+        "adapter_file_sha256": ROOT / "scripts" / ("narness-claude-adapter.py" if profile.get("agent", {}).get("agent") == "claude-code" else "ai-native-codex-adapter.py"),
         "scorer_file_sha256": ROOT / "scripts" / "score-ai-native-run.py",
         "seal_file_sha256": ROOT / "scripts" / "seal-ai-native-run.py",
         "run_seal_verifier_file_sha256": ROOT / "scripts" / "verify-ai-native-run-seal.py",
         "formal_orchestrator_file_sha256": ROOT / "scripts" / "run-ai-native-formal.py",
         "formal_readiness_file_sha256": ROOT / "scripts" / "prepare-ai-native-formal-collection.py",
     }
+    if profile.get("agent", {}).get("agent") == "claude-code":
+        tool_paths.update({
+            "command_mapper_file_sha256": ROOT / "scripts/ai-native-codex-adapter.py",
+        })
     for key, tool_path in tool_paths.items():
         expected = tooling.get(key)
         actual = file_sha256(tool_path)
@@ -184,11 +188,14 @@ def main() -> int:
     model = profile["agent"]["model"]
     effort = profile["agent"]["reasoning_effort"]
     timeout = profile["agent_timeout_seconds"]
-    adapter = ROOT / "scripts" / "ai-native-codex-adapter.py"
+    adapter = ROOT / "scripts" / ("narness-claude-adapter.py" if profile.get("agent", {}).get("agent") == "claude-code" else "ai-native-codex-adapter.py")
     agent_cmd = (
         f"{shlex.quote(sys.executable)} {shlex.quote(str(adapter))} "
         f"--model {shlex.quote(str(model))} --effort {shlex.quote(str(effort))}"
     )
+
+    if profile["agent"].get("agent") == "claude-code":
+        agent_cmd += " --max-turns " + str(int(profile["agent"]["max_turns"]))
 
     verifier = ROOT / "scripts" / "verify-ai-native-run-seal.py"
     benchmark_sha = load(lock_path)["definition_sha"]
