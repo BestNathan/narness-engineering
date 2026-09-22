@@ -1,0 +1,109 @@
+name: AI Native Codex Pilots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ai-native-codex-pilots.yml'
+      - 'docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/PILOT-RUN-TRIGGER'
+
+permissions:
+  contents: read
+
+jobs:
+  pilots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      OPENAI_API_KEY: \${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - name: Checkout Narness Engineering
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout Nession
+        uses: actions/checkout@v4
+        with:
+          repository: BestNathan/nession
+          path: nession
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Require OpenAI API key
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "\${OPENAI_API_KEY:-}" ]]; then
+            echo "::error::Repository secret OPENAI_API_KEY is not configured."
+            echo "::error::Formal research execution cannot proceed without real Codex authentication."
+            exit 78
+          fi
+
+      - name: Install Codex CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global @openai/codex
+          codex --version
+
+      - name: Authenticate Codex CLI for CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          printenv OPENAI_API_KEY | codex login --with-api-key
+          codex login status
+
+      - name: Run fresh A/B/C instrumentation pilots
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/run-ai-native-codex-pilots.sh \
+            "$GITHUB_WORKSPACE/nession" \
+            "$GITHUB_WORKSPACE/research-runs/pilots"
+
+      - name: Verify generated execution metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXP="docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
+          test -s "$EXP/runner/execution-profile-r1.json"
+          test -s "$EXP/runner/formal-schedule-r1.json"
+          test -s "$EXP/runner/formal-plan-r1.lock.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          exp=Path("docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09")
+          profile=json.loads((exp/"runner/execution-profile-r1.json").read_text())
+          schedule=json.loads((exp/"runner/formal-schedule-r1.json").read_text())
+          plan=json.loads((exp/"runner/formal-plan-r1.lock.json").read_text())
+          assert profile["status"] == "frozen"
+          assert schedule["status"] == "pre-registered"
+          assert schedule["run_count"] == 216
+          assert plan["status"] == "frozen"
+          assert plan["run_count"] == 216
+          print("Generated execution metadata is complete.")
+          PY
+
+      - name: Upload pilot evidence and generated execution locks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-native-codex-pilots-\${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            research-runs/pilots/
+            docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/execution-profile-r1.json
+            docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-schedule-r1.json
+            docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-plan-r1.lock.json
