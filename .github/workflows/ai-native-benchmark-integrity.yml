@@ -304,18 +304,26 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          text=Path('.github/workflows/ai-native-codex-pilots-self-hosted.yml').read_text()
+          import json
+          lock=json.loads(Path('docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/EXECUTION-PREPILOT-LOCK.json').read_text())
           required=[
             'runs-on: [self-hosted, ai-native-research]',
             'persist-credentials: false',
-            'research/ai-native-execution-prepilot-r4',
+            'ref: ' + lock['repository_sha'],
+            'ref: 88d08dd95b69a217f9433b84b35179663ace4e09',
+            'path: pilot-control',
+            'python3 pilot-control/scripts/validate-ai-native-pilot-handoff.py',
+            'group: ai-native-codex-pilots-r2-frozen',
+            '$' + '{{ github.run_attempt }}',
             'codex login status',
             'OPENAI_API_KEY',
             'CODEX_ACCESS_TOKEN',
-            './scripts/run-ai-native-codex-pilots.sh',
+            'bash ./scripts/run-ai-native-codex-pilots.sh',
           ]
-          missing=[value for value in required if value not in text]
-          assert not missing, missing
+          for name in ('ai-native-codex-pilots-self-hosted.yml', 'ai-native-codex-pilots-self-hosted-trigger.yml'):
+            text=(Path('.github/workflows') / name).read_text()
+            missing=[value for value in required if value not in text]
+            assert not missing, (name, missing)
           PY
 
       - name: Validate Codex execution isolation contract
