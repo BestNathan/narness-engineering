@@ -333,6 +333,9 @@ jobs:
               assert required in active, required
           assert 'self-hosted' not in active
           assert 'nession_path' not in active
+          assert 'push:' in active
+          assert 'branches: [main]' in active
+          assert 'Report pilot setup diagnostics' in active
           formal=Path('.github/workflows/ai-native-claude-formal.yml').read_text()
           for required in (
               'runs-on: ubuntu-24.04',
