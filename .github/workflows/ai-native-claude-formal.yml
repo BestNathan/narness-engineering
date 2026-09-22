@@ -58,7 +58,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require the committed R6 formal gate
+      - name: Require the committed R7 formal gate
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -71,11 +71,11 @@ jobs:
           profile=json.loads((exp/'runner/execution-profile-r1.json').read_text())
           schedule=json.loads((exp/'runner/formal-schedule-r1.json').read_text())
           plan=json.loads((exp/'runner/formal-plan-r1.lock.json').read_text())
-          assert lock['execution_prepilot_revision'] == 6
+          assert lock['execution_prepilot_revision'] == 7
           assert lock['required_agent_config']['agent'] == 'claude-code'
           assert profile['status'] == 'frozen'
           assert profile['agent']['agent'] == 'claude-code'
-          assert profile['profile_id'] == 'claude-code-r6-r1'
+          assert profile['profile_id'] == 'claude-code-r7-r1'
           assert schedule['status'] == 'pre-registered'
           assert schedule['run_count'] == 216
           assert plan['status'] == 'frozen'
