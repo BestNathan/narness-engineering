@@ -1,0 +1,79 @@
+name: Inspect retained Claude pilot artifact
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/inspect-r7-pilot-artifact.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  inspect:
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'debug/inspect-r7-pilot-artifact')
+    runs-on: ubuntu-24.04
+    environment: ds
+    steps:
+      - name: Download the failed pilot handoff
+        uses: actions/download-artifact@v4
+        with:
+          name: ai-native-claude-r6-35719597268-1
+          repository: BestNathan/narness-engineering
+          run-id: 35719597268
+          github-token: ${{ github.token }}
+          path: pilot-artifact
+
+      - name: Print redacted run and usage diagnostics
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          secret = os.environ.get('ANTHROPIC_API_KEY', '')
+          def redact(value):
+              value = value.replace(secret, '***') if secret else value
+              value = re.sub(r'(?i)(bearer\s+)[^\s]+', r'\1***', value)
+              value = re.sub(r'(?i)(sk-[A-Za-z0-9_-]{12,})', '***', value)
+              return value
+          for run_dir in sorted(Path('pilot-artifact').glob('**/T*-*-01')):
+              run_path = run_dir / 'run.json'
+              if not run_path.exists():
+                  continue
+              run = json.loads(run_path.read_text())
+              agent = (run.get('commands') or {}).get('agent') or {}
+              print(json.dumps({
+                  'run_id': run.get('run_id'),
+                  'runner_error': run.get('runner_error'),
+                  'agent_exit_ok': run.get('agent_exit_ok'),
+                  'agent_exit_code': agent.get('exit_code'),
+                  'agent_timed_out': agent.get('timed_out'),
+                  'trace_complete': run.get('trace_complete'),
+              }, sort_keys=True))
+              raw = run_dir / 'claude.raw.jsonl'
+              if raw.exists():
+                  for line in raw.read_text(errors='replace').splitlines():
+                      try:
+                          event = json.loads(line)
+                      except json.JSONDecodeError:
+                          continue
+                      if event.get('type') == 'result':
+                          print('result-event=' + json.dumps({
+                              key: event.get(key) for key in ('type','subtype','is_error','usage','modelUsage','duration_ms','cost_usd','error')
+                              if key in event
+                          }, sort_keys=True))
+                      elif event.get('type') == 'assistant':
+                          message = event.get('message') or {}
+                          if message.get('usage') or message.get('stop_reason'):
+                              print('assistant-usage=' + json.dumps({
+                                  'usage': message.get('usage'),
+                                  'stop_reason': message.get('stop_reason'),
+                                  'model': message.get('model'),
+                              }, sort_keys=True))
+              for name in ('claude.stderr.log', 'agent.stderr.log'):
+                  path = run_dir / name
+                  if path.exists():
+                      tail = '\n'.join(path.read_text(errors='replace').splitlines()[-60:])
+                      print(name + ' tail:\n' + redact(tail))
+          PY
