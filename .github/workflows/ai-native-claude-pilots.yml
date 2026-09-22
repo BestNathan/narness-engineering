@@ -13,6 +13,7 @@ concurrency:
 jobs:
   pilots:
     runs-on: ubuntu-24.04
+    environment: ds
     timeout-minutes: 240
     env:
       CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
