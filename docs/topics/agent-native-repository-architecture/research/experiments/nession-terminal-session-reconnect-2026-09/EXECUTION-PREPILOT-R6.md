@@ -5,15 +5,20 @@ Codex to an installed Claude Code client before any real or reportable pilot.
 Benchmark R2 and Analysis R2 remain unchanged. R5's container and model-gateway
 path is historical and must not be mixed with R6 evidence.
 
+All active execution is hosted in GitHub Actions. The workflow uses a disposable
+GitHub-hosted `ubuntu-24.04` machine; no self-hosted runner or local Claude Code
+process is part of the R6 protocol.
+
 ## Required environment
 
-Set these values in the process that launches the pilot script:
+Set these repository-level GitHub Actions values before dispatching
+`.github/workflows/ai-native-claude-pilots.yml`:
 
 ```text
-ANTHROPIC_API_KEY     required unless ANTHROPIC_AUTH_TOKEN is used
-ANTHROPIC_BASE_URL    required HTTPS or HTTP-compatible Anthropic Messages URL
+ANTHROPIC_API_KEY     required repository secret
+ANTHROPIC_BASE_URL    optional repository variable; defaults to official endpoint
 CLAUDE_MODEL          required explicit model ID; aliases are rejected
-NARNESS_CLAUDE_BIN   optional; defaults to claude
+NARNESS_CLAUDE_BIN   not set in hosted workflow; defaults to claude
 ```
 
 Do not paste the API key into source files, issue comments, logs, prompts, or
@@ -21,9 +26,9 @@ chat. The adapter passes the selected Anthropic credential only to the Claude
 child process and never includes its value in trace metadata. Codex credentials
 are rejected for this path.
 
-## Client installation
+## Hosted client installation
 
-Install the pinned CLI once on the research machine:
+The workflow installs the pinned CLI on every fresh GitHub-hosted job:
 
 ```bash
 npm install --global @anthropic-ai/claude-code@2.1.278
@@ -34,16 +39,12 @@ The pilot preflight calls `claude --version` and verifies the configured base UR
 and credential before spending model budget. A moving CLI or model version is not
 accepted after the R6 profile is frozen.
 
-## Pilot command
+## Pilot workflow
 
-From a clean checkout of the R6 execution commit, with a clean Nession checkout:
-
-```bash
-CLAUDE_MODEL='your-explicit-model-id' \
-ANTHROPIC_BASE_URL='https://api.anthropic.com' \
-ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-bash scripts/narness-run-claude-pilots.sh /path/to/nession
-```
+Dispatch **AI Native Claude Code Pilots** manually. The workflow checks out the
+R6 execution SHA from `EXECUTION-PREPILOT-LOCK.json`, checks out
+`BestNathan/nession` as a clean subject repository, and injects the secret only
+into the pilot step.
 
 The command runs T05/A, T08/B, and T20/C in fresh standalone single-ref subject
 checkouts. It uses Claude Code print mode with `stream-json`, disables session
@@ -60,7 +61,7 @@ contract and emits one cumulative usage event from the terminal result.
 
 ## Freeze and formal gate
 
-After the three real pilots pass, the command generates the same three required
+After the three real pilots pass, the workflow generates the same three required
 files:
 
 ```text
@@ -76,6 +77,8 @@ The formal readiness gate rechecks the installed client and base URL. Changing
 the client, model, endpoint, adapter, or execution policy requires a new pilot
 profile; do not silently continue an existing formal collection.
 
-Review and commit the three generated files plus `runner/PILOT-FREEZE.json` on a
-formal-execution branch before any 216-run collection. Synthetic adapter tests
-are protocol tests only and cannot be promoted as pilot evidence.
+Review the handoff artifact, then dispatch **AI Native Claude Pilot Promotion**.
+That hosted workflow validates the evidence and opens a draft PR containing the
+three generated files plus `runner/PILOT-FREEZE.json`; merge that PR before any
+216-run collection. Synthetic adapter tests are protocol tests only and cannot be
+promoted as pilot evidence.
