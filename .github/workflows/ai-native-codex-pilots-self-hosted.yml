@@ -22,6 +22,7 @@ concurrency:
 
 jobs:
   pilots:
+    if: ${{ false }} # Superseded by the Claude Code R5 execution revision.
     # Requires an explicitly labeled trusted runner. Keep Codex auth in the
     # credential store; do not inject OPENAI_API_KEY or CODEX_ACCESS_TOKEN.
     runs-on: [self-hosted, ai-native-research]

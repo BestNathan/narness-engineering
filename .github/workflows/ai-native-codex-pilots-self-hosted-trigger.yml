@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   pilots:
+    if: ${{ false }} # Superseded by the Claude Code R5 execution revision.
     runs-on: [self-hosted, ai-native-research]
     timeout-minutes: 240
 

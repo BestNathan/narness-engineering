@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "execution_prepilot_revision": 4,
+  "execution_prepilot_revision": 6,
   "status": "frozen-before-real-pilots",
-  "branch": "research/ai-native-execution-prepilot-r4",
-  "repository_sha": "d01117beb44e57c24cb6b73ae8c4c9f89100e825",
+  "branch": "main",
+  "repository_sha": "d35abcbf632c7a89af707d7c0fe15e5554c36c9b",
   "benchmark_revision": 2,
   "benchmark_definition_sha": "194bf5dc1a28f4e4c10491d7326891ba157d325b",
   "analysis_revision": 2,
@@ -29,24 +29,27 @@
     }
   ],
   "integrity": {
-    "benchmark_workflow_run_id": 35630413932,
-    "benchmark_workflow_conclusion": "success",
-    "general_ci_run_id": 35630413911,
-    "general_ci_conclusion": "success"
+    "local_validation": "passed",
+    "github_ci": "pending-publication",
+    "real_pilots": "not-executed"
   },
   "supersedes": {
-    "execution_prepilot_revision": 3,
-    "repository_sha": "1519adcb31bc66d5741e4cd0e67e54c79b19eef1",
-    "reason": "Linked Git worktrees shared the source repository object database/refs, creating a hidden-oracle and research-branch leakage channel. Revision 4 replaces them with standalone single-ref repositories that preserve only the treatment commit ancestry, expose no remote, retain no source path, and exclude hidden/non-ancestor objects."
+    "execution_prepilot_revision": 5,
+    "repository_sha": "8bab203034f97345541783c32c9e646d923b40a7",
+    "reason": "The requested execution path is an installed Claude Code client receiving ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL directly. The containerized R5 gateway is retained as historical design only; benchmark and analysis semantics remain frozen."
   },
-  "promotion_rule": "A pilot handoff is promotable only if all three pilot run records and the generated execution profile identify repository_sha d01117beb44e57c24cb6b73ae8c4c9f89100e825, use checkout_isolation single-ref-standalone-git-no-remote, satisfy the Revision-3 Codex permission profile requirements, and the profile/schedule/formal-plan identities agree.",
+  "promotion_rule": "Only real direct Claude Code T05/A, T08/B, T20/C evidence from repository_sha d35abcbf632c7a89af707d7c0fe15e5554c36c9b may freeze the R6 profile. Require isolated subject checkout, registered agent policy, exact installed CLI/model/base URL, exact tool hashes, and profile/schedule/formal-plan identity. Synthetic replay evidence cannot be promoted.",
   "required_agent_config": {
-    "permission_profile": "narness-research",
-    "filesystem_read_scope": "workspace-only-plus-minimal-runtime; temp roots denied",
-    "network": false,
+    "agent": "claude-code",
+    "network": "provider-direct",
+    "permission_profile": "claude-direct-narness-r6",
+    "filesystem_read_scope": "isolated standalone subject checkout",
     "subagents_enabled": false,
     "web_search": "disabled",
     "harness_environment_scrubbed": true,
+    "reasoning_effort": "high",
+    "max_turns": 100,
+    "raw_trace_file": "claude.raw.jsonl",
     "shell_environment_allowlist": [
       "PATH",
       "HOME",
@@ -56,7 +59,9 @@
       "LANG",
       "LC_*",
       "SHELL",
-      "USER"
+      "USER",
+      "ANTHROPIC_BASE_URL",
+      "ANTHROPIC_API_KEY"
     ]
   },
   "required_environment": {

@@ -41,7 +41,7 @@ def main() -> int:
     run_dir = args.run_dir.resolve()
     errors: list[str] = []
 
-    for required in ("run.json", "trace.jsonl", "codex.raw.jsonl", "score.json", "final.diff"):
+    for required in ("run.json", "trace.jsonl", "score.json", "final.diff"):
         if not (run_dir / required).exists():
             fail(f"missing artifact: {required}", errors)
 
@@ -53,14 +53,19 @@ def main() -> int:
     run = load_json(run_dir / "run.json")
     score = load_json(run_dir / "score.json")
     trace = load_jsonl(run_dir / "trace.jsonl")
-    raw = load_jsonl(run_dir / "codex.raw.jsonl")
+    config = next((e for e in trace if e.get("type") == "agent-config"), {})
+    raw_name = "claude.raw.jsonl" if config.get("agent") == "claude-code" else "codex.raw.jsonl"
+    if not (run_dir / raw_name).exists():
+        print(f"ERROR: missing artifact: {raw_name}")
+        return 1
+    raw = load_jsonl(run_dir / raw_name)
 
     types = [event.get("type") for event in trace]
 
     if not run.get("trace_present"):
         fail("run.json does not report a present structured trace", errors)
     if not raw:
-        fail("raw Codex JSONL is empty", errors)
+        fail("raw agent JSONL is empty", errors)
     if not any(t in NAV_TYPES for t in types):
         fail("no navigation event captured", errors)
     if "edit" not in types:
@@ -70,7 +75,7 @@ def main() -> int:
         fail("no usage event captured", errors)
     elif usage_count != 1:
         fail(
-            f"expected exactly one usage event for one ephemeral Codex turn; "
+            f"expected exactly one usage event for one fresh agent task; "
             f"captured {usage_count}",
             errors,
         )

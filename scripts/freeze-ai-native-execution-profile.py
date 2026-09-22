@@ -22,7 +22,6 @@ PILOT_ARTIFACTS = (
     "run.json",
     "score.json",
     "trace.jsonl",
-    "codex.raw.jsonl",
     "final.diff",
     "prompt.txt",
     "git-status.txt",
@@ -111,14 +110,21 @@ def main() -> int:
             raise RuntimeError(f"{run_dir}: no edit event captured")
 
         artifact_hashes: dict[str, str] = {}
-        for name in PILOT_ARTIFACTS:
+        if cfg.get("agent") == "claude-code-replay":
+            raise RuntimeError("replay evidence cannot freeze a real execution profile")
+        if cfg.get("agent") == "claude-code":
+            for field in ("claude_version", "claude_bin", "base_url", "credential_env", "runtime_mode", "command_mapper_sha256"):
+                if not cfg.get(field):
+                    raise RuntimeError(f"Claude pilot omitted {field}")
+        raw_name = "claude.raw.jsonl" if cfg.get("agent") == "claude-code" else "codex.raw.jsonl"
+        for name in (*PILOT_ARTIFACTS, raw_name):
             path = run_dir / name
             if not path.exists():
                 raise RuntimeError(
                     f"{run_dir}: required pilot artifact is missing: {name}"
                 )
             artifact_hashes[name] = file_sha256(path)
-        for optional_name in ("codex.stderr.log",):
+        for optional_name in ("codex.stderr.log", "claude.stderr.log"):
             path = run_dir / optional_name
             if path.exists():
                 artifact_hashes[optional_name] = file_sha256(path)
@@ -148,6 +154,14 @@ def main() -> int:
         "shell_environment_allowlist",
         "harness_environment_scrubbed",
         "codex_version",
+        "claude_version",
+        "claude_bin",
+        "base_url",
+        "credential_env",
+        "runtime_mode",
+        "max_turns",
+        "command_mapper_sha256",
+        "raw_trace_file",
         "adapter_file_sha256",
     ]
     env_keys = [
@@ -258,6 +272,11 @@ def main() -> int:
             "network_policy": "offline coding agent; dependency install occurs before agent",
         },
     }
+
+    if agent_profile.get("agent") == "claude-code":
+        profile["tooling"]["command_mapper_file_sha256"] = file_sha256(
+            ROOT / "scripts/ai-native-codex-adapter.py"
+        )
 
     output = args.output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)

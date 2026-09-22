@@ -2,12 +2,19 @@ name: AI Native Benchmark Integrity
 
 on:
   workflow_dispatch:
+  pull_request:
   push:
     paths:
       - 'scripts/*ai-native*'
+      - 'scripts/narness-*claude*'
+      - 'research/claude-runtime/**'
+      - '.github/workflows/ai-native-claude-pilots.yml'
+      - '.github/workflows/ai-native-claude-promote.yml'
+      - '.github/workflows/ai-native-claude-formal.yml'
       - 'docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/**'
       - '.github/workflows/ai-native-benchmark-integrity.yml'
       - '.github/workflows/ai-native-codex-pilots-self-hosted.yml'
+      - '.github/workflows/ai-native-codex-pilots-self-hosted-trigger.yml'
 
 jobs:
   validate:
@@ -33,7 +40,9 @@ jobs:
             scripts/validate-ai-native-pilot-handoff.py \
             scripts/promote-ai-native-pilot-handoff.py \
             scripts/ai-native-codex-adapter.py \
+            scripts/narness-claude-adapter.py \
             scripts/preflight-ai-native-codex-pilots.py \
+            scripts/narness-selftest-claude-adapter.py \
             scripts/selftest-ai-native-runner.py \
             scripts/selftest-ai-native-checkout-isolation.py \
             scripts/selftest-ai-native-execution-profile.py \
@@ -300,31 +309,66 @@ jobs:
       - name: Validate pilot shell syntax
         run: bash -n scripts/run-ai-native-codex-pilots.sh
 
-      - name: Validate self-hosted pilot workflow contract
+      - name: Validate hosted-only pilot workflow contract
         run: |
           python - <<'PY'
           from pathlib import Path
           import json
           lock=json.loads(Path('docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/EXECUTION-PREPILOT-LOCK.json').read_text())
-          required=[
-            'runs-on: [self-hosted, ai-native-research]',
-            'persist-credentials: false',
-            'ref: ' + lock['repository_sha'],
-            'ref: 88d08dd95b69a217f9433b84b35179663ace4e09',
-            'path: pilot-control',
-            'python3 pilot-control/scripts/validate-ai-native-pilot-handoff.py',
-            'group: ai-native-codex-pilots-r2-frozen',
-            '$' + '{{ github.run_attempt }}',
-            'codex login status',
-            'OPENAI_API_KEY',
-            'CODEX_ACCESS_TOKEN',
-            'bash ./scripts/run-ai-native-codex-pilots.sh',
-          ]
-          for name in ('ai-native-codex-pilots-self-hosted.yml', 'ai-native-codex-pilots-self-hosted-trigger.yml'):
-            text=(Path('.github/workflows') / name).read_text()
-            missing=[value for value in required if value not in text]
-            assert not missing, (name, missing)
+          assert lock['execution_prepilot_revision'] == 6
+          assert lock['required_agent_config']['agent'] == 'claude-code'
+          active=Path('.github/workflows/ai-native-claude-pilots.yml').read_text()
+          for required in (
+              'runs-on: ubuntu-24.04',
+              'secrets.ANTHROPIC_API_KEY',
+              'vars.CLAUDE_MODEL',
+              'persist-credentials: false',
+              'node-version: \'22.14.0\'',
+              'python-version: \'3.13.2\'',
+              'npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278',
+              'ANTHROPIC_BASE_URL',
+              'scripts/narness-run-claude-pilots.sh',
+              'scripts/validate-ai-native-pilot-handoff.py',
+          ):
+              assert required in active, required
+          assert 'self-hosted' not in active
+          assert 'nession_path' not in active
+          formal=Path('.github/workflows/ai-native-claude-formal.yml').read_text()
+          for required in (
+              'runs-on: ubuntu-24.04',
+              'secrets.ANTHROPIC_API_KEY',
+              'vars.CLAUDE_MODEL',
+              'node-version: \'22.14.0\'',
+              'python-version: \'3.13.2\'',
+              'scripts/run-ai-native-formal.py',
+              'scripts/verify-ai-native-collection.py',
+              'timeout-minutes: 360',
+          ):
+              assert required in formal, required
+          assert 'self-hosted' not in formal
+          promote=Path('.github/workflows/ai-native-claude-promote.yml').read_text()
+          for required in (
+              'actions/download-artifact@v4',
+              'scripts/promote-ai-native-pilot-handoff.py',
+              'contents: write',
+              'pull-requests: write',
+          ):
+              assert required in promote, required
+          for name in (
+              'ai-native-codex-pilots-self-hosted.yml',
+              'ai-native-codex-pilots-self-hosted-trigger.yml',
+          ):
+              historical=(Path('.github/workflows') / name).read_text()
+              disabled='if: ' + '$' + '{{ false }}'
+              assert disabled in historical, name
+              assert 'self-hosted' in historical, name
           PY
+
+      - name: Validate Claude Code execution instrumentation
+        run: |
+          python -m py_compile scripts/narness-claude-adapter.py
+          bash -n scripts/narness-run-claude-pilots.sh
+          python scripts/narness-selftest-claude-adapter.py
 
       - name: Validate Codex execution isolation contract
         run: |

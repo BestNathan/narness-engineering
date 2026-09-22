@@ -1,6 +1,6 @@
 # Nession Terminal / Session Reconnect Experiment
 
-> Status: Benchmark Revision 2 and Analysis Revision 2 frozen. Real Codex instrumentation pilots are the remaining gate before reportable formal collection.
+> Status: Benchmark Revision 2 and Analysis Revision 2 frozen. Real Claude Code R6 instrumentation pilots on GitHub-hosted Actions are the remaining gate before reportable formal collection.
 
 ## Research question
 
@@ -70,13 +70,13 @@ T23–T24   evidence / mutation-oriented tasks
 ```text
 Frozen benchmark + analysis
           ↓
-3 non-reportable Codex pilots
+3 non-reportable Claude Code R6 pilots on GitHub-hosted Actions
           ↓
 execution-profile-r1.json
 formal-schedule-r1.json
 formal-plan-r1.lock.json
           ↓
-commit + collection-start lock
+promotion PR merged + collection-start lock
           ↓
 216 reportable formal runs
           ↓
@@ -101,11 +101,10 @@ publication-manifest.json
 
 ## Current gate
 
-The next action requires a local machine with an authenticated Codex CLI and clean Narness/Nession checkouts:
-
-```bash
-./scripts/run-ai-native-codex-pilots.sh /path/to/nession
-```
+The next action is a manually dispatched GitHub-hosted Claude Code workflow.
+Configure the `ANTHROPIC_API_KEY` secret plus `CLAUDE_MODEL` and (if needed)
+`ANTHROPIC_BASE_URL` repository variables, then dispatch
+`.github/workflows/ai-native-claude-pilots.yml`.
 
 The three pilot cells are:
 
@@ -115,14 +114,14 @@ T08 / B
 T20 / C
 ```
 
-Pilot task success itself is not required. Complete, trustworthy instrumentation is required. The active execution handoff is `research/ai-native-execution-prepilot-r4@d01117beb44e57c24cb6b73ae8c4c9f89100e825`.
+Pilot task success itself is not required. Complete, trustworthy instrumentation is required. The active execution handoff is the registered direct Claude Code R6 lock in `EXECUTION-PREPILOT-LOCK.json`.
 
 ## Key documents
 
 - [Protocol](protocol.md)
 - [Runbook](RUNBOOK.md)
 - [Instrumentation pilots](instrumentation-pilots.md)
-- [Execution Pre-Pilot Revision 4](EXECUTION-PREPILOT-R4.md)
+- [Execution Pre-Pilot Revision 6](EXECUTION-PREPILOT-R6.md)
 - [Benchmark Revision 2](REVISION-2-FROZEN.md)
 - [Analysis Revision 2](ANALYSIS-REVISION-2-FROZEN.md)
 - [Pre-registered analysis plan](ANALYSIS-PLAN.md)

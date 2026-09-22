@@ -1,0 +1,164 @@
+name: AI Native Claude Formal Collection
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_sequence:
+        description: First pre-registered schedule sequence to execute
+        required: true
+        default: '1'
+        type: string
+      end_sequence:
+        description: Last pre-registered schedule sequence to execute
+        required: true
+        default: '216'
+        type: string
+      recover_incomplete:
+        description: Quarantine and restart an existing incomplete run directory
+        required: true
+        default: false
+        type: boolean
+      previous_run_id:
+        description: Optional prior formal workflow run ID whose artifact should be resumed
+        required: false
+        type: string
+      previous_artifact_name:
+        description: Exact prior formal artifact name when resuming
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: ai-native-claude-formal-${{ inputs.start_sequence }}-${{ inputs.end_sequence }}
+  cancel-in-progress: false
+
+jobs:
+  collection:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+      ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
+      RUNS_ROOT: ${{ runner.temp }}/ai-native-claude-formal-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Checkout the committed formal plan
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require the committed R6 formal gate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          exp=Path('docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09')
+          lock=json.loads((exp/'EXECUTION-PREPILOT-LOCK.json').read_text())
+          profile=json.loads((exp/'runner/execution-profile-r1.json').read_text())
+          schedule=json.loads((exp/'runner/formal-schedule-r1.json').read_text())
+          plan=json.loads((exp/'runner/formal-plan-r1.lock.json').read_text())
+          assert lock['execution_prepilot_revision'] == 6
+          assert lock['required_agent_config']['agent'] == 'claude-code'
+          assert profile['status'] == 'frozen'
+          assert profile['agent']['agent'] == 'claude-code'
+          assert profile['profile_id'] == 'claude-code-r6-r1'
+          assert schedule['status'] == 'pre-registered'
+          assert schedule['run_count'] == 216
+          assert plan['status'] == 'frozen'
+          assert plan['run_count'] == 216
+          assert os.environ['CLAUDE_MODEL'] == profile['agent']['model']
+          assert os.environ['ANTHROPIC_API_KEY'], 'Set repository secret ANTHROPIC_API_KEY'
+          assert os.environ['ANTHROPIC_BASE_URL'] == profile['agent']['base_url']
+          PY
+
+      - name: Checkout the frozen Nession subject repository
+        uses: actions/checkout@v4
+        with:
+          repository: BestNathan/nession
+          path: nession
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.2'
+
+      - name: Restore a prior formal artifact for hosted recovery
+        if: ${{ inputs.previous_run_id != '' && inputs.previous_artifact_name != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.previous_run_id }}
+          name: ${{ inputs.previous_artifact_name }}
+          path: ${{ env.RUNS_ROOT }}
+
+      - name: Install the pinned Claude Code client
+        run: |
+          set -euo pipefail
+          npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
+          claude --version
+
+      - name: Run formal readiness and the registered schedule
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ inputs.previous_run_id }}" || -n "${{ inputs.previous_artifact_name }}" ]]; then
+            test -n "${{ inputs.previous_run_id }}"
+            test -n "${{ inputs.previous_artifact_name }}"
+          fi
+          EXP="$GITHUB_WORKSPACE/docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
+          args=(
+            --source-repo "$GITHUB_WORKSPACE/nession"
+            --schedule "$EXP/runner/formal-schedule-r1.json"
+            --execution-profile "$EXP/runner/execution-profile-r1.json"
+            --formal-plan-lock "$EXP/runner/formal-plan-r1.lock.json"
+            --runs-root "$RUNS_ROOT"
+            --start-sequence "${{ inputs.start_sequence }}"
+            --end-sequence "${{ inputs.end_sequence }}"
+          )
+          if [[ "${{ inputs.recover_incomplete }}" == 'true' ]]; then
+            args+=(--recover-incomplete)
+          fi
+          python3 scripts/run-ai-native-formal.py "${args[@]}"
+
+      - name: Verify the sealed collection
+        if: always()
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          EXP="$GITHUB_WORKSPACE/docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
+          args=(
+            --runs-root "$RUNS_ROOT"
+            --schedule "$EXP/runner/formal-schedule-r1.json"
+            --execution-profile "$EXP/runner/execution-profile-r1.json"
+            --benchmark-lock "$EXP/BENCHMARK-LOCK.json"
+            --analysis-lock "$EXP/ANALYSIS-LOCK.json"
+            --formal-plan-lock "$EXP/runner/formal-plan-r1.lock.json"
+            --output "$RUNS_ROOT/collection-manifest.json"
+          )
+          if [[ "${{ inputs.start_sequence }}" != '1' || "${{ inputs.end_sequence }}" != '216' ]]; then
+            args+=(--allow-incomplete)
+          fi
+          python3 scripts/verify-ai-native-collection.py "${args[@]}"
+
+      - name: Upload formal collection artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-native-claude-formal-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.start_sequence }}-${{ inputs.end_sequence }}
+          path: ${{ env.RUNS_ROOT }}
+          retention-days: 90
+          if-no-files-found: warn

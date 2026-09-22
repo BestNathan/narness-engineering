@@ -1,0 +1,119 @@
+name: AI Native Claude Code Pilots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-native-claude-pilots-r6
+  cancel-in-progress: false
+
+jobs:
+  pilots:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+      ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
+      PILOT_OUTPUT: ${{ runner.temp }}/claude-pilots-${{ github.run_id }}-${{ github.run_attempt }}
+      HANDOFF: ${{ runner.temp }}/claude-handoff-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Checkout registration and handoff controller
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve registered Claude execution revision
+        id: contract
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          lock=json.loads(Path('docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/EXECUTION-PREPILOT-LOCK.json').read_text())
+          assert lock['execution_prepilot_revision'] == 6, 'Claude direct R6 is not registered yet'
+          assert lock['required_agent_config']['agent'] == 'claude-code'
+          assert os.environ['CLAUDE_MODEL'], 'Set repository variable CLAUDE_MODEL to an explicit model ID'
+          assert os.environ['CLAUDE_MODEL'] not in ('sonnet', 'opus', 'haiku', 'default'), 'Moving model aliases are not allowed'
+          assert os.environ['ANTHROPIC_API_KEY'], 'Set repository secret ANTHROPIC_API_KEY'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write('sha='+lock['repository_sha']+'\n')
+          PY
+
+      - name: Checkout frozen execution revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.contract.outputs.sha }}
+          path: execution
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify frozen execution checkout
+        working-directory: execution
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ steps.contract.outputs.sha }}"
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Checkout frozen subject objects
+        uses: actions/checkout@v4
+        with:
+          repository: BestNathan/nession
+          path: nession
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.2'
+
+      - name: Install pinned Claude Code client
+        run: |
+          set -euo pipefail
+          npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
+          claude --version
+
+      - name: Run three fresh non-reportable Claude pilots
+        working-directory: execution
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          bash scripts/narness-run-claude-pilots.sh "$GITHUB_WORKSPACE/nession" "$PILOT_OUTPUT"
+
+      - name: Retain pilot evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p "$HANDOFF"
+          EXP=execution/docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09
+          for name in execution-profile-r1.json formal-schedule-r1.json formal-plan-r1.lock.json; do
+            if [[ -f "$EXP/runner/$name" ]]; then cp "$EXP/runner/$name" "$HANDOFF/"; fi
+          done
+          if [[ -d "$PILOT_OUTPUT" ]]; then cp -R "$PILOT_OUTPUT" "$HANDOFF/pilot-runs"; fi
+          echo "repository_sha=$(git -C execution rev-parse HEAD)" > "$HANDOFF/workflow-metadata.txt"
+          echo "workflow_run_id=$GITHUB_RUN_ID" >> "$HANDOFF/workflow-metadata.txt"
+
+      - name: Validate handoff with registered R6 controller
+        if: success()
+        run: |
+          python3 scripts/validate-ai-native-pilot-handoff.py \
+            --handoff-dir "$HANDOFF" --output "$HANDOFF/promotion-validation.json"
+
+      - name: Upload non-reportable handoff
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-native-claude-r6-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.HANDOFF }}
+          retention-days: 30
+          if-no-files-found: error
