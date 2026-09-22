@@ -1,6 +1,6 @@
 # Next Phase — Freeze Benchmark and Treatments
 
-> Status: Benchmark revision 2 and analysis revision 2 frozen; instrumentation plumbing and preflight green; three real Codex pilots pending.
+> Status: Benchmark revision 2 and analysis revision 2 frozen; instrumentation plumbing and preflight green; three real Claude Code R6 pilots on GitHub-hosted Actions pending.
 
 Benchmark revision 2 and all three treatments are now frozen. Formal A/B/C data collection is still blocked on the three non-reportable instrumentation pilots.
 
@@ -121,19 +121,19 @@ The active benchmark semantics are frozen at the revision-2 definition SHA. Post
 Latest validated instrumentation state:
 
 ```text
-structured Codex adapter replay                 PASS
+structured Claude Code adapter protocol selftest PASS
 search-result path normalization                PASS
 runner/scorer selftest                          PASS
 benchmark semantic-drift gate                   PASS
-local pilot preflight (Codex skipped in CI)     PASS
-AI Native Benchmark Integrity run               35630413932 PASS
-general repository CI                           35630413911 PASS
+hosted pilot workflow contract                  PASS (local static gate)
+AI Native Benchmark Integrity run               pending publication
+general repository CI                           pending publication
 ```
 
 The remaining transition is external execution, not benchmark design:
 
 ```text
-authenticated local Codex CLI
+GitHub-hosted Claude Code CLI
         ↓
 T05 / A pilot
 T08 / B pilot
@@ -146,19 +146,11 @@ generate + commit formal-schedule-r1.json
 formal collection may begin
 ```
 
-The local one-command entry point is:
-
-```bash
-./scripts/run-ai-native-codex-pilots.sh /path/to/nession
-```
-
-A trusted self-hosted Actions runner can instead dispatch
-`.github/workflows/ai-native-codex-pilots-self-hosted.yml` with the absolute
-Nession checkout path. Both paths use the same preflight and benchmark runner.
-
-The command now preflights both repositories before spending model budget and,
-after all three pilots pass, emits the frozen execution profile, the
-pre-registered 216-run schedule, and `formal-plan-r1.lock.json`.
+Dispatch `.github/workflows/ai-native-claude-pilots.yml` after setting the
+`ANTHROPIC_API_KEY` secret and explicit `CLAUDE_MODEL`/`ANTHROPIC_BASE_URL`
+variables. The hosted workflow preflights both repositories before spending
+model budget and, after all three pilots pass, emits the frozen execution
+profile, the pre-registered 216-run schedule, and `formal-plan-r1.lock.json`.
 
 ## Analysis and reporting readiness
 
@@ -174,15 +166,21 @@ research report generator   READY
 structured H1-H5 review     READY
 ```
 
-`RUNBOOK.md` now defines the complete operational path from the three external Codex pilots through 216 formal runs, failure review, paired analysis, and final research report generation.
+`RUNBOOK.md` now defines the complete operational path from the three hosted
+Claude Code pilots through 216 formal runs, failure review, paired analysis, and
+final research report generation.
 
 
 ## Active execution handoff
 
 ```text
-Execution Pre-Pilot Revision 4
-branch  research/ai-native-execution-prepilot-r4
-SHA     d01117beb44e57c24cb6b73ae8c4c9f89100e825
+Execution Pre-Pilot Revision 6
+branch  main
+SHA     recorded in EXECUTION-PREPILOT-LOCK.json
 ```
 
-Revision 4 supersedes Revision 3 before any real pilot. It retains the workspace-only Codex permission boundary and additionally replaces linked Git worktrees with standalone single-ref repositories so hidden oracle/research objects and refs cannot enter the coding-agent checkout. The three real pilots must run from this exact revision.
+Revision 6 supersedes the earlier Codex/container revisions before any real pilot.
+It uses a pinned Claude Code client with a direct Anthropic endpoint, standalone
+single-ref subject repositories, disabled subagents/web/MCP, and a scrubbed child
+environment. The three real pilots must run from the exact SHA recorded in the
+R6 lock.
