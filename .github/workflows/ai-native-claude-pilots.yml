@@ -17,9 +17,17 @@ jobs:
     env:
       CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
       ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
-      PILOT_OUTPUT: ${{ runner.temp }}/claude-pilots-${{ github.run_id }}-${{ github.run_attempt }}
-      HANDOFF: ${{ runner.temp }}/claude-handoff-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
+      - name: Set runner temp paths
+        id: paths
+        run: |
+          set -euo pipefail
+          pilot_output="$RUNNER_TEMP/claude-pilots-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          handoff="$RUNNER_TEMP/claude-handoff-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          echo "PILOT_OUTPUT=$pilot_output" >> "$GITHUB_ENV"
+          echo "HANDOFF=$handoff" >> "$GITHUB_ENV"
+          echo "handoff=$handoff" >> "$GITHUB_OUTPUT"
+
       - name: Checkout registration and handoff controller
         uses: actions/checkout@v4
         with:
@@ -114,6 +122,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ai-native-claude-r6-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ env.HANDOFF }}
+          path: ${{ steps.paths.outputs.handoff }}
           retention-days: 30
           if-no-files-found: error
