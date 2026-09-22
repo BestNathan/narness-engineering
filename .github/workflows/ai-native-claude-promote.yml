@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       pilot_run_id:
-        description: GitHub Actions run ID that produced the validated Claude R7 pilot artifact
+        description: GitHub Actions run ID that produced the validated Claude R8 pilot artifact
         required: true
         type: string
       artifact_name:
@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Checkout the current R7 controller
+      - name: Checkout the current R8 controller
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -60,11 +60,11 @@ jobs:
             docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-plan-r1.lock.json \
             docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/PILOT-FREEZE.json
           git diff --cached --check
-          git commit -m 'research: promote Claude R7 pilot freeze metadata'
+          git commit -m 'research: promote Claude R8 pilot freeze metadata'
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --set-upstream origin "$branch"
           cat > /tmp/pr-body.md <<EOF
-          This PR promotes the validated, non-reportable Claude Code R7 pilot handoff from Actions run ${PILOT_RUN_ID}.
+          This PR promotes the validated, non-reportable Claude Code R8 pilot handoff from Actions run ${PILOT_RUN_ID}.
 
           The required T05/A, T08/B, and T20/C evidence was validated before these four files were generated. Review the hashes and merge this PR before dispatching formal collection. The pilot traces remain in the source Actions artifact.
           EOF
@@ -72,5 +72,5 @@ jobs:
             --base main \
             --head "$branch" \
             --draft \
-            --title 'research: promote Claude R7 pilot freeze' \
+            --title 'research: promote Claude R8 pilot freeze' \
             --body-file /tmp/pr-body.md
