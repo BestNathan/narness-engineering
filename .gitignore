@@ -12,3 +12,8 @@
 
 # Claude Code (local, per-user settings)
 .claude/settings.local.json
+
+# Python research instrumentation
+__pycache__/
+*.pyc
+/research-runs/
