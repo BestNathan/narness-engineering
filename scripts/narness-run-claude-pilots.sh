@@ -37,7 +37,7 @@ for pair in T05:A T08:B T20:C; do
   python3 "$ROOT/scripts/ai-native-repo-experiment.py" \
     --source-repo "$SOURCE_REPO" --task "$EXP/runner/manifests/$task.json" \
     --treatments "$EXP/runner/treatments.json" --treatment "$treatment" --attempt 1 \
-    --setup-cmd 'cd web && npm ci' --agent-cmd "$AGENT_CMD" --output-dir "$OUTPUT_DIR"
+    --setup-cmd 'cd web && npm ci --legacy-peer-deps' --agent-cmd "$AGENT_CMD" --output-dir "$OUTPUT_DIR"
   rc=$?
   set -e
   if [[ "$rc" != 0 && "$rc" != 2 ]]; then exit "$rc"; fi
@@ -47,7 +47,7 @@ for pair in T05:A T08:B T20:C; do
 done
 python3 "$ROOT/scripts/freeze-ai-native-execution-profile.py" \
   --pilot "$OUTPUT_DIR/T05-A-01" --pilot "$OUTPUT_DIR/T08-B-01" --pilot "$OUTPUT_DIR/T20-C-01" \
-  --profile-id claude-code-r6-r1 --output "$EXP/runner/execution-profile-r1.json"
+  --profile-id claude-code-r7-r1 --output "$EXP/runner/execution-profile-r1.json"
 python3 "$ROOT/scripts/generate-ai-native-formal-schedule.py" --replications 3 \
   --profile-id claude-code-r6-r1 --output "$EXP/runner/formal-schedule-r1.json"
 python3 "$ROOT/scripts/freeze-ai-native-formal-plan.py" \
