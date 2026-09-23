@@ -449,8 +449,8 @@ def outlines(root, selected_files):
     """Build semantic scope outlines from retained files.
 
     A scope outline is a class/impl/trait/interface/service with its direct
-    members, or a standalone leaf symbol such as a free function. System One
-    judges these scopes before individual member symbols are disclosed.
+    members. Remaining file-level symbols are grouped into one module scope.
+    System One judges these scopes before individual symbols are disclosed.
     """
     candidates = []
     symbols_by_outline = {}
@@ -506,29 +506,41 @@ def outlines(root, selected_files):
             symbols_by_outline[outline_id] = members
             assigned.update(item["id"] for item in members)
 
-        for item in file_symbols:
-            if item["id"] in assigned:
-                continue
-            outline_id = f"{item['id']}::outline"
+        module_members = [
+            item for item in file_symbols
+            if item["id"] not in assigned
+        ]
+        if module_members:
+            outline_id = f"{file['id']}::module::outline"
+            preview = [
+                {
+                    "kind": item["payload"]["kind"],
+                    "name": item["payload"]["name"],
+                }
+                for item in module_members[:OUTLINE_SYMBOL_LIMIT]
+            ]
             candidates.append({
                 "id": outline_id,
                 "payload": {
                     "path": path,
                     "filename": file["payload"]["filename"],
                     "extension": file["payload"]["extension"],
-                    "scope_kind": item["payload"]["kind"],
-                    "scope_name": item["payload"]["name"],
-                    "start_line": item["payload"]["start_line"],
-                    "end_line": item["payload"]["end_line"],
-                    "member_count": 1,
-                    "members": [{
-                        "kind": item["payload"]["kind"],
-                        "name": item["payload"]["name"],
-                    }],
-                    "truncated": False,
+                    "scope_kind": "module",
+                    "scope_name": file["payload"]["filename"],
+                    "start_line": min(
+                        item["payload"]["start_line"]
+                        for item in module_members
+                    ),
+                    "end_line": max(
+                        item["payload"]["end_line"]
+                        for item in module_members
+                    ),
+                    "member_count": len(module_members),
+                    "members": preview,
+                    "truncated": len(module_members) > OUTLINE_SYMBOL_LIMIT,
                 },
             })
-            symbols_by_outline[outline_id] = [item]
+            symbols_by_outline[outline_id] = module_members
 
     return candidates, symbols_by_outline
 
