@@ -113,7 +113,16 @@ def main() -> int:
         if cfg.get("agent") == "claude-code-replay":
             raise RuntimeError("replay evidence cannot freeze a real execution profile")
         if cfg.get("agent") == "claude-code":
-            for field in ("claude_version", "claude_bin", "base_url", "credential_env", "runtime_mode", "command_mapper_sha256"):
+            for field in (
+                "claude_version",
+                "claude_bin",
+                "base_url",
+                "credential_env",
+                "runtime_mode",
+                "bubblewrap_version",
+                "sandbox_runtime_version",
+                "command_mapper_sha256",
+            ):
                 if not cfg.get(field):
                     raise RuntimeError(f"Claude pilot omitted {field}")
         raw_name = "claude.raw.jsonl" if cfg.get("agent") == "claude-code" else "codex.raw.jsonl"
@@ -151,11 +160,14 @@ def main() -> int:
         "web_search",
         "permission_profile",
         "filesystem_read_scope",
+        "bash_network",
+        "git_metadata",
         "shell_environment_allowlist",
         "harness_environment_scrubbed",
         "codex_version",
         "claude_version",
         "bubblewrap_version",
+        "sandbox_runtime_version",
         "claude_bin",
         "base_url",
         "credential_env",
@@ -173,6 +185,7 @@ def main() -> int:
         "npm",
         "runner_file_sha256",
         "checkout_isolation",
+        "validation_isolation",
     ]
 
     agent_profile = {key: first["cfg"].get(key) for key in agent_keys}
@@ -270,7 +283,10 @@ def main() -> int:
         "notes": {
             "pilot_task_success_required": False,
             "formal_task_success_required_for_admissibility": False,
-            "network_policy": "offline coding agent; dependency install occurs before agent",
+            "network_policy": (
+                "Claude client reaches only the fixed provider gateway; Bash/tool "
+                "subprocesses and all post-agent validation have no network"
+            ),
         },
     }
 
