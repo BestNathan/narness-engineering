@@ -257,11 +257,11 @@ jobs:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
           TYPESAFE_API_URL: ${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
           TYPESAFE_MODEL: ${{ vars.TYPESAFE_MODEL || 'jev-latest' }}
-          QUERY: ${{ inputs.query }}
-          DIRECTORY_THRESHOLD: ${{ inputs.directory_threshold }}
-          FILE_THRESHOLD: ${{ inputs.file_threshold }}
-          LINE_THRESHOLD: ${{ inputs.line_threshold }}
-          BATCH_SIZE: ${{ inputs.batch_size }}
+          QUERY: ${{ inputs.query || 'Help me optimize the websocket connection implementation' }}
+          DIRECTORY_THRESHOLD: ${{ inputs.directory_threshold || '0.35' }}
+          FILE_THRESHOLD: ${{ inputs.file_threshold || '0.50' }}
+          LINE_THRESHOLD: ${{ inputs.line_threshold || '0.70' }}
+          BATCH_SIZE: ${{ inputs.batch_size || '48' }}
         run: |
           set -euo pipefail
           python3 narness/examples/system-one-code-locator/system_one_code_locator.py             subject "$QUERY"             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold "$LINE_THRESHOLD"             --batch-size "$BATCH_SIZE"             --trace-file "$EVIDENCE_DIR/code-locator/trace.jsonl"             --output-json "$EVIDENCE_DIR/code-locator/result.json"             | tee "$EVIDENCE_DIR/code-locator/stdout.log"
