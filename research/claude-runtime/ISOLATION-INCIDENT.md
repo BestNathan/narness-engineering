@@ -52,7 +52,7 @@ streaming and the pinned Claude binary. It makes no real model calls.
 Ubuntu 24.04 requires an AppArmor user-namespace exception for /usr/bin/bwrap.
 The hosted workflow loads the reviewed bwrap.apparmor profile for that executable
 only. It does not disable AppArmor globally. Future pilot/collection setup must
-install bubblewrap, socat, libseccomp-dev, the pinned Claude Code client and the
+install bubblewrap, socat, ripgrep, libseccomp-dev, the pinned Claude Code client and the
 pinned Anthropic Sandbox Runtime, then load this same AppArmor profile.
 
 ## Registration remains suspended
