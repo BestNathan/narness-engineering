@@ -220,21 +220,30 @@ soft rounds = 4
 hard rounds = 8
 ~~~
 
-At or beyond the soft limit, the batch continues only when the just-completed round produced at least one new observation whose relevance is at or above the observation threshold. Each extra round must earn the next one again. The hard limit is unconditional.
+At or beyond the soft limit, continuation is file-scoped. Every active file must independently produce a new observation whose relevance is at or above the observation threshold to earn its own next round. Files that fail this test stop, while other files in the same batch may continue. The hard limit is unconditional.
 
 ~~~text
 round < soft limit
-  -> continue normally
+  -> all active files continue normally
 
 round >= soft limit
-  -> new high-relevance observation?
-       yes -> grant one more round
-       no  -> stop batch
+  -> for each active file:
+       new high-relevance observation?
+         yes -> file earns one more round
+         no  -> stop that file
+
+batch continues while any file remains active
 
 round == hard limit
-  -> stop regardless of score
+  -> stop all remaining files regardless of score
 ~~~
 
-This makes continuation a consequence of newly observed state rather than a fixed loop counter while preserving a deterministic upper bound on cost.
+This separates two roles that were previously conflated: the batch is concurrent decision context, while the file owns continuation budget. Continuation remains a consequence of newly observed state and still has a deterministic upper cost bound.
 
 The first experiment should hold thresholds, window size, file batch size, and multi-hotspot logic constant. The target trace case is `server/handler.rs`, where the previous run discovered a new relevant region on round four but could not expose a follow-up action because the hard `max_rounds=4` loop ended.
+
+### File-scoped continuation finding
+
+The first soft/hard implementation granted continuation at batch scope. A high-signal `server_client.rs` observation kept `cli/client/connection.rs` alive for two extra low-value reads. The file-scoped follow-up run 35833457198 corrected this: the CLI file scored 0.64 at round four and stopped immediately, while `server_client.rs` independently continued through rounds five, six, and seven.
+
+See [the file-scoped round budget baseline](pilots/nession-websocket-file-scoped-round-budget-2026-09-23.md).
