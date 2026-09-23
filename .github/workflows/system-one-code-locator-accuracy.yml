@@ -1,0 +1,347 @@
+name: System One Code Locator Accuracy Reference
+
+on:
+  workflow_dispatch:
+    inputs:
+      subject_repository:
+        description: Subject repository
+        required: true
+        default: BestNathan/nession
+        type: string
+      subject_ref:
+        description: Subject ref resolved once and shared by both agents
+        required: true
+        default: staging
+        type: string
+      query:
+        description: Verbatim localization task given to both systems
+        required: true
+        default: Help me optimize the websocket connection implementation
+        type: string
+  push:
+    branches:
+      - fix/code-locator-three-stage-requests
+    paths:
+      - ".github/workflows/system-one-code-locator-accuracy.yml"
+
+permissions:
+  contents: read
+
+env:
+  QUERY: ${{ inputs.query || 'Help me optimize the websocket connection implementation' }}
+  SUBJECT_REPOSITORY: ${{ inputs.subject_repository || 'BestNathan/nession' }}
+  SUBJECT_REF: ${{ inputs.subject_ref || 'staging' }}
+
+jobs:
+  resolve-subject:
+    name: Resolve shared subject revision
+    runs-on: ubuntu-24.04
+    outputs:
+      subject_sha: ${{ steps.revision.outputs.sha }}
+    steps:
+      - name: Checkout subject
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SUBJECT_REPOSITORY }}
+          ref: ${{ env.SUBJECT_REF }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Resolve exact revision
+        id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  system-one:
+    name: System One progressive reader
+    needs: resolve-subject
+    runs-on: ubuntu-24.04
+    environment: typesafe
+    timeout-minutes: 120
+    env:
+      TYPESAFE_MODEL: ${{ vars.TYPESAFE_MODEL || 'jev-latest' }}
+    steps:
+      - name: Checkout Narness harness
+        uses: actions/checkout@v4
+        with:
+          path: narness
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout exact subject revision
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SUBJECT_REPOSITORY }}
+          ref: ${{ needs.resolve-subject.outputs.subject_sha }}
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run System One locator
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
+          TYPESAFE_API_URL: ${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
+        run: |
+          set -euo pipefail
+          test -n "$TYPESAFE_API_KEY"
+          mkdir -p artifacts/system-one
+          python3 narness/research/code-locator/src/system_one_code_locator.py             subject             "$QUERY"             --directory-threshold 0.50             --file-threshold 0.65             --phase1-max-files 16             --reader-file-batch-size 4             --reader-window-lines 140             --reader-soft-rounds 4             --reader-hard-rounds 8             --reader-action-threshold 0.40             --observation-threshold 0.65             --model "$TYPESAFE_MODEL"             --trace-file artifacts/system-one/trace.jsonl             --output-json artifacts/system-one/result.json
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path("artifacts/system-one")
+          result=json.loads((root/"result.json").read_text())
+          manifest={
+              "query": os.environ["QUERY"],
+              "subject_repository": os.environ["SUBJECT_REPOSITORY"],
+              "subject_sha": "${{ needs.resolve-subject.outputs.subject_sha }}",
+              "model": os.environ["TYPESAFE_MODEL"],
+              "architecture": result.get("architecture"),
+              "thresholds": result.get("thresholds"),
+              "metrics": result.get("metrics"),
+          }
+          (root/"manifest.json").write_text(json.dumps(manifest, indent=2)+"\n")
+          PY
+
+      - name: Upload System One evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-locator-accuracy-system-one-${{ github.run_id }}
+          path: artifacts/system-one/
+          if-no-files-found: error
+          retention-days: 90
+
+  claude-reference:
+    name: Claude Code System 2 reference
+    needs: resolve-subject
+    runs-on: ubuntu-24.04
+    environment: ds
+    timeout-minutes: 120
+    env:
+      CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+      ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
+    steps:
+      - name: Checkout exact subject revision
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SUBJECT_REPOSITORY }}
+          ref: ${{ needs.resolve-subject.outputs.subject_sha }}
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install pinned Claude Code
+        run: |
+          set -euo pipefail
+          npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
+          claude --version
+
+      - name: Require DS Claude configuration
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$ANTHROPIC_API_KEY"
+          test -n "$ANTHROPIC_BASE_URL"
+          test -n "$CLAUDE_MODEL"
+          case "$CLAUDE_MODEL" in
+            sonnet|opus|haiku|default)
+              echo "Use an explicit CLAUDE_MODEL in ds, not a moving alias." >&2
+              exit 2
+              ;;
+          esac
+
+      - name: Build verbatim-task reference prompt
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/claude-reference
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          query=os.environ["QUERY"]
+          prompt=f"""User task (verbatim):
+          {query}
+
+          Act as a System 2 code-localization reference for this task.
+
+          Investigate this repository using Read, Glob, Grep, and read-only Bash commands.
+          Do not modify any file. Do not use git history, GitHub issues, the network, or external context.
+          Search and read enough source code to identify the files and exact code regions that materially matter to the task.
+
+          Your final answer MUST be only valid JSON, with no Markdown fences, in this schema:
+          {{
+            "task": {query!r},
+            "summary": "short description of the implementation areas that matter",
+            "confidence": "high|medium|low",
+            "relevant_files": [
+              {{
+                "path": "repository-relative/path",
+                "relevance": "primary|supporting|context",
+                "reason": "why this file matters",
+                "evidence": [
+                  {{
+                    "start_line": 1,
+                    "end_line": 20,
+                    "description": "what relevant implementation is in this range"
+                  }}
+                ]
+              }}
+            ]
+          }}
+
+          Definitions:
+          - primary: directly implements websocket connection lifecycle, connection establishment, reconnect/backoff, websocket server/client behavior, or the core transport path relevant to the task.
+          - supporting: a direct dependency/caller/state component needed to understand or optimize that primary behavior.
+          - context: useful surrounding wiring, but not core implementation.
+
+          Requirements:
+          - Rank relevant_files from most to least relevant.
+          - Include only repository-relative file paths.
+          - Include files only after inspecting their contents.
+          - Ground each primary/supporting file with at least one concrete line range.
+          - Prefer precision over listing every file whose name mentions websocket.
+          - Do not propose edits; this run is localization only.
+          """
+          Path("artifacts/claude-reference/prompt.txt").write_text(prompt)
+          PY
+
+      - name: Run Claude Code reference locator
+        working-directory: subject
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          claude -p             --output-format json             --model "$CLAUDE_MODEL"             --effort high             --max-turns 100             --permission-mode dontAsk             --no-session-persistence             --setting-sources ''             --strict-mcp-config             --mcp-config '{"mcpServers":{}}'             --disable-slash-commands             --tools 'Bash,Read,Glob,Grep'             --allowedTools 'Bash(*)' 'Read' 'Glob' 'Grep'             --disallowedTools 'Edit' 'Write' 'Agent' 'Task' 'WebFetch' 'WebSearch' 'EndConversation' 'mcp__*'             --settings '{"disableAllHooks":true}'             < ../artifacts/claude-reference/prompt.txt             > ../artifacts/claude-reference/envelope.json
+
+      - name: Extract and validate Claude reference
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+
+          root=Path("artifacts/claude-reference")
+          envelope=json.loads((root/"envelope.json").read_text())
+          raw=envelope.get("result")
+          if not isinstance(raw, str):
+              raise SystemExit("Claude JSON envelope omitted string result")
+
+          value=raw.strip()
+          if value.startswith("~~~") or value.startswith("```"):
+              value=re.sub(r"^(?:~~~|```)(?:json)?\s*", "", value)
+              value=re.sub(r"\s*(?:~~~|```)$", "", value)
+
+          reference=json.loads(value)
+          if not isinstance(reference.get("relevant_files"), list):
+              raise SystemExit("Claude reference omitted relevant_files")
+
+          seen=set()
+          for item in reference["relevant_files"]:
+              path=item.get("path")
+              if not isinstance(path, str) or path.startswith("/") or path.startswith("../"):
+                  raise SystemExit(f"invalid reference path: {path!r}")
+              if path in seen:
+                  raise SystemExit(f"duplicate reference path: {path}")
+              seen.add(path)
+              if item.get("relevance") not in {"primary","supporting","context"}:
+                  raise SystemExit(f"invalid relevance for {path}")
+              if item["relevance"] in {"primary","supporting"} and not item.get("evidence"):
+                  raise SystemExit(f"missing evidence for {path}")
+              if not Path("subject", path).is_file():
+                  raise SystemExit(f"reference file does not exist: {path}")
+
+          (root/"reference.json").write_text(
+              json.dumps(reference, indent=2, ensure_ascii=False)+"\n"
+          )
+          usage={
+              "model": os.environ["CLAUDE_MODEL"],
+              "claude_version": envelope.get("version"),
+              "session_id": envelope.get("session_id"),
+              "duration_ms": envelope.get("duration_ms"),
+              "duration_api_ms": envelope.get("duration_api_ms"),
+              "num_turns": envelope.get("num_turns"),
+              "usage": envelope.get("usage"),
+              "model_usage": envelope.get("modelUsage"),
+              "subject_sha": "${{ needs.resolve-subject.outputs.subject_sha }}",
+              "query": os.environ["QUERY"],
+          }
+          (root/"manifest.json").write_text(
+              json.dumps(usage, indent=2, ensure_ascii=False)+"\n"
+          )
+          PY
+
+      - name: Upload Claude reference evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-locator-accuracy-claude-${{ github.run_id }}
+          path: artifacts/claude-reference/
+          if-no-files-found: error
+          retention-days: 90
+
+  compare:
+    name: Compare localization accuracy
+    needs:
+      - resolve-subject
+      - system-one
+      - claude-reference
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout comparison code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Download System One evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: code-locator-accuracy-system-one-${{ github.run_id }}
+          path: artifacts/system-one
+
+      - name: Download Claude reference
+        uses: actions/download-artifact@v4
+        with:
+          name: code-locator-accuracy-claude-${{ github.run_id }}
+          path: artifacts/claude-reference
+
+      - name: Compare file and range localization
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/comparison
+          python3 research/code-locator/src/compare_claude_reference.py             --system-one artifacts/system-one/result.json             --claude artifacts/claude-reference/reference.json             --output-json artifacts/comparison/comparison.json             --output-markdown artifacts/comparison/summary.md
+          cat artifacts/comparison/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          payload={
+              "subject_sha": "${{ needs.resolve-subject.outputs.subject_sha }}",
+              "system_one": json.loads(Path("artifacts/system-one/manifest.json").read_text()),
+              "claude": json.loads(Path("artifacts/claude-reference/manifest.json").read_text()),
+          }
+          Path("artifacts/comparison/run-manifest.json").write_text(
+              json.dumps(payload, indent=2, ensure_ascii=False)+"\n"
+          )
+          PY
+
+      - name: Upload accuracy comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-locator-accuracy-comparison-${{ github.run_id }}
+          path: artifacts/comparison/
+          if-no-files-found: error
+          retention-days: 90
