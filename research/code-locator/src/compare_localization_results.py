@@ -55,6 +55,26 @@ def file_map(result):
     }
 
 
+def cost_summary(result):
+    cost = result.get("cost") or {}
+    tokens = cost.get("tokens") or {}
+    return {
+        "elapsed_ms": cost.get("elapsed_ms"),
+        "model_calls": cost.get("model_calls"),
+        "turns": cost.get("turns"),
+        "tool_calls": cost.get("tool_calls"),
+        "input_tokens": tokens.get("input"),
+        "output_tokens": tokens.get("output"),
+        "cache_read_input_tokens": tokens.get("cache_read_input"),
+        "cache_creation_input_tokens": tokens.get(
+            "cache_creation_input"
+        ),
+        "thinking_tokens": tokens.get("thinking"),
+        "provider_cost_usd": cost.get("provider_cost_usd"),
+        "stages": cost.get("stages", []),
+    }
+
+
 def confidence_score(value):
     if not isinstance(value, dict):
         return None
@@ -162,6 +182,7 @@ def compare(left, right):
                 len(item.get("evidence", []))
                 for item in left_files.values()
             ),
+            "cost": cost_summary(left),
         },
         "right": {
             "producer": right.get("producer"),
@@ -170,6 +191,7 @@ def compare(left, right):
                 len(item.get("evidence", []))
                 for item in right_files.values()
             ),
+            "cost": cost_summary(right),
         },
         "files": {
             "shared": shared,
@@ -202,10 +224,32 @@ def markdown(report):
     l = evidence["left_covered_by_right"]
     r = evidence["right_covered_by_left"]
 
+    left_cost = report["left"]["cost"]
+    right_cost = report["right"]["cost"]
+
     lines = [
         "# Localization result comparison",
         "",
         "> Symmetric observation only. Neither side is ground truth.",
+        "",
+        "## Cost record",
+        "",
+        f"- Left elapsed ms: {left_cost['elapsed_ms']}",
+        f"- Right elapsed ms: {right_cost['elapsed_ms']}",
+        f"- Left model calls: {left_cost['model_calls']}",
+        f"- Right model calls: {right_cost['model_calls']}",
+        f"- Left turns: {left_cost['turns']}",
+        f"- Right turns: {right_cost['turns']}",
+        f"- Left tool calls: {left_cost['tool_calls']}",
+        f"- Right tool calls: {right_cost['tool_calls']}",
+        f"- Left input tokens: {left_cost['input_tokens']}",
+        f"- Right input tokens: {right_cost['input_tokens']}",
+        f"- Left output tokens: {left_cost['output_tokens']}",
+        f"- Right output tokens: {right_cost['output_tokens']}",
+        f"- Left cache-read tokens: {left_cost['cache_read_input_tokens']}",
+        f"- Right cache-read tokens: {right_cost['cache_read_input_tokens']}",
+        f"- Left provider cost USD: {left_cost['provider_cost_usd']}",
+        f"- Right provider cost USD: {right_cost['provider_cost_usd']}",
         "",
         "## File sets",
         "",
