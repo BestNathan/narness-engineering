@@ -85,28 +85,39 @@ All actions are grounded only from line count, coverage, and runtime history.
 
 ### Action scoring and concurrency
 
-System One independently Noul-scores every action in a file-local action space.
+Each file-local request contains two decision primitives:
 
-Current prototype threshold:
+~~~text
+Choice:
+  StopFile vs ContinueFile
+
+Noul:
+  one utility score per ReadRange
+~~~
+
+The Stop/Continue Choice is the control-flow decision. It is not compared
+numerically with ReadRange utility.
+
+Current ReadRange threshold:
 
 ~~~text
 parallel action threshold = 0.65
 ~~~
 
-The threshold controls concurrency only:
+The threshold controls ReadRange concurrency only:
 
 ~~~text
-StopFile >= threshold and StopFile >= best read
-  -> model_stop
+if Choice == StopFile:
+  model_stop
 
-otherwise:
-  execute all non-overlapping reads >= threshold
+if Choice == ContinueFile:
+  execute all non-overlapping ReadRanges >= threshold
 
-if none reach threshold:
-  execute top-1 read
+if no ReadRange reaches threshold:
+  execute top-1 ReadRange
 ~~~
 
-Low scores never cause Harness termination.
+Low read scores never cause Harness termination.
 
 ### Stop semantics
 
@@ -295,3 +306,34 @@ It records final valuable files, file-level confidence, valuable source ranges, 
 Cost fields include elapsed time, token usage, model calls / turns / tool calls when available, provider USD cost when reported, and per-stage breakdowns.
 
 Confidence values preserve their source semantics rather than pretending to be calibrated across models. For Claude, confidence is produced only by the second fresh session after localization is frozen. See `docs/localization-result.md`.
+
+
+### StopFile Choice baseline
+
+Real run `35864316780` validates the current stop policy:
+
+~~~text
+17 FileRuntime instances
+
+model_stop               4
+action_space_exhausted  12
+budget_exhausted         1
+
+reads                  134
+model calls            130
+elapsed             25.952s
+~~~
+
+The four genuine early stops occurred with unread content still remaining:
+
+~~~text
+server/websocket.rs        91.3% coverage
+WebSocketService.ts        77.5%
+CLI connection.rs          86.0%
+web_client_registry.rs     99.3%
+~~~
+
+`StopFile` now means the model has enough representative evidence to finalize
+the file-level localization result. It does not mean full-file coverage.
+
+See `docs/pilots/nession-websocket-per-file-range-runtime-v0-2026-09-23.md`.
