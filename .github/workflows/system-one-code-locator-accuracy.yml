@@ -93,6 +93,8 @@ jobs:
             --evidence-threshold 0.65 \
             --max-jumps 2 \
             --max-file-epochs 32 \
+            --subject-repository "$SUBJECT_REPOSITORY" \
+            --subject-revision "${{ needs.resolve-subject.outputs.subject_sha }}" \
             --model "$TYPESAFE_MODEL" \
             --trace-file artifacts/system-one/trace.jsonl \
             --output-json artifacts/system-one/result.json \
@@ -382,6 +384,7 @@ jobs:
             --localization-manifest artifacts/claude-reference/localization-manifest.json \
             --model "$CLAUDE_MODEL" \
             --subject-sha "${{ needs.resolve-subject.outputs.subject_sha }}" \
+            --subject-repository "$SUBJECT_REPOSITORY" \
             --output-result artifacts/claude-reference/localization-result.json \
             --output-confidence-manifest artifacts/claude-reference/confidence-manifest.json \
             --output-manifest artifacts/claude-reference/manifest.json \
