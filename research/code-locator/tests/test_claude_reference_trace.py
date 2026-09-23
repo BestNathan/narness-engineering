@@ -99,8 +99,12 @@ class ClaudeReferenceTraceTest(unittest.TestCase):
             )
 
             steps, terminal, final_text = MODULE.parse_stream(raw, subject)
-            reference = json.loads(MODULE.strip_json_fence(final_text))
-            MODULE.validate_reference(reference, subject)
+            raw_result = json.loads(MODULE.strip_json_fence(final_text))
+            localization = MODULE.normalize_claude_result(
+                raw_result,
+                subject,
+                "test-model",
+            )
 
             self.assertEqual(["Glob", "Read"], [step["tool"] for step in steps])
             self.assertEqual(
@@ -109,8 +113,12 @@ class ClaudeReferenceTraceTest(unittest.TestCase):
             )
             self.assertEqual(1234, terminal["duration_ms"])
             self.assertEqual(
+                "1: def connect():\n2:     pass",
+                localization["files"][0]["evidence"][0]["content"],
+            )
+            self.assertEqual(
                 "src/client.py",
-                reference["relevant_files"][0]["path"],
+                localization["files"][0]["path"],
             )
 
 
