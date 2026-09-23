@@ -181,17 +181,39 @@ Despite the historical filename, the workflow is now an observational comparison
 
 Both systems receive the same task and exact subject revision. Claude Code runs through the existing `ds` environment with read-only repository tools.
 
-The Claude artifact preserves:
+Claude uses two fresh sessions with different responsibilities:
 
 ~~~text
-claude.raw.jsonl
+Session A: localization only
+  -> repository search / Read / Grep / Glob / Bash
+  -> final files + evidence ranges
+  -> no confidence output
+
+Session B: confidence only
+  -> new session
+  -> no repository tools
+  -> sees immutable Session-A draft + exact evidence source
+  -> assigns overall / file / evidence confidence
+~~~
+
+The Claude artifact preserves both stages:
+
+~~~text
+localization.raw.jsonl
+localization-draft.json
 execution-path.json
 execution-summary.md
-reference.json
+localization-manifest.json
+
+confidence.raw.jsonl
+confidence-manifest.json
+confidence-summary.md
+
+localization-result.json
 manifest.json
 ~~~
 
-This records what Claude Code actually did — ordered Read / Grep / Glob / Bash actions, their arguments and result metadata — in addition to its final localization output.
+The confidence session cannot alter Session A's file set or evidence ranges; structural drift fails the workflow.
 
 Claude Code is not treated as ground truth or as an optimization target for System One. File/range agreement is retained only as descriptive research data.
 
@@ -245,6 +267,8 @@ Both System One and Claude Code emit the same final-result contract:
 localization-result.json
 ~~~
 
-It records final valuable files, file-level confidence, valuable source ranges, range-level confidence/reason, and the exact source content. Execution traces remain separate.
+It records final valuable files, file-level confidence, valuable source ranges, range-level confidence/reason, exact source content, and execution-cost metrics.
 
-Confidence values preserve their source semantics rather than pretending to be calibrated across models. See `docs/localization-result.md`.
+Cost fields include elapsed time, token usage, model calls / turns / tool calls when available, provider USD cost when reported, and per-stage breakdowns.
+
+Confidence values preserve their source semantics rather than pretending to be calibrated across models. For Claude, confidence is produced only by the second fresh session after localization is frozen. See `docs/localization-result.md`.
