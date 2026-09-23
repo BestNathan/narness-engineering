@@ -15,6 +15,35 @@ def ratio(num, den):
     return None if den == 0 else num / den
 
 
+def subject_identity(result, side):
+    subject = result.get("subject")
+    if not isinstance(subject, dict):
+        raise ValueError(
+            f"{side} localization result is missing canonical subject identity"
+        )
+    repository = subject.get("repository")
+    revision = subject.get("revision")
+    if not repository or not revision:
+        raise ValueError(
+            f"{side} localization subject requires repository and revision"
+        )
+    return {
+        "repository": str(repository),
+        "revision": str(revision),
+    }
+
+
+def require_same_subject(left, right):
+    left_subject = subject_identity(left, "left")
+    right_subject = subject_identity(right, "right")
+    if left_subject != right_subject:
+        raise ValueError(
+            "cannot compare localization results from different subjects: "
+            f"left={left_subject} right={right_subject}"
+        )
+    return left_subject
+
+
 def ranges_overlap(a_start, a_end, b_start, b_end):
     return max(a_start, b_start) <= min(a_end, b_end)
 
@@ -123,6 +152,7 @@ def directional_region_coverage(source_files, target_files):
 
 
 def compare(left, right):
+    subject = require_same_subject(left, right)
     left_files = file_map(left)
     right_files = file_map(right)
     left_paths = set(left_files)
@@ -171,6 +201,7 @@ def compare(left, right):
         "schema_version": 1,
         "kind": "code-localization-comparison",
         "task": left.get("task") or right.get("task"),
+        "subject": subject,
         "interpretation": (
             "Symmetric observational comparison. Neither side is treated as "
             "ground truth and confidence scores may have different semantics."
