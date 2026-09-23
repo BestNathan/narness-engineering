@@ -125,7 +125,7 @@ jobs:
     name: Real System One evidence
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.collect_system_one }}
     runs-on: ubuntu-24.04
-    environment: typesave
+    environment: typesafe
     timeout-minutes: 120
     steps:
       - name: Checkout Narness harness
