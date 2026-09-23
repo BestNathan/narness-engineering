@@ -222,7 +222,7 @@ print('nested Bash network/unix-socket isolation: PASS')
         ) as gateway:
             p = adapter.sandbox_launch(
                 subject,
-                ['srt', '--settings', '/workspace/srt-settings.json', '--',
+                ['srt', '--settings', '/workspace/srt-settings.json',
                  '/usr/bin/python3', '-c', bash_probe],
                 {},
                 gateway_socket=gateway,
