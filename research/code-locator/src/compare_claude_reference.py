@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare System One code-locator evidence with a Claude Code reference run."""
+"""Record agreement between System One and an independent Claude Code run."""
 from __future__ import annotations
 
 import argparse
@@ -194,7 +194,7 @@ def compare(system_one, claude):
     s1_only = sorted(evidence_paths - ref_all)
 
     return {
-        "reference_kind": "claude-code-system2-reference-not-ground-truth",
+        "reference_kind": "claude-code-system2-observation-not-ground-truth-or-target",
         "query": system_one.get("query"),
         "counts": {
             "claude_reference_files": len(ref_all),
@@ -271,9 +271,9 @@ def markdown(report):
         return "n/a" if value is None else f"{value * 100:.1f}%"
 
     lines = [
-        "# System One vs Claude Code reference",
+        "# System One / Claude Code localization record",
         "",
-        "> Claude Code is used as a System 2 reference baseline, not as ground truth.",
+        "> Claude Code is a separate System 2 execution record, not ground truth or an optimization target.",
         "",
         "## Metrics",
         "",
