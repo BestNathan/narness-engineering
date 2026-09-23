@@ -20,6 +20,7 @@ def main(argv=None):
     parser.add_argument("--localization-manifest", required=True)
     parser.add_argument("--model", required=True)
     parser.add_argument("--subject-sha", required=True)
+    parser.add_argument("--subject-repository", required=True)
     parser.add_argument("--output-result", required=True)
     parser.add_argument("--output-confidence-manifest", required=True)
     parser.add_argument("--output-manifest", required=True)
@@ -60,6 +61,10 @@ def main(argv=None):
         args.model,
         localization_stage,
         confidence_stage,
+        subject={
+            "repository": args.subject_repository,
+            "revision": args.subject_sha,
+        },
     )
 
     confidence_manifest = {
