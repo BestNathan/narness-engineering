@@ -1,0 +1,3922 @@
+relevant directories:
+  0.920 web/src/platform/socket
+  0.910 crates/nession-server/src/server
+  0.890 crates/nession-agent/src/server
+  0.880 web/src/shared/hooks
+  0.830 crates/nession-agent/src/connection
+  0.810 crates/nession-cli/src/client
+  0.810 web/src/platform
+  0.790 crates/nession-server/src
+  0.770 crates/nession-agent/src
+  0.750 web/src/platform/terminal-runtime
+  0.720 web/src/app
+  0.720 web/src/platform/terminal-runtime/transport
+  0.710 web/src
+  0.710 web/src/platform/attach/state
+  0.710 web/src/product/terminal/state
+  0.700 crates
+  0.690 crates/nession-server
+  0.670 crates/nession-claude-code/src/protocol/read
+  0.670 web/src/platform/server
+  0.650 web/src/platform/attach
+  0.640 web
+  0.640 web/src/platform/session-runtime
+  0.630 web/src/generated/protocol/core/agent-keepalive-ping
+  0.630 web/src/generated/protocol/core/server-session-relay-end
+  0.620 crates/nession-agent/src/sync
+  0.620 crates/nession-protocol/src/contracts/client
+  0.610 crates/nession-server/src/protocol
+  0.600 crates/nession-server/src/registry
+  0.600 crates/nession-server/tests/integration
+  0.600 web/src/generated/protocol/core/server-session-list
+  0.600 web/src/product/terminal
+  0.600 web/src/product/terminal/hooks
+  0.590 web/src/generated/protocol/core/server-session-attach
+  0.580 web/src/generated/protocol/core/server-agent-heartbeat
+  0.580 web/src/product/session
+  0.570 crates/nession-claude-code/src
+  0.570 crates/nession-cli/src
+  0.570 crates/nession-protocol/src/contracts
+  0.570 web/src/shared
+  0.560 crates/nession-agent
+  0.560 crates/nession-agent/src/protocol
+  0.560 crates/nession-git/src
+  0.560 web/src/generated/protocol/core/server-session-relay-begin
+  0.550 crates/nession-protocol/src/contracts/server
+  0.550 web/src/platform/terminal-runtime/adapters
+  0.550 web/src/product/session/state
+  0.540 crates/nession-claude-code/src/protocol
+  0.540 web/src/generated/protocol
+  0.520 crates/nession-protocol
+  0.520 web/src/generated/protocol/core/client-session-attach
+  0.520 web/src/generated/protocol/core/server-session-create
+  0.510 crates/nession-protocol/src
+  0.510 web/src/platform/protocol
+  0.510 web/src/platform/socket/__tests__/unit
+  0.510 web/src/product/agent/hooks
+  0.480 crates/nession-protocol/src/contracts/session
+  0.470 web/src/generated/protocol/core/server-session-env-active
+  0.470 web/src/platform/terminal-runtime/instance
+  0.470 web/src/product/terminal/adapters
+  0.460 crates/nession-git/src/protocol/root
+  0.460 web/src/platform/socket/__tests__/integration
+  0.460 web/src/product/agent/state
+  0.450 web/src/platform/terminal-runtime/controller
+  0.450 web/src/product/session/hooks
+  0.450 web/src/product/session/model
+  0.440 web/src/generated
+  0.440 web/src/generated/protocol/core/client-session-create
+  0.430 crates/nession-common
+  0.430 web/src/generated/protocol/core/server-agent-session-update
+  0.430 web/src/generated/protocol/core/server-session-kill
+  0.430 web/src/product/session/patterns
+  0.410 web/src/generated/protocol/core/agent-attach
+  0.410 web/src/platform/socket/__tests__
+  0.410 web/src/product
+  0.400 crates/nession-agent/tests/integration
+  0.400 design/generated
+  0.400 docs/architecture
+  0.400 web/src/generated/protocol/core/agent-detach
+  0.400 web/src/generated/protocol/core/server-commands-update
+  0.380 crates/nession-cli/src/commands
+  0.380 crates/nession-protocol/src/kernel
+  0.380 web/src/product/capability
+  0.370 web/src/generated/protocol/core/server-commands-list
+  0.360 docs
+  0.360 web/src/generated/protocol/core/client-session-kill
+  0.350 crates/nession-cli
+  0.350 web/src/generated/protocol/core/agent-session-create
+  0.350 web/src/generated/protocol/core/server-auth
+  0.350 web/src/generated/protocol/git/root
+relevant files:
+  0.930 crates/nession-server/src/server/websocket.rs
+  0.920 crates/nession-agent/src/server/websocket.rs
+  0.920 web/src/platform/socket/WebSocketService.ts
+  0.880 web/src/shared/hooks/useWebSocket.ts
+  0.860 crates/nession-cli/src/client/connection.rs
+  0.860 web/src/platform/terminal-runtime/ConnectionManager.ts
+  0.840 web/src/app/useAppConnection.ts
+  0.840 web/src/platform/attach/relayServerConnection.ts
+  0.820 crates/nession-agent/src/connection/server_client.rs
+  0.810 web/src/app/useRealtimeUpdates.ts
+  0.810 web/src/platform/socket/index.ts
+  0.790 web/src/platform/attach/state/transport.ts
+  0.780 web/src/platform/terminal-runtime/transport/TerminalTransport.ts
+  0.780 web/src/product/terminal/server.ts
+  0.770 crates/nession-server/src/server/web_client_registry.rs
+  0.740 crates/nession-agent/src/connection/mod.rs
+  0.740 crates/nession-server/src/server/handler.rs
+  0.740 web/src/app/useVisibilityReconnect.ts
+  0.740 web/src/product/terminal/state/transport.ts
+  0.730 crates/nession-server/src/server/client_registry.rs
+  0.730 web/src/platform/session-runtime/SessionRuntime.ts
+  0.720 web/src/platform/socket/MessageRouter.ts
+  0.720 web/src/product/terminal/hooks/useP2PAttachTransport.ts
+  0.720 web/src/product/terminal/state/session.ts
+  0.710 crates/nession-agent/src/sync/heartbeat.rs
+  0.710 web/src/platform/socket/types.ts
+  0.700 crates/nession-server/src/broker.rs
+  0.700 crates/nession-server/src/protocol/mod.rs
+  0.700 crates/nession-server/src/registry/session.rs
+  0.690 web/src/product/terminal/agent.ts
+  0.680 web/src/product/terminal/useTerminalAttach.ts
+  0.670 web/src/platform/terminal-runtime/controller/TerminalController.ts
+  0.670 web/src/platform/terminal-runtime/instance/TerminalInstance.ts
+  0.670 web/src/product/terminal/hooks/useSessionRuntime.ts
+  0.660 crates/nession-cli/src/commands/client.rs
+  0.660 crates/nession-server/src/server/mod.rs
+  0.660 web/src/app/capsulePresence.ts
+  0.660 web/src/product/session/state/session.ts
+  0.650 crates/nession-protocol/src/contracts/server/v1.rs
+  0.650 web/src/product/session/index.ts
+  0.640 crates/nession-server/src/lib.rs
+  0.640 web/src/product/capability/presence.ts
+  0.640 web/src/product/terminal/hooks/useTerminal.ts
+  0.630 crates/nession-server/src/main.rs
+  0.630 web/src/platform/protocol/index.ts
+  0.630 web/src/platform/server/index.ts
+  0.620 web/src/generated/protocol/core/agent-keepalive-ping/v1.ts
+  0.620 web/src/product/session/SessionsPlugin.ts
+  0.610 crates/nession-agent/src/protocol/mod.rs
+  0.610 web/src/product/terminal/adapters/TerminalRuntimeAdapter.ts
+  0.600 crates/nession-cli/src/commands/server.rs
+  0.600 web/src/platform/attach/SessionAttachController.ts
+  0.600 web/src/product/agent/hooks/useAgentData.ts
+  0.600 web/src/product/terminal/state/terminal.ts
+  0.590 crates/nession-protocol/src/contracts/client/mod.rs
+  0.590 crates/nession-protocol/src/contracts/client/v1.rs
+  0.590 web/src/product/session/model/sessionChrome.ts
+  0.580 crates/nession-server/src/registry/agent.rs
+  0.580 web/src/app/useCapsuleCapability.ts
+  0.580 web/src/app/useDashboard.ts
+  0.580 web/src/platform/terminal-runtime/adapters/TransportAttachGate.ts
+  0.580 web/src/product/session/hooks/useSessionData.ts
+  0.580 web/src/types.ts
+  0.570 crates/nession-git/src/agent.rs
+  0.570 design/generated/app.ts
+  0.570 web/src/app/useAttachFlow.ts
+  0.570 web/src/generated/protocol/core/server-agent-heartbeat/v1.ts
+  0.570 web/src/product/terminal/useTerminalOrchestration.ts
+  0.560 crates/nession-agent/src/main.rs
+  0.560 crates/nession-agent/src/netwatch.rs
+  0.560 crates/nession-claude-code/src/protocol/read/mod.rs
+  0.560 web/src/app/workspace/workspaceContext.ts
+  0.550 crates/nession-agent/src/sync/session_watcher.rs
+  0.550 web/src/platform/terminal-runtime/__tests__/unit/ConnectionManager.test.ts
+  0.550 web/src/product/agent/state/probe.ts
+  0.540 web/src/generated/protocol/core/server-session-relay-begin/v1.ts
+  0.530 crates/nession-claude-code/src/server.rs
+  0.530 crates/nession-protocol/src/lib.rs
+  0.530 crates/nession-server/src/server/agent_view.rs
+  0.530 web/src/app/__tests__/integration/useAppConnection.test.ts
+  0.530 web/src/generated/protocol/core/server-session-relay-end/v1.ts
+  0.530 web/src/platform/protocol/types.ts
+  0.530 web/src/platform/server/ServerPlugin.ts
+  0.530 web/src/platform/socket/clientId.ts
+  0.530 web/src/product/session/patterns/ConnectionStatus.tsx
+  0.520 web/src/generated/protocol/core/server-session-attach/v1.ts
+  0.520 web/src/platform/attach/AttachStateMachine.ts
+  0.520 web/src/platform/terminal-runtime/types.ts
+  0.520 web/src/product/session/state/route.ts
+  0.510 web/src/platform/socket/__tests__/unit/WebSocketService.test.ts
+  0.510 web/src/product/agent/index.ts
+  0.500 crates/nession-claude-code/src/protocol/mod.rs
+relevant snippets:
+  0.870 crates/nession-agent/src/server/websocket.rs:1438-1448
+1438:     }
+1439: 
+1440:     /// Drain incoming WebSocket frames and dispatch them.
+1441:     #[allow(clippy::too_many_arguments)]
+1442:     async fn run_message_loop(
+1443:         mut ws_stream: futures_util::stream::SplitStream<WebSocketStream<TcpOrTls>>,
+1444:         sink: Arc<Mutex<futures_util::stream::SplitSink<WebSocketStream<TcpOrTls>, WsMessage>>>,
+1445:         tmux: Arc<SessionManager>,
+1446:         sessions: Arc<Mutex<SessionMap>>,
+1447:         client_id: Arc<Mutex<Option<String>>>,
+1448:         addr: SocketAddr,
+  0.870 crates/nession-server/src/server/websocket.rs:324-347
+324:             db,
+325:         },
+326:         crate::server::handler::ConnectionHandlerConfig {
+327:             server_auth_token: auth_token,
+328:             heartbeat_interval_secs,
+329:         },
+330:     );
+331:     handler.set_client_sender(sender.clone());
+332: 
+333:     // Spawn a relay task that drains the receiver and forwards to the actual
+334:     // write sink. A periodic WebSocket Ping keeps the TCP path alive through
+335:     // intermediaries and lets us detect a dead peer quickly.
+336:     let ping_period = std::time::Duration::from_secs(heartbeat_interval_secs.max(1));
+337:     let relay_task = tokio::spawn(async move {
+338:         let mut ping_ticker = tokio::time::interval(ping_period);
+339:         ping_ticker.tick().await; // consume the immediate first tick
+340:         loop {
+341:             tokio::select! {
+342:                 maybe_msg = rx.recv() => {
+343:                     match maybe_msg {
+344:                         Some(msg) => {
+345:                             if let Err(e) = write.send(msg).await {
+346:                                 error!("Failed to send WebSocket message: {}", e);
+347:                                 break;
+  0.860 crates/nession-agent/src/server/websocket.rs:682-696
+682:                             });
+683: 
+684:                             // Spawn ONE broadcast task for this session.
+685:                             // It reads from output_rx and fans out to ALL subscribers.
+686:                             let sessions_clone = Arc::clone(ctx.sessions);
+687:                             let session_name_clone = session_name.clone();
+688:                             tokio::spawn(async move {
+689:                                 while let Some(bytes) = output_rx.recv().await {
+690:                                     let mut guard = sessions_clone.lock().await;
+691:                                     if let Some(s) = guard.get_mut(&session_name_clone) {
+692:                                         // Broadcast to all subscribers; prune dead ones.
+693:                                         s.subscribers.retain(|tx| tx.send(bytes.clone()).is_ok());
+694:                                         if s.subscribers.is_empty() {
+695:                                             break;
+696:                                         }
+  0.860 crates/nession-server/src/server/websocket.rs:104-122
+104:             let env_service = Arc::clone(&self.env_service);
+105:             let web_client_registry = Arc::clone(&self.web_client_registry);
+106:             // Sweep at the heartbeat cadence (min 1s) so detection latency stays
+107:             // close to the configured timeout.
+108:             let sweep_period = std::time::Duration::from_secs(heartbeat_interval_secs.max(1));
+109:             tokio::spawn(async move {
+110:                 let mut ticker = tokio::time::interval(sweep_period);
+111:                 ticker.tick().await; // consume the immediate first tick
+112:                 loop {
+113:                     ticker.tick().await;
+114:                     let offline = agent_registry.check_offline_agents().await;
+115:                     for agent_id in offline {
+116:                         info!("Agent {} marked offline (heartbeat timeout)", agent_id);
+117:                         command_broker.unregister_agent(&agent_id).await;
+118: 
+119:                         // Schedule session cleanup after 30s grace period.
+120:                         // If the agent reconnects before the grace period
+121:                         // expires, its sessions are preserved.
+122:                         let session_registry = Arc::clone(&session_registry);
+  0.850 crates/nession-agent/src/server/websocket.rs:672-679
+672:                                         data: encoded,
+673:                                     };
+674:                                     let msg = new_message(msg_types::TERMINAL_OUTPUT, output);
+675:                                     if let Ok(json) = serde_json::to_string(&msg) {
+676:                                         let mut s = sink_first.lock().await;
+677:                                         if s.send(WsMessage::Text(json)).await.is_err() {
+678:                                             break;
+679:                                         }
+  0.850 crates/nession-cli/src/client/connection.rs:84-93
+84: }
+85: 
+86: impl ClientConnection {
+87:     /// Connect to the server with WebSocket (supports TLS).
+88:     pub async fn connect(server_url: &str, auth_token: &str) -> Result<Self> {
+89:         info!("Connecting to server: {}", server_url);
+90: 
+91:         let (ws_stream, _) = connect_async(server_url)
+92:             .await
+93:             .with_context(|| format!("Failed to connect to server at {server_url}"))?;
+  0.850 crates/nession-server/src/server/websocket.rs:274-293
+274: }
+275: 
+276: async fn handle_connection(
+277:     tcp_stream: tokio::net::TcpStream,
+278:     tls_acceptor: Option<TlsAcceptor>,
+279:     ctx: ServerContext,
+280: ) -> anyhow::Result<()> {
+281:     if let Some(acceptor) = tls_acceptor {
+282:         let tls_stream = acceptor.accept(tcp_stream).await?;
+283:         handle_ws_stream(tls_stream, ctx).await
+284:     } else {
+285:         handle_ws_stream(tcp_stream, ctx).await
+286:     }
+287: }
+288: 
+289: async fn handle_ws_stream<S>(stream: S, ctx: ServerContext) -> anyhow::Result<()>
+290: where
+291:     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
+292: {
+293:     use crate::server::command_broker::WsMessageSender;
+  0.850 crates/nession-server/src/server/websocket.rs:307-318
+307:     } = ctx;
+308: 
+309:     let ws_stream = accept_async(stream).await?;
+310:     let (mut write, mut read) = ws_stream.split();
+311: 
+312:     // Create the outgoing-message channel BEFORE the handler so the handler
+313:     // can register its sender for broadcasts (e.g. terminal resize).
+314:     let (sender, mut rx) = WsMessageSender::new();
+315: 
+316:     let mut handler = ConnectionHandler::new(
+317:         crate::server::handler::ConnectionHandlerDeps {
+318:             agent_registry,
+  0.850 crates/nession-server/src/server/websocket.rs:351-356
+351:                     }
+352:                 }
+353:                 _ = ping_ticker.tick() => {
+354:                     if write.send(tokio_tungstenite::tungstenite::Message::Ping(Vec::new())).await.is_err() {
+355:                         // Connection closed — expected during shutdown, no need to log.
+356:                         break;
+  0.850 web/src/platform/socket/WebSocketService.ts:299-327
+299:   }
+300: 
+301:   private sendRaw(message: SocketMessage): void {
+302:     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+303:       throw new Error('WebSocket not connected');
+304:     }
+305:     this.ws.send(JSON.stringify(message));
+306:   }
+307: 
+308:   private openSocket(resolve: () => void, reject: (error: Error) => void): void {
+309:     const myGeneration = ++this.generation;
+310:     const ws = new WebSocket(this.url);
+311:     this.ws = ws;
+312:     ws.binaryType = 'arraybuffer';
+313: 
+314:     ws.onopen = () => {
+315:       if (this.generation !== myGeneration) {
+316:         ws.close();
+317:         return;
+318:       }
+319:       const handshake = this.options.handshake;
+320:       if (!handshake) {
+321:         // Nothing gates readiness, so the socket *is* the connection: open is
+322:         // established, and only here may the reconnect budget reset.
+323:         this.reconnectAttempt = 0;
+324:         this.setState('connected');
+325:         this.connectPromise = null;
+326:         this.rejectConnect = null;
+327:         resolve();
+  0.850 web/src/platform/socket/WebSocketService.ts:443-456
+443:   }
+444: 
+445:   private handleSocketLoss(): void {
+446:     // A stale async callback (e.g. a handshake failing after a teardown) must
+447:     // not schedule a reconnect or flip the state once the transport stopped.
+448:     if (this.disposed || this.userClosed) {
+449:       return;
+450:     }
+451:     const error = new Error('Connection lost');
+452:     this.router.failPending(error);
+453:     const maxAttempts = this.options.maxReconnectAttempts ?? DEFAULT_MAX_RECONNECT_ATTEMPTS;
+454:     if (this.reconnectAttempt >= maxAttempts) {
+455:       console.error('Max reconnection attempts reached');
+456:       this.setState('disconnected');
+  0.840 crates/nession-agent/src/connection/server_client.rs:810-819
+810:         let addr = listener.local_addr().expect("mock server local_addr");
+811: 
+812:         let handle = tokio::spawn(async move {
+813:             if let Ok((stream, _)) = listener.accept().await {
+814:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+815:                 let (mut sink, mut stream) = ws.split();
+816: 
+817:                 // Send a registration response.
+818:                 let response = serde_json::json!({
+819:                     "msg_type": "server.agent.register.response",
+  0.840 crates/nession-agent/src/connection/server_client.rs:1167-1174
+1167:         let addr = listener.local_addr().expect("mock server local_addr");
+1168: 
+1169:         let handle = tokio::spawn(async move {
+1170:             if let Ok((stream, _)) = listener.accept().await {
+1171:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+1172:                 let (mut sink, mut stream) = ws.split();
+1173: 
+1174:                 // Send registration response.
+  0.840 crates/nession-agent/src/connection/server_client.rs:1282-1291
+1282:         let addr = listener.local_addr().expect("mock server local_addr");
+1283: 
+1284:         let handle = tokio::spawn(async move {
+1285:             if let Ok((stream, _)) = listener.accept().await {
+1286:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+1287:                 let (mut sink, mut stream) = ws.split();
+1288: 
+1289:                 // Send registration response.
+1290:                 let response = serde_json::json!({
+1291:                     "msg_type": "server.agent.register.response",
+  0.840 crates/nession-agent/src/connection/server_client.rs:1393-1400
+1393:         let addr = listener.local_addr().expect("mock server local_addr");
+1394: 
+1395:         let handle = tokio::spawn(async move {
+1396:             if let Ok((stream, _)) = listener.accept().await {
+1397:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+1398:                 let (mut sink, mut stream) = ws.split();
+1399: 
+1400:                 // Send registration response.
+  0.840 crates/nession-agent/src/server/websocket.rs:50-77
+50: /// `subscribers` fans terminal output out to every attached client; the
+51: /// control-mode path forwards output directly and leaves this empty.
+52: struct AttachedSession {
+53:     backend: Box<dyn TmuxSession>,
+54:     /// Unbounded senders — one per subscribed client.  The broadcast task
+55:     /// clones output to all of them.
+56:     subscribers: Vec<tokio::sync::mpsc::UnboundedSender<Vec<u8>>>,
+57: }
+58: 
+59: /// Per-connection map of attached sessions, keyed by session name.
+60: type SessionMap = std::collections::HashMap<String, AttachedSession>;
+61: 
+62: /// A stream that can be either plain TCP or TLS-wrapped.
+63: #[allow(clippy::large_enum_variant)]
+64: enum TcpOrTls {
+65:     Plain(tokio::net::TcpStream),
+66:     Tls(tokio_rustls::server::TlsStream<tokio::net::TcpStream>),
+67: }
+68: 
+69: impl tokio::io::AsyncRead for TcpOrTls {
+70:     fn poll_read(
+71:         self: Pin<&mut Self>,
+72:         cx: &mut std::task::Context<'_>,
+73:         buf: &mut tokio::io::ReadBuf<'_>,
+74:     ) -> std::task::Poll<std::io::Result<()>> {
+75:         match self.get_mut() {
+76:             TcpOrTls::Plain(s) => Pin::new(s).poll_read(cx, buf),
+77:             TcpOrTls::Tls(s) => Pin::new(s).poll_read(cx, buf),
+  0.840 crates/nession-agent/src/server/websocket.rs:784-792
+784:                                         data: encoded,
+785:                                     };
+786:                                     let msg = new_message(msg_types::TERMINAL_OUTPUT, output);
+787:                                     if let Ok(json) = serde_json::to_string(&msg) {
+788:                                         let mut s = sink_clone.lock().await;
+789:                                         if s.send(WsMessage::Text(json)).await.is_err() {
+790:                                             break;
+791:                                         }
+792:                                     }
+  0.840 crates/nession-agent/src/server/websocket.rs:1375-1384
+1375:     }
+1376: 
+1377:     /// Handle a single incoming TCP connection. Performs optional TLS
+1378:     /// handshake, upgrades to WebSocket, then enters the per-client
+1379:     /// message loop.
+1380:     #[allow(clippy::too_many_arguments)]
+1381:     async fn handle_connection(
+1382:         stream: tokio::net::TcpStream,
+1383:         addr: SocketAddr,
+1384:         tmux_manager: Arc<SessionManager>,
+  0.840 crates/nession-agent/src/server/websocket.rs:1666-1700
+1666:     async fn connect_client(
+1667:         addr: SocketAddr,
+1668:     ) -> (
+1669:         futures_util::stream::SplitSink<
+1670:             tokio_tungstenite::WebSocketStream<
+1671:                 tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+1672:             >,
+1673:             WsMessage,
+1674:         >,
+1675:         futures_util::stream::SplitStream<
+1676:             tokio_tungstenite::WebSocketStream<
+1677:                 tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+1678:             >,
+1679:         >,
+1680:     ) {
+1681:         let url = format!("ws://{addr}");
+1682:         let (ws_stream, _response) = connect_async(&url).await.expect("connect should succeed");
+1683:         ws_stream.split()
+1684:     }
+1685: 
+1686:     /// Send a JSON request and receive the matching JSON response.
+1687:     /// Skips over unsolicited messages (e.g., terminal.output) that may
+1688:     /// arrive from background tasks.
+1689:     async fn send_and_receive<S, R>(
+1690:         sink: &mut futures_util::stream::SplitSink<
+1691:             tokio_tungstenite::WebSocketStream<
+1692:                 tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+1693:             >,
+1694:             WsMessage,
+1695:         >,
+1696:         stream: &mut futures_util::stream::SplitStream<
+1697:             tokio_tungstenite::WebSocketStream<
+1698:                 tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+1699:             >,
+1700:         >,
+  0.840 crates/nession-cli/src/client/connection.rs:6-20
+6: use serde_json::json;
+7: use std::time::{SystemTime, UNIX_EPOCH};
+8: use tokio::net::TcpStream;
+9: use tokio_tungstenite::{
+10:     connect_async, tungstenite::protocol::Message, MaybeTlsStream, WebSocketStream,
+11: };
+12: use tracing::{debug, info};
+13: use uuid::Uuid;
+14: 
+15: /// Client connection to the central server.
+16: #[derive(Debug)]
+17: pub struct ClientConnection {
+18:     ws_stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
+19:     authenticated: bool,
+20: }
+  0.840 crates/nession-server/src/server/websocket.rs:441-447
+441: /// until one succeeds.  This avoids long hangs when the first address
+442: /// is unreachable (common in k8s where pod IPs are not routable).
+443: async fn relay_bidirectional_via_channel<RS>(
+444:     client_read: &mut RS,
+445:     sender: crate::server::command_broker::WsMessageSender,
+446:     agent_ws_urls: &[String],
+447:     session_name: &str,
+  0.840 crates/nession-server/src/server/websocket.rs:622-635
+622:     }
+623: 
+624:     // Forward client -> agent, with trailing-edge rate limiting on
+625:     // terminal.input to protect against mouse-tracking floods.
+626:     const INPUT_THROTTLE_MS: u64 = 16;
+627:     let mut last_terminal_input = std::time::Instant::now()
+628:         .checked_sub(std::time::Duration::from_secs(60))
+629:         .unwrap_or(std::time::Instant::now());
+630: 
+631:     let client_to_agent = async {
+632:         while let Some(msg) = client_read.next().await {
+633:             let msg = match msg {
+634:                 Ok(m) => m,
+635:                 Err(e) => {
+  0.840 crates/nession-server/src/server/websocket.rs:703-712
+703:     };
+704: 
+705:     // Forward agent -> client (via channel sender)
+706:     let agent_to_client = async {
+707:         while let Some(msg) = agent_read.next().await {
+708:             match msg {
+709:                 Ok(msg) => {
+710:                     if let Err(e) = sender.send(msg) {
+711:                         error!("Failed to forward agent message to client: {}", e);
+712:                         break;
+  0.840 web/src/platform/socket/WebSocketService.ts:32-44
+32: }
+33: 
+34: type ConnectionWaiter = {
+35:   resolve: () => void;
+36:   reject: (error: Error) => void;
+37: };
+38: 
+39: /**
+40:  * The single WebSocket transport for the web UI.
+41:  *
+42:  * Lifecycle: reconnect with exponential backoff, generation guard for stale
+43:  * socket events, request correlation via MessageRouterImpl. Three differences
+44:  * make it the transport these plugins install on:
+  0.840 web/src/platform/socket/WebSocketService.ts:240-249
+240:     }
+241: 
+242:     // Not ready yet: wait behind the readiness gate, then send with the
+243:     // remaining time budget.
+244:     const startedAt = Date.now();
+245:     return this.waitForConnection(timeoutMs).then(() => {
+246:       const remaining = timeoutMs - (Date.now() - startedAt);
+247:       if (remaining <= 0) {
+248:         return Promise.reject(new Error(`Request timeout: ${type}`));
+249:       }
+  0.840 web/src/platform/terminal-runtime/ConnectionManager.ts:186-208
+186:     });
+187: 
+188:     // Pure transport: ConnectionManager sends/receives messages but never
+189:     // initiates protocol actions.  client.attach timing is owned by the
+190:     // React layer (terminalSessionStateAtom).
+191:     this.pingTimer = setInterval(() => {
+192:       if (this.disposed) { return; }
+193:       try {
+194:         api.ping();
+195:       } catch { /* transport reconnecting — the runtime reconnect budget owns recovery */ }
+196:     }, 30_000);
+197:   }
+198: 
+199:   private setupRelay(): void {
+200:     const svc = this.serverConnection!;
+201: 
+202:     // Use sessionName for relay subscriptions — agent protocol messages
+203:     // carry session_name (short name), not session_id (agent:name format).
+204:     this.relayUnsubOutput = svc.onRelayOutput(this.sessionName, (data: Uint8Array) => {
+205:       if (!this.disposed) {
+206:         this.onOutput?.(data);
+207:       }
+208:     });
+  0.830 crates/nession-agent/src/connection/server_client.rs:237-251
+237:     }
+238: 
+239:     /// Serialize and enqueue a protocol message. A closed outbox (supervisor
+240:     /// gone) is the only failure; a merely-disconnected socket is not.
+241:     fn enqueue<P: Serialize>(&self, msg: &ProtocolMessage<P>) -> Result<()> {
+242:         let json = serde_json::to_string(msg)?;
+243:         self.outbox
+244:             .send(WsMessage::Text(json))
+245:             .map_err(|_| anyhow::anyhow!("server client supervisor has stopped"))
+246:     }
+247: 
+248:     /// Request the client to shut down.
+249:     pub async fn shutdown(&self) -> Result<()> {
+250:         self.shutdown_tx
+251:             .send(())
+  0.830 crates/nession-agent/src/connection/server_client.rs:453-466
+453:     }
+454: 
+455:     /// Establish one connection and register. Returns the split sink/stream and
+456:     /// the heartbeat interval the server advertised (if any).
+457:     async fn connect_once(&self) -> Result<(WsSink, WsStreamHalf, Option<u64>)> {
+458:         info!("Connecting to server at {}", self.server_url);
+459: 
+460:         let (ws_stream, _) = connect_async(&self.server_url)
+461:             .await
+462:             .context("failed to connect to server")?;
+463: 
+464:         let (mut sink, mut stream) = ws_stream.split();
+465: 
+466:         // Send registration.
+  0.830 crates/nession-agent/src/connection/server_client.rs:535-559
+535:     }
+536: 
+537:     /// Service a live connection: forward queued outgoing messages, handle
+538:     /// incoming server messages, respond to pings, and watch for shutdown.
+539:     /// Returns whether the loop ended due to shutdown or a dropped connection.
+540:     async fn run_connection(
+541:         self: Arc<Self>,
+542:         mut sink: WsSink,
+543:         mut stream: WsStreamHalf,
+544:         outbox_rx: &mut mpsc::UnboundedReceiver<WsMessage>,
+545:         shutdown_rx: &mut mpsc::Receiver<()>,
+546:     ) -> ConnectionOutcome {
+547:         // Handler tasks write their responses here; this loop drains the channel
+548:         // onto the socket. Unbounded so a handler never blocks on a full queue.
+549:         let (resp_tx, mut resp_rx) = mpsc::unbounded_channel::<WsMessage>();
+550: 
+551:         loop {
+552:             tokio::select! {
+553:                 // Outgoing: drain the outbox (heartbeats, session updates).
+554:                 outgoing = outbox_rx.recv() => {
+555:                     match outgoing {
+556:                         Some(msg) => {
+557:                             if let Err(e) = sink.send(msg).await {
+558:                                 warn!("Failed to send to server: {:#}", e);
+559:                                 return ConnectionOutcome::Disconnected;
+  0.830 crates/nession-agent/src/connection/server_client.rs:1979-1986
+1979:         let addr = listener.local_addr().expect("mock server local_addr");
+1980: 
+1981:         let handle = tokio::spawn(async move {
+1982:             if let Ok((stream, _)) = listener.accept().await {
+1983:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+1984:                 let (mut sink, mut stream) = ws.split();
+1985: 
+1986:                 let response = serde_json::json!({
+  0.830 crates/nession-agent/src/server/websocket.rs:762-769
+762:                                     data: encoded,
+763:                                 };
+764:                                 let msg = new_message(msg_types::TERMINAL_OUTPUT, output);
+765:                                 if let Ok(json) = serde_json::to_string(&msg) {
+766:                                     let mut s = ctx.sink.lock().await;
+767:                                     let _ = s.send(WsMessage::Text(json)).await;
+768:                                 }
+769:                             }
+  0.830 crates/nession-agent/src/server/websocket.rs:1902-1911
+1902:         // Increased from 5s — under LLVM instrumentation terminal I/O is slower.
+1903:         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(15);
+1904:         while tokio::time::Instant::now() < deadline {
+1905:             match tokio::time::timeout(std::time::Duration::from_secs(2), stream.next()).await {
+1906:                 Ok(Some(Ok(WsMessage::Text(text)))) => {
+1907:                     let msg: Message<serde_json::Value> = serde_json::from_str(&text).unwrap();
+1908:                     if msg.msg_type == msg_types::TERMINAL_OUTPUT {
+1909:                         let data_b64 = msg.payload.get("data").unwrap().as_str().unwrap();
+1910:                         let decoded = base64::engine::general_purpose::STANDARD
+1911:                             .decode(data_b64)
+  0.830 crates/nession-server/src/server/web_client_registry.rs:1-20
+1: //! Broadcast channel for pushing agent state changes to web clients.
+2: //!
+3: //! Uses a `tokio::sync::broadcast` channel so every authenticated web
+4: //! client connection subscribes once and receives `agents.changed` pushes
+5: //! without the server needing to track individual senders.
+6: 
+7: use std::sync::Arc;
+8: use tokio::sync::broadcast;
+9: use tokio_tungstenite::tungstenite::Message as WsMessage;
+10: use tracing::{debug, error, info};
+11: 
+12: use super::command_broker::WsMessageSender;
+13: 
+14: /// Shared broadcast channel for agent state pushes. A single sender is held
+15: /// by the server; every web-client connection spawns a relay task that
+16: /// forwards each broadcast to its own `WsMessageSender`.
+17: pub struct WebClientRegistry {
+18:     tx: broadcast::Sender<String>,
+19: }
+20: 
+  0.830 crates/nession-server/src/server/web_client_registry.rs:32-50
+32:     }
+33: 
+34:     /// Subscribe a newly-authenticated web client. Spawns a background task
+35:     /// that forwards every broadcast to `sender` until the client disconnects
+36:     /// (the receiver is dropped / lagged).
+37:     pub fn subscribe(&self, sender: WsMessageSender) {
+38:         let mut rx = self.tx.subscribe();
+39:         tokio::spawn(async move {
+40:             loop {
+41:                 match rx.recv().await {
+42:                     Ok(json) => {
+43:                         if sender.send(WsMessage::Text(json)).is_err() {
+44:                             debug!("WebClientRegistry: subscriber sender closed");
+45:                             break;
+46:                         }
+47:                     }
+48:                     Err(broadcast::error::RecvError::Lagged(n)) => {
+49:                         info!(
+50:                             "WebClientRegistry: subscriber lagged by {} messages, skipping",
+  0.830 crates/nession-server/src/server/websocket.rs:1-25
+1: use std::sync::Arc;
+2: use tokio::net::TcpListener;
+3: use tokio_rustls::TlsAcceptor;
+4: use tokio_tungstenite::accept_async;
+5: use tracing::{error, info, warn};
+6: 
+7: use super::handler::{ConnectionHandler, HandlerAction};
+8: use crate::db::Database;
+9: use crate::env::EnvService;
+10: use crate::registry::{AgentRegistry, AgentStatus, SessionRegistry};
+11: use crate::server::client_registry::ClientRegistry;
+12: use crate::server::command_broker::CommandBroker;
+13: use crate::server::web_client_registry::WebClientRegistry;
+14: use nession_common::config::ServerConfig;
+15: use nession_protocol::contracts::env::v1::EnvSnapshot;
+16: 
+17: pub struct WebSocketServer {
+18:     config: ServerConfig,
+19:     agent_registry: Arc<AgentRegistry>,
+20:     session_registry: Arc<SessionRegistry>,
+21:     command_broker: Arc<CommandBroker>,
+22:     client_registry: Arc<ClientRegistry>,
+23:     web_client_registry: Arc<WebClientRegistry>,
+24:     env_service: Arc<EnvService>,
+25:     db: Arc<Database>,
+  0.830 crates/nession-server/src/server/websocket.rs:469-480
+469:     // Fast-retry: try each URL with a 2s connect timeout.  The list is
+470:     // sorted best-first (Reachable → Unknown → Unreachable) by the
+471:     // handler so the first success is the best available endpoint.
+472:     let mut agent_ws = None;
+473:     let mut connected_url: Option<String> = None;
+474:     for url in agent_ws_urls {
+475:         info!("Relay: trying {}", url);
+476:         match tokio::time::timeout(
+477:             std::time::Duration::from_secs(2),
+478:             tokio_tungstenite::connect_async(url),
+479:         )
+480:         .await
+  0.830 crates/nession-server/src/server/websocket.rs:660-677
+660:                 let mut latest = msg;
+661: 
+662:                 loop {
+663:                     let remaining =
+664:                         drain_deadline.saturating_duration_since(std::time::Instant::now());
+665:                     if remaining.is_zero() {
+666:                         break;
+667:                     }
+668:                     match tokio::time::timeout(remaining, client_read.next()).await {
+669:                         Ok(Some(Ok(m))) if is_terminal_input(&m) => {
+670:                             latest = m; // keep only latest mouse event
+671:                         }
+672:                         Ok(Some(Ok(m))) => {
+673:                             // Non-terminal.input message during drain:
+674:                             // forward it now, then break to send latest.
+675:                             let _ = agent_write.send(m).await;
+676:                             break;
+677:                         }
+  0.830 web/src/app/useVisibilityReconnect.ts:2-21
+2: import type { WebSocketService } from '../platform/socket';
+3: 
+4: /**
+5:  * When the tab becomes visible after being backgrounded (e.g. mobile app
+6:  * switch), check whether the WebSocket died while we were away and trigger
+7:  * an immediate reconnect instead of waiting for the backoff timer — which
+8:  * the browser may have throttled or paused during suspension.
+9:  *
+10:  * Only a stopped transport ('disconnected') is re-armed here: 'connecting' has
+11:  * an in-flight attempt (connect() is shared), 'reconnecting' already has a
+12:  * timer scheduled, and 'connected' needs nothing.
+13:  */
+14: export function useVisibilityReconnect(
+15:   wasEverAuthed: boolean,
+16:   wsService: WebSocketService | null,
+17: ): void {
+18:   useEffect(() => {
+19:     const handleVisibility = () => {
+20:       if (document.visibilityState !== 'visible') { return; }
+21:       if (!wasEverAuthed) { return; }
+  0.830 web/src/platform/session-runtime/SessionRuntime.ts:601-609
+601:     }
+602: 
+603:     const builtUrl = buildAgentWsUrl(url, token);
+604:     const live = this.agentWs;
+605:     if (live && !opts?.forceReconnect && live.getUrl() === builtUrl) {
+606:       // Same agent endpoint: keep the live socket. The reconnect budget was
+607:       // fixed at construction; endpoint or token changes rebuild below.
+608:       if (live.connectionState === 'connected') {
+609:         this.maybeStartP2PAttach();
+  0.830 web/src/platform/socket/WebSocketService.ts:11-24
+11: } from './types';
+12: 
+13: const MAX_RECONNECT_DELAY = 30_000;
+14: const DEFAULT_MAX_RECONNECT_ATTEMPTS = 10;
+15: const DEFAULT_RECONNECT_BASE_DELAY = 1_000;
+16: 
+17: function reconnectDelayMs(attempt: number, baseDelay: number): number {
+18:   return Math.min(baseDelay * Math.pow(2, attempt), MAX_RECONNECT_DELAY);
+19: }
+20: 
+21: /** Append a connection token to an agent WebSocket URL as a query parameter. */
+22: export function buildAgentWsUrl(agentUrl: string, connectionToken?: string): string {
+23:   if (!connectionToken) {
+24:     return agentUrl;
+  0.830 web/src/platform/socket/WebSocketService.ts:125-143
+125:       return Promise.reject(new Error('WebSocketService is closed'));
+126:     }
+127:     if (this.connectPromise) {
+128:       return this.connectPromise;
+129:     }
+130:     if (this.ws?.readyState === WebSocket.OPEN && this.state === 'connected') {
+131:       return Promise.resolve();
+132:     }
+133: 
+134:     this.setState('connecting');
+135:     this.connectPromise = new Promise<void>((resolve, reject) => {
+136:       this.rejectConnect = reject;
+137:       try {
+138:         this.openSocket(resolve, reject);
+139:       } catch (error) {
+140:         this.connectPromise = null;
+141:         this.rejectConnect = null;
+142:         this.setState('disconnected');
+143:         reject(error instanceof Error ? error : new Error(String(error)));
+  0.830 web/src/platform/terminal-runtime/ConnectionManager.ts:63-84
+63:    */
+64:   flushInputBuffer(): void {
+65:     if (this.disposed || this.inputBuffer.length === 0) { return; }
+66:     const buffered = this.inputBuffer.splice(0);
+67:     for (const d of buffered) { this.sendRaw(d); }
+68:   }
+69: 
+70:   /** Send input unconditionally — used by send() once the session is attached. */
+71:   private sendRaw(data: string): void {
+72:     if (this.mode === 'p2p' && this.agentApi) {
+73:       // The underlying socket may be mid-reconnect or disposed — the agent
+74:       // transport refuses with a throw ('WebSocket not connected' /
+75:       // 'WebSocketService disposed'). Drop rather than surface a transport
+76:       // race as a user-visible error; the runtime's reconnect budget owns
+77:       // recovery and the isAttached gate covers the transient window.
+78:       try {
+79:         this.agentApi.sendInput(this.sessionName, data);
+80:       } catch { /* transport reconnecting */ }
+81:     } else if (this.mode === 'relay' && this.serverConnection?.isReady()) {
+82:       this.serverConnection.sendRelayInput(this.sessionName, data);
+83:     }
+84:   }
+  0.820 crates/nession-agent/src/connection/server_client.rs:85-93
+85: }
+86: 
+87: /// WebSocket client that connects to the central nession-server.
+88: ///
+89: /// The client owns a supervisor task that handles connection, registration,
+90: /// the message loop, and automatic reconnection with exponential backoff.
+91: pub struct ServerClient {
+92:     /// Server URL (e.g., "wss://server.example.com:8443").
+93:     server_url: String,
+  0.820 crates/nession-agent/src/connection/server_client.rs:582-603
+582:                     }
+583:                 }
+584:                 // Incoming: server messages, pings, close.
+585:                 incoming = stream.next() => {
+586:                     match incoming {
+587:                         Some(Ok(WsMessage::Text(text))) => {
+588:                             // Handle off the loop so a slow command can't block
+589:                             // heartbeats or subsequent reads.
+590:                             let this = self.clone();
+591:                             let tx = resp_tx.clone();
+592:                             tokio::spawn(async move {
+593:                                 if let Err(e) = this.handle_server_message(&text, &tx).await {
+594:                                     warn!("Error handling server message: {:#}", e);
+595:                                 }
+596:                             });
+597:                         }
+598:                         Some(Ok(WsMessage::Ping(data))) => {
+599:                             let _ = sink.send(WsMessage::Pong(data)).await;
+600:                         }
+601:                         Some(Ok(WsMessage::Close(_))) => {
+602:                             info!("Server closed connection");
+603:                             return ConnectionOutcome::Disconnected;
+  0.820 crates/nession-agent/src/connection/server_client.rs:825-836
+825:                     }
+826:                 });
+827:                 let _ = sink.send(WsMessage::Text(response.to_string())).await;
+828: 
+829:                 // Echo messages back and forward them to the receiver.
+830:                 while let Some(Ok(msg)) = stream.next().await {
+831:                     if let WsMessage::Text(text) = msg {
+832:                         let _ = msg_tx.send(text.clone()).await;
+833:                         // Echo back.
+834:                         let _ = sink.send(WsMessage::Text(text)).await;
+835:                     }
+836:                 }
+  0.820 crates/nession-agent/src/connection/server_client.rs:1008-1015
+1008:             .expect("failed to bind mock server");
+1009:         let addr = listener.local_addr().expect("mock server local_addr");
+1010:         let handle = tokio::spawn(async move {
+1011:             if let Ok((stream, _)) = listener.accept().await {
+1012:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+1013:                 let (mut sink, mut stream) = ws.split();
+1014:                 let response = serde_json::json!({
+1015:                     "msg_type": "server.agent.register.response",
+  0.820 crates/nession-agent/src/connection/server_client.rs:1705-1712
+1705:         let addr = listener.local_addr().expect("mock server local_addr");
+1706: 
+1707:         let handle = tokio::spawn(async move {
+1708:             if let Ok((stream, _)) = listener.accept().await {
+1709:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+1710:                 let (mut sink, mut stream) = ws.split();
+1711: 
+1712:                 let response = serde_json::json!({
+  0.820 crates/nession-agent/src/connection/server_client.rs:1794-1801
+1794:         let addr = listener.local_addr().expect("mock server local_addr");
+1795: 
+1796:         let handle = tokio::spawn(async move {
+1797:             if let Ok((stream, _)) = listener.accept().await {
+1798:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+1799:                 let (mut sink, mut stream) = ws.split();
+1800: 
+1801:                 let response = serde_json::json!({
+  0.820 crates/nession-agent/src/connection/server_client.rs:1814-1822
+1814:                     "payload": { "request_id": "req-sessions-list-1" }
+1815:                 });
+1816:                 let _ = sink.send(WsMessage::Text(cmd.to_string())).await;
+1817: 
+1818:                 while let Some(Ok(msg)) = stream.next().await {
+1819:                     if let WsMessage::Text(text) = msg {
+1820:                         let _ = msg_tx.send(text.clone()).await;
+1821:                     }
+1822:                 }
+  0.820 crates/nession-agent/src/connection/server_client.rs:1888-1895
+1888:         let addr = listener.local_addr().expect("mock server local_addr");
+1889: 
+1890:         let handle = tokio::spawn(async move {
+1891:             if let Ok((stream, _)) = listener.accept().await {
+1892:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+1893:                 let (mut sink, mut stream) = ws.split();
+1894: 
+1895:                 let response = serde_json::json!({
+  0.820 crates/nession-agent/src/connection/server_client.rs:1908-1916
+1908:                     "payload": { "request_id": "req-env-query-1" }
+1909:                 });
+1910:                 let _ = sink.send(WsMessage::Text(cmd.to_string())).await;
+1911: 
+1912:                 while let Some(Ok(msg)) = stream.next().await {
+1913:                     if let WsMessage::Text(text) = msg {
+1914:                         let _ = msg_tx.send(text.clone()).await;
+1915:                     }
+1916:                 }
+  0.820 crates/nession-agent/src/connection/server_client.rs:2198-2205
+2198:         let addr = listener.local_addr().expect("mock server local_addr");
+2199: 
+2200:         let handle = tokio::spawn(async move {
+2201:             if let Ok((stream, _)) = listener.accept().await {
+2202:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+2203:                 let (mut sink, mut stream) = ws.split();
+2204: 
+2205:                 let response = serde_json::json!({
+  0.820 crates/nession-agent/src/server/websocket.rs:609-626
+609:                     }
+610: 
+611:                     let mut sessions_guard = ctx.sessions.lock().await;
+612: 
+613:                     if let Some(shared) = sessions_guard.get_mut(&session_name) {
+614:                         // Session already exists: add a new subscriber.
+615:                         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+616:                         shared.subscribers.push(tx);
+617:                         drop(sessions_guard);
+618: 
+619:                         let sink_output = Arc::clone(ctx.sink);
+620:                         let session_name_output = session_name.clone();
+621:                         tokio::spawn(async move {
+622:                             while let Some(bytes) = rx.recv().await {
+623:                                 use base64::Engine;
+624:                                 let encoded =
+625:                                     base64::engine::general_purpose::STANDARD.encode(&bytes);
+626:                                 let output = TerminalOutputPayload {
+  0.820 crates/nession-agent/src/server/websocket.rs:628-635
+628:                                     data: encoded,
+629:                                 };
+630:                                 let msg = new_message(msg_types::TERMINAL_OUTPUT, output);
+631:                                 if let Ok(json) = serde_json::to_string(&msg) {
+632:                                     let mut s = sink_output.lock().await;
+633:                                     if s.send(WsMessage::Text(json)).await.is_err() {
+634:                                         break;
+635:                                     }
+  0.820 crates/nession-agent/src/server/websocket.rs:732-740
+732:                     .await
+733:                     {
+734:                         Ok((session, mut output_rx, mut resize_rx)) => {
+735:                             let session_name = payload.session_name.clone();
+736:                             ctx.sessions.lock().await.insert(
+737:                                 session_name.clone(),
+738:                                 AttachedSession {
+739:                                     backend: Box::new(session),
+740:                                     subscribers: Vec::new(),
+  0.820 crates/nession-agent/src/server/websocket.rs:771-780
+771:                             // Spawn a background task that consumes the output
+772:                             // channel from the control-mode subprocess and
+773:                             // forwards bytes to the client as `terminal.output`
+774:                             // messages.
+775:                             let sink_clone = Arc::clone(ctx.sink);
+776:                             let session_name_clone = session_name.clone();
+777:                             tokio::spawn(async move {
+778:                                 while let Some(bytes) = output_rx.recv().await {
+779:                                     use base64::Engine;
+780:                                     let encoded =
+  0.820 crates/nession-cli/src/client/connection.rs:260-272
+260: 
+261:         debug!("Sending sessions list request: {}", request);
+262:         self.ws_stream
+263:             .send(Message::Text(request.to_string()))
+264:             .await?;
+265: 
+266:         // Wait for response
+267:         if let Some(msg) = self.ws_stream.next().await {
+268:             match msg {
+269:                 Ok(Message::Text(text)) => {
+270:                     let response: serde_json::Value = serde_json::from_str(&text)?;
+271:                     let msg_type = response
+272:                         .get("msg_type")
+  0.820 crates/nession-cli/src/client/connection.rs:603-615
+603:         let addr = listener.local_addr().unwrap();
+604: 
+605:         let handle = tokio::spawn(async move {
+606:             if let Ok((stream, _)) = listener.accept().await {
+607:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+608:                 let (mut sink, mut stream) = ws.split();
+609: 
+610:                 // Echo messages back
+611:                 while let Some(Ok(msg)) = stream.next().await {
+612:                     if let Message::Text(text) = msg {
+613:                         let parsed: serde_json::Value = serde_json::from_str(&text).unwrap();
+614:                         let msg_type = parsed
+615:                             .get("msg_type")
+  0.820 crates/nession-server/src/server/client_registry.rs:1-17
+1: use std::collections::HashMap;
+2: use tokio::sync::RwLock;
+3: use tokio_tungstenite::tungstenite::Message as WsMessage;
+4: use tracing::{debug, warn};
+5: 
+6: use super::command_broker::WsMessageSender;
+7: 
+8: /// Tracks connected web clients per session, enabling server-initiated
+9: /// broadcasts (e.g. terminal resize events from the agent).
+10: ///
+11: /// A client is registered when it enters relay mode for a session and
+12: /// unregistered when the connection drops.
+13: pub struct ClientRegistry {
+14:     /// session_id → (client_id → sender)
+15:     clients: RwLock<HashMap<String, HashMap<String, WsMessageSender>>>,
+16: }
+17: 
+  0.820 crates/nession-server/src/server/client_registry.rs:57-73
+57:     }
+58: 
+59:     /// Broadcast a text message to all clients attached to a session.
+60:     /// Returns the number of clients the message was sent to.
+61:     pub async fn broadcast(&self, session_id: &str, msg: String) -> usize {
+62:         let clients = self.clients.read().await;
+63:         let Some(session_clients) = clients.get(session_id) else {
+64:             return 0;
+65:         };
+66: 
+67:         let ws_msg = WsMessage::Text(msg);
+68:         let mut sent = 0;
+69:         for (client_id, sender) in session_clients {
+70:             match sender.send(ws_msg.clone()) {
+71:                 Ok(_) => sent += 1,
+72:                 Err(e) => {
+73:                     warn!(
+  0.820 crates/nession-server/src/server/web_client_registry.rs:63-70
+63:     }
+64: 
+65:     /// Push an `agents.changed` JSON payload to all connected web clients.
+66:     /// This is a non-blocking send — slow clients may miss messages (lagged).
+67:     pub fn broadcast(&self, json: String) {
+68:         match self.tx.send(json) {
+69:             Ok(n) => debug!("WebClientRegistry: broadcast to {} subscribers", n),
+70:             Err(broadcast::error::SendError(_)) => {
+  0.820 crates/nession-server/src/server/websocket.rs:27-35
+27: }
+28: 
+29: impl WebSocketServer {
+30:     pub async fn new(config: ServerConfig, db: Arc<Database>) -> anyhow::Result<Self> {
+31:         let listener = TcpListener::bind(&config.listen_address).await?;
+32:         let agent_registry = Arc::new(AgentRegistry::new(
+33:             config.heartbeat_timeout_secs,
+34:             Arc::clone(&db),
+35:         ));
+  0.820 crates/nession-server/src/server/websocket.rs:125-149
+125:                         let web_client_registry = Arc::clone(&web_client_registry);
+126:                         let agent_id_clone = agent_id.clone();
+127:                         tokio::spawn(async move {
+128:                             tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+129:                             // Only clean if agent is still offline after grace period.
+130:                             if let Some(agent) = agent_registry.get(&agent_id_clone).await {
+131:                                 if agent.status == AgentStatus::Offline {
+132:                                     info!(
+133:                                         "Cleaning sessions for offline agent {} (grace period expired)",
+134:                                         agent_id_clone
+135:                                     );
+136:                                     // Collect session IDs first so we can clear their
+137:                                     // env usage locks after removal.
+138:                                     let removed =
+139:                                         session_registry.remove_by_agent(&agent_id_clone).await;
+140:                                     for session_id in &removed {
+141:                                         env_service.usage.clear_session(session_id);
+142:                                     }
+143:                                     if !removed.is_empty() {
+144:                                         // Push the shrunken list so browsers stop
+145:                                         // showing sessions that are now gone.
+146:                                         web_client_registry
+147:                                             .broadcast_sessions_changed(Arc::clone(
+148:                                                 &session_registry,
+149:                                             ))
+  0.820 crates/nession-server/src/server/websocket.rs:391-398
+391:                 cols,
+392:                 rows,
+393:             } => {
+394:                 relay_bidirectional_via_channel(
+395:                     &mut read,
+396:                     sender.clone(),
+397:                     &agent_ws_urls,
+398:                     &session_name,
+  0.820 web/src/platform/session-runtime/SessionRuntime.ts:574-581
+574:   }
+575: 
+576:   /**
+577:    * Keep or rebuild the P2P agent WebSocket.
+578:    *
+579:    * Rebuilds (and only rebuilds) when the agent endpoint changed — candidate
+580:    * rotation, a manual route switch, or the first sync — or when
+581:    * `forceReconnect` is requested. A rebuild disposes the old service and
+  0.820 web/src/platform/socket/WebSocketService.ts:58-78
+58:  * A handshake that *rejects* is a refusal, not a loss: the socket opened and
+59:  * the peer answered it. The service settles at 'disconnected' and schedules no
+60:  * reconnect, because replaying the same handshake would be refused again
+61:  * (#692). The reconnect budget therefore covers only sockets lost from a live
+62:  * connection, and is reset by each connection that actually gets established —
+63:  * not by a socket that merely opened.
+64:  */
+65: export class WebSocketService implements PluginSurface {
+66:   private ws: WebSocket | null = null;
+67:   private generation = 0;
+68:   private reconnectAttempt = 0;
+69:   private state: ConnectionState = 'disconnected';
+70:   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+71:   private connectPromise: Promise<void> | null = null;
+72:   private rejectConnect: ((error: Error) => void) | null = null;
+73:   private userClosed = false;
+74:   private disposed = false;
+75:   private readonly stateListeners = new Set<(state: ConnectionState) => void>();
+76:   private readonly waiters = new Set<ConnectionWaiter>();
+77:   private idCounter = 0;
+78:   private readonly plugins = new Map<string, RegisteredPlugin>();
+  0.820 web/src/platform/socket/WebSocketService.ts:370-396
+370:         }
+371:         this.connectPromise = null;
+372:         this.rejectConnect = null;
+373:         reject(error instanceof Error ? error : new Error(String(error)));
+374:         // Only a refusal from a socket that is still live settles here. If the
+375:         // socket died while the handshake was in flight, its onclose already
+376:         // ran the loss path — retrying there is legitimate, and overriding it
+377:         // would strand the retry timer behind a 'disconnected' state.
+378:         if (this.ws === ws && ws.readyState === WebSocket.OPEN) {
+379:           this.teardownSocket();
+380:           this.failConnection();
+381:         }
+382:       });
+383:     };
+384: 
+385:     ws.onmessage = (event) => {
+386:       if (this.generation !== myGeneration) {
+387:         return;
+388:       }
+389:       try {
+390:         if (typeof event.data === 'string') {
+391:           const message = JSON.parse(event.data) as SocketMessage;
+392:           this.router.handleIncoming(message);
+393:         } else if (event.data instanceof ArrayBuffer) {
+394:           this.router.handleBinary(event.data);
+395:         }
+396:       } catch (error) {
+  0.820 web/src/platform/terminal-runtime/ConnectionManager.ts:3-12
+3: import type { TerminalTransport } from './transport/TerminalTransport';
+4: 
+5: export class ConnectionManager implements TerminalTransport {
+6:   readonly mode: 'p2p' | 'relay';
+7:   private sessionName: string;
+8:   private agentApi?: ConnectionOptions['agentApi'];
+9:   private serverConnection?: ConnectionOptions['serverConnection'];
+10:   private pingTimer: ReturnType<typeof setInterval> | null = null;
+11:   private relayUnsubOutput: (() => void) | null = null;
+12:   private relayUnsubState: (() => void) | null = null;
+  0.820 web/src/platform/terminal-runtime/ConnectionManager.ts:42-58
+42:     if (this.mode === 'p2p' && this.agentApi) {
+43:       this.setupP2P();
+44:     } else if (this.mode === 'relay' && this.serverConnection) {
+45:       this.setupRelay();
+46:     }
+47:   }
+48: 
+49:   send(data: string): void {
+50:     if (this.disposed) { return; }
+51:     if (!this.isAttached()) {
+52:       this.inputBuffer.push(data);
+53:       return;
+54:     }
+55:     this.flushInputBuffer();
+56:     this.sendRaw(data);
+57:   }
+58: 
+  0.810 crates/nession-agent/src/connection/server_client.rs:1-18
+1: //! WebSocket client for connecting to the central nession-server.
+2: //!
+3: //! The [`ServerClient`] runs a supervisor task that connects to the central
+4: //! server, registers the agent, and then services the connection. If the
+5: //! connection drops for any reason, the supervisor reconnects with exponential
+6: //! backoff and re-registers — the loop never exits until shutdown is requested.
+7: //!
+8: //! Outgoing messages (heartbeats, session updates) are queued on an unbounded
+9: //! channel rather than written to the socket directly. The supervisor drains
+10: //! the queue onto whatever connection is currently live; while disconnected,
+11: //! queued messages are dropped. This means callers never observe a "broken
+12: //! pipe" — sending always succeeds locally and delivery resumes after reconnect.
+13: 
+14: use anyhow::{Context, Result};
+15: use futures_util::{SinkExt, StreamExt};
+16: use nession_protocol::contracts::agent::v1::{
+17:     AgentAddress, AgentAddressUpdatePayload, AgentHeartbeatPayload, AgentMetadata,
+18:     AgentRegisterPayload, AgentStatus, HeartbeatMetadata,
+  0.810 crates/nession-agent/src/connection/server_client.rs:358-377
+358:     }
+359: 
+360:     /// Supervisor loop: connect → register → service → reconnect, forever.
+361:     async fn supervise(
+362:         self,
+363:         mut outbox_rx: mpsc::UnboundedReceiver<WsMessage>,
+364:         mut shutdown_rx: mpsc::Receiver<()>,
+365:         interval_tx: mpsc::Sender<Result<Option<u64>, String>>,
+366:         sync_needed: Arc<AtomicBool>,
+367:         connected: Arc<AtomicBool>,
+368:     ) {
+369:         let mut reconnect_delay = INITIAL_RECONNECT_DELAY;
+370:         let mut reported_interval = false;
+371: 
+372:         let this = Arc::new(self);
+373: 
+374:         loop {
+375:             // Bail out immediately if shutdown was requested between attempts.
+376:             if shutdown_rx.try_recv().is_ok() {
+377:                 info!("Server client shutting down before reconnect");
+  0.810 crates/nession-agent/src/connection/server_client.rs:490-505
+490:         let msg = new_message(msg_types::AGENT_REGISTER, payload);
+491:         let json = serde_json::to_string(&msg)?;
+492:         sink.send(WsMessage::Text(json))
+493:             .await
+494:             .context("failed to send registration message")?;
+495:         info!("Sent registration message for agent {}", self.agent_id);
+496: 
+497:         // Wait for the registration response so we can learn the heartbeat
+498:         // interval and confirm acceptance before reporting "connected".
+499:         let interval;
+500:         loop {
+501:             match stream.next().await {
+502:                 Some(Ok(WsMessage::Text(text))) => {
+503:                     let resp: ProtocolMessage<serde_json::Value> = serde_json::from_str(&text)
+504:                         .context("failed to parse registration response")?;
+505:                     if resp.msg_type == msg_types::AGENT_REGISTER_RESPONSE {
+  0.810 crates/nession-agent/src/connection/server_client.rs:1071-1079
+1071:         let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+1072:         let addr = listener.local_addr().expect("mock server local_addr");
+1073:         let server_handle = tokio::spawn(async move {
+1074:             for round in 0..2u32 {
+1075:                 if let Ok((stream, _)) = listener.accept().await {
+1076:                     let ws = accept_async(stream).await.expect("accept ws");
+1077:                     let (mut sink, mut stream) = ws.split();
+1078:                     let response = serde_json::json!({
+1079:                         "msg_type": "server.agent.register.response",
+  0.810 crates/nession-agent/src/connection/server_client.rs:1199-1208
+1199:                     }
+1200:                 });
+1201:                 let _ = sink.send(WsMessage::Text(create_cmd.to_string())).await;
+1202: 
+1203:                 // Collect response.
+1204:                 while let Some(Ok(msg)) = stream.next().await {
+1205:                     if let WsMessage::Text(text) = msg {
+1206:                         let _ = msg_tx.send(text.clone()).await;
+1207:                     }
+1208:                 }
+  0.810 crates/nession-agent/src/connection/server_client.rs:1321-1327
+1321: 
+1322:                 // Collect response.
+1323:                 while let Some(Ok(msg)) = stream.next().await {
+1324:                     if let WsMessage::Text(text) = msg {
+1325:                         let _ = msg_tx.send(text.clone()).await;
+1326:                     }
+1327:                 }
+  0.810 crates/nession-agent/src/connection/server_client.rs:1725-1733
+1725:                     "payload": { "request_id": "req-env-list-1" }
+1726:                 });
+1727:                 let _ = sink.send(WsMessage::Text(cmd.to_string())).await;
+1728: 
+1729:                 while let Some(Ok(msg)) = stream.next().await {
+1730:                     if let WsMessage::Text(text) = msg {
+1731:                         let _ = msg_tx.send(text.clone()).await;
+1732:                     }
+1733:                 }
+  0.810 crates/nession-agent/src/connection/server_client.rs:2010-2018
+2010:                     }
+2011:                 });
+2012:                 let _ = sink.send(WsMessage::Text(cmd.to_string())).await;
+2013: 
+2014:                 while let Some(Ok(msg)) = stream.next().await {
+2015:                     if let WsMessage::Text(text) = msg {
+2016:                         let _ = msg_tx.send(text.clone()).await;
+2017:                     }
+2018:                 }
+  0.810 crates/nession-agent/src/connection/server_client.rs:2302-2309
+2302:             .unwrap();
+2303: 
+2304:         // The heartbeat must arrive promptly (well before the 5s hang ends).
+2305:         let delivered = tokio::time::timeout(Duration::from_secs(1), async {
+2306:             loop {
+2307:                 let msg = msg_rx.recv().await.expect("server closed");
+2308:                 let parsed: serde_json::Value = serde_json::from_str(&msg).unwrap();
+2309:                 if parsed.get("msg_type").and_then(|v| v.as_str()) == Some("server.agent.heartbeat")
+  0.810 crates/nession-agent/src/server/websocket.rs:1-7
+1: //! Agent WebSocket server implementation.
+2: //!
+3: //! Provides a [`AgentServer`] that listens for P2P client connections over
+4: //! WebSocket (with optional TLS) and routes terminal I/O to/from per-client
+5: //! PTY sessions. Also exposes session management operations (list, create,
+6: //! kill) via the [`SessionManager`].
+7: //!
+  0.810 crates/nession-agent/src/server/websocket.rs:1332-1343
+1332: 
+1333:             loop {
+1334:                 let shutdown_future = async {
+1335:                     let mut rx = shutdown_rx.lock().await;
+1336:                     rx.recv().await
+1337:                 };
+1338:                 tokio::select! {
+1339:                     accept_result = listener.accept() => {
+1340:                         match accept_result {
+1341:                             Ok((stream, addr)) => {
+1342:                                 let tmux = Arc::clone(&tmux_manager);
+1343:                                 let fops = Arc::clone(&file_ops);
+  0.810 crates/nession-agent/src/server/websocket.rs:1389-1399
+1389:         agent_id: &str,
+1390:         attach_mode: AttachMode,
+1391:         resize_tx: mpsc::UnboundedSender<(String, u16, u16)>,
+1392:     ) -> Result<()> {
+1393:         // Box the underlying stream so that TLS and plain connections
+1394:         // share a single WebSocket stream type.
+1395:         let io: TcpOrTls = if let Some(acceptor) = tls_acceptor {
+1396:             let tls_stream = acceptor
+1397:                 .accept(stream)
+1398:                 .await
+1399:                 .context("TLS handshake failed")?;
+  0.810 crates/nession-agent/src/server/websocket.rs:1404-1425
+1404:         };
+1405: 
+1406:         let ws = tokio_tungstenite::accept_async(io)
+1407:             .await
+1408:             .context("WebSocket upgrade failed")?;
+1409:         let (ws_sink, ws_stream) = ws.split();
+1410: 
+1411:         info!("WebSocket connection from {}", addr);
+1412: 
+1413:         // Shared sink so that `handle_request` (which may be invoked for
+1414:         // multiple concurrent requests via the terminal I/O task) can
+1415:         // send messages back to the client.
+1416:         let sink = Arc::new(Mutex::new(ws_sink));
+1417:         // Per-client attached PTY sessions keyed by session name.
+1418:         let sessions: Arc<Mutex<SessionMap>> =
+1419:             Arc::new(Mutex::new(std::collections::HashMap::new()));
+1420:         // Per-connection client ID (set during CLIENT_AUTH handshake)
+1421:         let client_id: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+1422: 
+1423:         Self::run_message_loop(
+1424:             ws_stream,
+1425:             sink,
+  0.810 crates/nession-agent/src/server/websocket.rs:1452-1459
+1452:         agent_id: &str,
+1453:         attach_mode: AttachMode,
+1454:         resize_tx: mpsc::UnboundedSender<(String, u16, u16)>,
+1455:     ) -> Result<()> {
+1456:         while let Some(msg) = ws_stream.next().await {
+1457:             let msg = match msg {
+1458:                 Ok(m) => m,
+1459:                 Err(e) => {
+  0.810 crates/nession-agent/src/server/websocket.rs:1705-1718
+1705:         R: for<'de> Deserialize<'de>,
+1706:     {
+1707:         let json = serde_json::to_string(request).unwrap();
+1708:         let request_id = request.id.clone();
+1709:         sink.send(WsMessage::Text(json)).await.unwrap();
+1710: 
+1711:         loop {
+1712:             let msg = stream.next().await.unwrap().unwrap();
+1713:             match msg {
+1714:                 WsMessage::Text(text) => {
+1715:                     // Parse as a raw value first to check the ID
+1716:                     let raw: serde_json::Value = serde_json::from_str(&text).unwrap();
+1717:                     if raw.get("id").and_then(|v| v.as_str()) == Some(&request_id) {
+1718:                         return serde_json::from_value(raw).unwrap();
+  0.810 crates/nession-cli/src/client/connection.rs:129-141
+129: 
+130:         debug!("Sending auth message: {}", auth_msg);
+131:         self.ws_stream
+132:             .send(Message::Text(auth_msg.to_string()))
+133:             .await?;
+134: 
+135:         // Wait for auth response
+136:         if let Some(msg) = self.ws_stream.next().await {
+137:             match msg {
+138:                 Ok(Message::Text(text)) => {
+139:                     let response: serde_json::Value = serde_json::from_str(&text)?;
+140:                     let msg_type = response
+141:                         .get("msg_type")
+  0.810 crates/nession-cli/src/client/connection.rs:196-209
+196: 
+197:         debug!("Sending agents list request: {}", request);
+198:         self.ws_stream
+199:             .send(Message::Text(request.to_string()))
+200:             .await?;
+201: 
+202:         // Wait for response
+203:         if let Some(msg) = self.ws_stream.next().await {
+204:             match msg {
+205:                 Ok(Message::Text(text)) => {
+206:                     let response: serde_json::Value = serde_json::from_str(&text)?;
+207:                     let msg_type = response
+208:                         .get("msg_type")
+209:                         .and_then(|v| v.as_str())
+  0.810 crates/nession-cli/src/client/connection.rs:326-337
+326: 
+327:         debug!("Sending session attach request: {}", request);
+328:         self.ws_stream
+329:             .send(Message::Text(request.to_string()))
+330:             .await?;
+331: 
+332:         // Wait for response
+333:         if let Some(msg) = self.ws_stream.next().await {
+334:             match msg {
+335:                 Ok(Message::Text(text)) => {
+336:                     let response: serde_json::Value = serde_json::from_str(&text)?;
+337:                     let msg_type = response
+  0.810 crates/nession-cli/src/client/connection.rs:873-885
+873:         let addr = listener.local_addr().unwrap();
+874: 
+875:         let handle = tokio::spawn(async move {
+876:             if let Ok((stream, _)) = listener.accept().await {
+877:                 let ws = accept_async(stream).await.expect("failed to accept ws");
+878:                 let (mut sink, mut stream) = ws.split();
+879: 
+880:                 // Echo messages back
+881:                 while let Some(Ok(msg)) = stream.next().await {
+882:                     if let Message::Text(text) = msg {
+883:                         let parsed: serde_json::Value = serde_json::from_str(&text).unwrap();
+884:                         let msg_type = parsed
+885:                             .get("msg_type")
+  0.810 crates/nession-server/src/server/websocket.rs:730-739
+730:     }
+731: 
+732:     // ── Step 3: Send agent.detach on exit (best-effort, fresh connection) ──
+733:     // The original agent WS was split+consumed, so we open a fresh connection
+734:     // to the same URL that worked for the attach.
+735:     if let Some(ref url) = connected_url {
+736:         if let Ok((mut detach_ws, _)) = tokio_tungstenite::connect_async(url).await {
+737:             let detach_msg = serde_json::json!({
+738:                 "msg_type": "agent.detach",
+739:                 "id": uuid::Uuid::new_v4().to_string(),
+  0.810 web/src/platform/session-runtime/SessionRuntime.ts:143-154
+143:         this.attachedTransportGeneration = this.transportGeneration;
+144:       }
+145:       if (result.forceRelay) {
+146:         this.applyForceRelay();
+147:       } else if (result.retryAttach) {
+148:         // Self-driving retry: an attach timeout with budget remaining must
+149:         // schedule the next client.attach without any React/Jotai tick.
+150:         this.maybeStartP2PAttach();
+151:       } else if (result.phase === 'connecting' || result.phase === 'reconnecting') {
+152:         // A relay attach opportunity appeared (SESSION_SELECTED, relay loss,
+153:         // failed recovery). Deferred a tick: this listener runs inside the
+154:         // controller's outcome emission, and RELAY_BEGIN_OK would otherwise be
+  0.810 web/src/platform/session-runtime/SessionRuntime.ts:479-484
+479:     }
+480: 
+481:     this.relayServerUnsub = conn.onConnectionStateChange((state: ConnectionState) => {
+482:       // Any loss of the server transport ends the server-side relay forwarding
+483:       // loop: 'connecting' (first connect / handshake pending), 'reconnecting'
+484:       // (recoverable intra-budget drop — the new transport surfaces this
+  0.810 web/src/platform/session-runtime/SessionRuntime.ts:583-596
+583:    * API. Same-endpoint updates keep the live socket and its reconnect budget.
+584:    *
+585:    * Teardown order matters: the in-flight attach is canceled (epoch bump)
+586:    * BEFORE the old service is disposed, so the disposal's router rejection of
+587:    * the pending client.attach is a no-op instead of a spurious ATTACH_ERROR.
+588:    */
+589:   private syncAgentConnection(opts?: { forceReconnect?: boolean }): void {
+590:     const url = this.addressPolicy.activeUrl;
+591:     const token = this.config.attachInfo?.connection_token;
+592: 
+593:     if (!url || !this.config.attachInfo || this.config.forcedRelay) {
+594:       this.teardownConnectionHandler();
+595:       this.attachController.cancelActiveAttach();
+596:       this.agentWs?.dispose();
+  0.810 web/src/platform/socket/WebSocketService.ts:275-291
+275:     }
+276: 
+277:     return new Promise((resolve, reject) => {
+278:       const waiter: ConnectionWaiter = {
+279:         resolve: () => {
+280:           clearTimeout(timer);
+281:           resolve();
+282:         },
+283:         reject: (error) => {
+284:           clearTimeout(timer);
+285:           reject(error);
+286:         },
+287:       };
+288:       const timer = setTimeout(() => {
+289:         this.waiters.delete(waiter);
+290:         reject(new Error('Connection timeout'));
+291:       }, timeoutMs);
+  0.810 web/src/platform/socket/WebSocketService.ts:345-365
+345:           this.router.request<T>(type, payload, options),
+346:       };
+347:       handshake(surface).then(() => {
+348:         // The socket that ran this handshake must still be the live one.
+349:         // The generation guard covers a superseded physical socket; the
+350:         // readyState guard covers a loss before the reconnect timer fired.
+351:         if (
+352:           this.generation !== myGeneration
+353:           || this.ws !== ws
+354:           || ws.readyState !== WebSocket.OPEN
+355:         ) {
+356:           return;
+357:         }
+358:         // Established — the handshake is what proves it, so this is the only
+359:         // place a reconnect budget may reset. Resetting in ws.onopen instead
+360:         // let a socket that opened but never authenticated re-arm itself on
+361:         // every retry, so the budget never ran out (#692).
+362:         this.reconnectAttempt = 0;
+363:         this.connectPromise = null;
+364:         this.rejectConnect = null;
+365:         this.setState('connected');
+  0.800 crates/nession-agent/src/connection/server_client.rs:29-35
+29: use std::sync::Arc;
+30: use std::time::Duration;
+31: use tokio::sync::mpsc;
+32: use tokio_tungstenite::{
+33:     connect_async, tungstenite::protocol::Message as WsMessage, MaybeTlsStream, WebSocketStream,
+34: };
+35: use tracing::{debug, error, info, warn};
+  0.800 crates/nession-agent/src/connection/server_client.rs:126-135
+126: /// Handle to a running [`ServerClient`] for sending messages and shutdown.
+127: ///
+128: /// Messages are queued on a channel and delivered by the supervisor task to
+129: /// the live connection. Sends never fail due to a dropped connection.
+130: #[derive(Clone)]
+131: pub struct ServerClientHandle {
+132:     outbox: mpsc::UnboundedSender<WsMessage>,
+133:     shutdown_tx: mpsc::Sender<()>,
+134:     agent_id: String,
+135:     /// Agent version info — included in each heartbeat.
+  0.800 crates/nession-agent/src/connection/server_client.rs:2233-2239
+2233:                 let _ = sink.send(WsMessage::Text(list_cmd.to_string())).await;
+2234: 
+2235:                 while let Some(Ok(msg)) = stream.next().await {
+2236:                     if let WsMessage::Text(text) = msg {
+2237:                         let _ = msg_tx.send(text.clone()).await;
+2238:                     }
+2239:                 }
+  0.800 crates/nession-agent/src/server/websocket.rs:283-292
+283:         rows,
+284:     };
+285:     let msg = new_message(msg_types::TERMINAL_RESIZE, payload);
+286:     let Ok(json) = serde_json::to_string(&msg) else {
+287:         return true;
+288:     };
+289:     let mut s = sink.lock().await;
+290:     s.send(WsMessage::Text(json)).await.is_ok()
+291: }
+292: 
+  0.800 crates/nession-agent/src/server/websocket.rs:651-670
+651:                         payload.height,
+652:                     ) {
+653:                         Ok((pty_session, mut output_rx)) => {
+654:                             let (tx, mut first_rx) = tokio::sync::mpsc::unbounded_channel();
+655:                             let attached = AttachedSession {
+656:                                 backend: Box::new(pty_session),
+657:                                 subscribers: vec![tx],
+658:                             };
+659:                             sessions_guard.insert(session_name.clone(), attached);
+660:                             drop(sessions_guard);
+661: 
+662:                             // Spawn forwarding task for the first subscriber.
+663:                             let sink_first = Arc::clone(ctx.sink);
+664:                             let session_name_first = session_name.clone();
+665:                             tokio::spawn(async move {
+666:                                 while let Some(bytes) = first_rx.recv().await {
+667:                                     use base64::Engine;
+668:                                     let encoded =
+669:                                         base64::engine::general_purpose::STANDARD.encode(&bytes);
+670:                                     let output = TerminalOutputPayload {
+  0.800 crates/nession-agent/src/server/websocket.rs:1489-1495
+1489:                     break;
+1490:                 }
+1491:                 WsMessage::Ping(data) => {
+1492:                     let mut s = sink.lock().await;
+1493:                     let _ = s.send(WsMessage::Pong(data)).await;
+1494:                 }
+1495:                 // Pong, Binary, and Frame are ignored.
+  0.800 crates/nession-cli/src/client/connection.rs:385-411
+385:     }
+386: 
+387:     /// Split the underlying WebSocket stream for relay-mode terminal I/O.
+388:     /// Returns (sink, stream) halves that can be used as a TerminalTransport.
+389:     pub fn into_relay_transport(self) -> WebSocketStream<MaybeTlsStream<TcpStream>> {
+390:         self.ws_stream
+391:     }
+392: 
+393:     /// Close the connection gracefully.
+394:     pub async fn close(&mut self) -> Result<()> {
+395:         info!("Closing connection");
+396:         self.ws_stream.close(None).await?;
+397:         Ok(())
+398:     }
+399: }
+400: 
+401: /// Connect to an agent's WebSocket server for P2P terminal I/O.
+402: /// `agent_address` is a complete WebSocket URL (e.g. "ws://agent.example.com/ws").
+403: /// Returns the WebSocketStream for use as a TerminalTransport.
+404: pub async fn connect_to_agent(
+405:     agent_address: &str,
+406: ) -> Result<WebSocketStream<MaybeTlsStream<TcpStream>>> {
+407:     info!("Connecting to agent at: {}", agent_address);
+408: 
+409:     let (ws_stream, _) = connect_async(agent_address)
+410:         .await
+411:         .with_context(|| format!("Failed to connect to agent at {agent_address}"))?;
+  0.800 crates/nession-cli/src/client/connection.rs:433-437
+433:     info!("Connecting to agent at {} to create session", url);
+434: 
+435:     let (mut ws_stream, _) = connect_async(&url)
+436:         .await
+437:         .with_context(|| format!("Failed to connect to agent at {url}"))?;
+  0.800 crates/nession-server/src/server/websocket.rs:167-171
+167:             let sweep_period = std::time::Duration::from_secs(3600);
+168:             tokio::spawn(async move {
+169:                 let mut ticker = tokio::time::interval(sweep_period);
+170:                 ticker.tick().await; // consume the immediate first tick
+171:                 loop {
+  0.800 crates/nession-server/src/server/websocket.rs:361-387
+361:     });
+362: 
+363:     while let Some(msg) = read.next().await {
+364:         let msg = msg?;
+365: 
+366:         let action = handler.handle_message(msg).await?;
+367: 
+368:         // Register the agent's sender with CommandBroker.  Always replace
+369:         // the previous sender (if any) because on reconnect the old sender
+370:         // was already unregistered — failing to re-register here causes
+371:         // "agent not found" on the first command after reconnect.
+372:         if let Some(agent_id) = handler.registered_agent_id() {
+373:             command_broker
+374:                 .register_agent(agent_id, sender.clone())
+375:                 .await;
+376:         }
+377: 
+378:         match action {
+379:             HandlerAction::Reply(Some(response)) => {
+380:                 sender.send(response)?;
+381:             }
+382:             HandlerAction::Reply(None) => {
+383:                 // No response needed, continue
+384:             }
+385:             HandlerAction::Relay {
+386:                 agent_ws_urls,
+387:                 session_id,
+  0.800 web/src/app/useAppConnection.ts:78-96
+78:   }, [wsService]);
+79: 
+80:   const connectInternal = useCallback(async (remember: boolean, auto: boolean) => {
+81:     setToken(authToken, remember);
+82:     localStorage.setItem('nession_server_url', serverUrl);
+83: 
+84:     let service: WebSocketService | null = null;
+85:     try {
+86:       // A previous service (StrictMode twin, reconnect after disconnect) must
+87:       // stop before the new one opens — two transports would race the state.
+88:       serviceRef.current?.dispose();
+89:       const clientId = getOrCreateClientId();
+90:       service = new WebSocketService(serverUrl, SERVER_PLUGINS, {
+91:         maxReconnectAttempts: 5,
+92:         handshake: (surface) => surface
+93:           .request<AuthResponse>(AUTH_WIRE, { auth_token: authToken, client_id: clientId })
+94:           .then((res) => {
+95:             if (res.status !== 'success') {
+96:               throw new Error(res.message || 'Authentication failed');
+  0.800 web/src/app/useAppConnection.ts:148-170
+148:   }, [connectInternal]);
+149: 
+150:   // Auto-connect is a load-time action: it runs once, for the credentials the
+151:   // page loaded with. Keeping connectInternal out of the deps (a ref holds it)
+152:   // is what stops a token or URL edit from re-arming a connect that would
+153:   // supersede whatever is already live.
+154:   const connectInternalRef = useRef(connectInternal);
+155:   // "Once" needs a ref, not just the frozen deps array: StrictMode runs every
+156:   // effect body twice (mount→cleanup→mount) on the same instance, and the
+157:   // second pass would start a second transport, disposing the first while its
+158:   // socket was still CONNECTING (#697). A real remount gets a fresh ref, so
+159:   // the restore still runs again when the page is actually reloaded.
+160:   const autoConnectStartedRef = useRef(false);
+161: 
+162:   useEffect(() => {
+163:     if (!autoConnect || autoConnectStartedRef.current) {
+164:       return;
+165:     }
+166:     autoConnectStartedRef.current = true;
+167: 
+168:     connectInternalRef.current(getRememberPreference(), true).catch(() => {
+169:       // Failure is surfaced inside connectInternal, on ownership — a rejection
+170:       // from a transport a newer connect replaced stays silent.
+  0.800 web/src/platform/socket/WebSocketService.ts:118-122
+118:   }
+119: 
+120:   connect(): Promise<void> {
+121:     if (this.disposed) {
+122:       return Promise.reject(new Error('WebSocketService disposed'));
+  0.800 web/src/platform/socket/WebSocketService.ts:264-268
+264:   }
+265: 
+266:   waitForConnection(timeoutMs = 15_000): Promise<void> {
+267:     if (this.disposed) {
+268:       return Promise.reject(new Error('WebSocketService disposed'));
+  0.800 web/src/platform/socket/WebSocketService.ts:461-471
+461:     this.reconnectAttempt += 1;
+462:     this.setState('reconnecting');
+463:     const baseDelay = this.options.reconnectBaseDelay ?? DEFAULT_RECONNECT_BASE_DELAY;
+464:     const delay = reconnectDelayMs(this.reconnectAttempt - 1, baseDelay);
+465:     console.log(`Scheduling reconnect in ${delay}ms (attempt ${this.reconnectAttempt})`);
+466:     this.reconnectTimer = setTimeout(() => {
+467:       this.reconnectTimer = null;
+468:       if (!this.disposed && !this.userClosed) {
+469:         void this.connect().catch(() => {});
+470:       }
+471:     }, delay);
+  0.800 web/src/product/terminal/hooks/useTerminal.ts:37-43
+37:  * every re-render — including each terminalState transition (connecting →
+38:  * connected → attached), which derive a fresh session object but must NOT tear
+39:  * down the live terminal view. Only the session identity fields (id/name/mode)
+40:  * and the transport factory are memo deps; the factory itself is kept stable by
+41:  * the caller (a ref-backed wrapper) so frequently-changing connection objects
+42:  * never recreate the controller.
+43:  *
+  0.790 crates/nession-agent/src/connection/server_client.rs:379-384
+379:             }
+380: 
+381:             match this.connect_once().await {
+382:                 Ok((sink, stream, interval)) => {
+383:                     info!("Connected to server successfully");
+384:                     reconnect_delay = INITIAL_RECONNECT_DELAY;
+  0.790 crates/nession-agent/src/connection/server_client.rs:389-407
+389:                     sync_needed.store(true, Ordering::SeqCst);
+390: 
+391:                     // Report the heartbeat interval from the first connection so
+392:                     // connect_and_run can unblock.
+393:                     if !reported_interval {
+394:                         let _ = interval_tx.try_send(Ok(interval));
+395:                         reported_interval = true;
+396:                     }
+397: 
+398:                     // Service the live connection until it drops or shutdown.
+399:                     let outcome = this
+400:                         .clone()
+401:                         .run_connection(sink, stream, &mut outbox_rx, &mut shutdown_rx)
+402:                         .await;
+403:                     // Connection dropped — mark as disconnected so the
+404:                     // SessionWatcher pauses sending updates until reconnected.
+405:                     connected.store(false, Ordering::SeqCst);
+406:                     match outcome {
+407:                         ConnectionOutcome::Shutdown => {
+  0.790 crates/nession-agent/src/server/websocket.rs:92-100
+92:     }
+93: 
+94:     fn poll_flush(
+95:         self: Pin<&mut Self>,
+96:         cx: &mut std::task::Context<'_>,
+97:     ) -> std::task::Poll<std::io::Result<()>> {
+98:         match self.get_mut() {
+99:             TcpOrTls::Plain(s) => Pin::new(s).poll_flush(cx),
+100:             TcpOrTls::Tls(s) => Pin::new(s).poll_flush(cx),
+  0.790 crates/nession-agent/src/server/websocket.rs:102-110
+102:     }
+103: 
+104:     fn poll_shutdown(
+105:         self: Pin<&mut Self>,
+106:         cx: &mut std::task::Context<'_>,
+107:     ) -> std::task::Poll<std::io::Result<()>> {
+108:         match self.get_mut() {
+109:             TcpOrTls::Plain(s) => Pin::new(s).poll_shutdown(cx),
+110:             TcpOrTls::Tls(s) => Pin::new(s).poll_shutdown(cx),
+  0.790 crates/nession-agent/src/server/websocket.rs:865-880
+865:                     Err(e) => return ctx.err("parse_error", &e.to_string()),
+866:                 };
+867:                 let mut sessions_guard = ctx.sessions.lock().await;
+868:                 match sessions_guard.get_mut(&payload.session_name) {
+869:                     Some(session) => {
+870:                         // Drop this client's dead subscriber senders. When no
+871:                         // live subscribers remain (always true for control
+872:                         // mode, which keeps none), close the backend and
+873:                         // remove the session so its tmux child is terminated.
+874:                         session.subscribers.retain(|tx| !tx.is_closed());
+875:                         if session.subscribers.is_empty() {
+876:                             if let Some(mut removed) = sessions_guard.remove(&payload.session_name)
+877:                             {
+878:                                 if let Err(e) = removed.backend.close().await {
+879:                                     warn!(
+880:                                         "Error closing session {}: {:#}",
+  0.790 crates/nession-agent/src/server/websocket.rs:906-912
+906:                     Err(e) => return ctx.err("decode_error", &e.to_string()),
+907:                 };
+908:                 let mut sessions_guard = ctx.sessions.lock().await;
+909:                 match sessions_guard.get_mut(&payload.session_name) {
+910:                     Some(session) => match session.backend.write_input(&data).await {
+911:                         Ok(_) => serde_json::to_string(&make_ok(ctx.id, "ok")).unwrap_or_default(),
+912:                         Err(e) => ctx.err("write_error", &e.to_string()),
+  0.790 crates/nession-agent/src/server/websocket.rs:1348-1354
+1348:                                 let am = attach_mode.clone();
+1349:                                 let rtx = resize_tx.clone();
+1350:                                 tokio::spawn(async move {
+1351:                                     if let Err(e) =
+1352:                                         Self::handle_connection(stream, addr, tmux, tls, wd, fops, &la, &aid, am, rtx).await
+1353:                                     {
+1354:                                         // Downgraded from warn: random non-WebSocket clients
+  0.790 crates/nession-agent/src/server/websocket.rs:1525-1531
+1525:         text: &str,
+1526:         tmux: Arc<SessionManager>,
+1527:         sessions: Arc<Mutex<SessionMap>>,
+1528:         client_id: Arc<Mutex<Option<String>>>,
+1529:         sink: Arc<Mutex<futures_util::stream::SplitSink<WebSocketStream<TcpOrTls>, WsMessage>>>,
+1530:         default_working_dir: &str,
+1531:         file_ops: Arc<FileOps>,
+  0.790 crates/nession-agent/src/server/websocket.rs:1533-1541
+1533:         agent_id: &str,
+1534:         attach_mode: AttachMode,
+1535:         resize_tx: mpsc::UnboundedSender<(String, u16, u16)>,
+1536:     ) -> String {
+1537:         // Try to extract msg_type and id without fully deserialising the
+1538:         // payload — we need those even if the payload type is unknown.
+1539:         let raw: serde_json::Value = match serde_json::from_str(text) {
+1540:             Ok(v) => v,
+1541:             Err(e) => {
+  0.790 crates/nession-cli/src/client/connection.rs:455-467
+455: 
+456:     debug!("Sending session.create to agent: {}", request);
+457:     ws_stream
+458:         .send(Message::Text(request.to_string()))
+459:         .await
+460:         .with_context(|| "Failed to send session.create to agent")?;
+461: 
+462:     // Wait for response
+463:     if let Some(msg) = ws_stream.next().await {
+464:         match msg {
+465:             Ok(Message::Text(text)) => {
+466:                 let response: serde_json::Value = serde_json::from_str(&text)?;
+467:                 let resp_type = response
+  0.790 crates/nession-server/src/server/websocket.rs:527-543
+527:         }
+528:     });
+529:     agent_write
+530:         .send(tokio_tungstenite::tungstenite::Message::Text(
+531:             attach_msg.to_string(),
+532:         ))
+533:         .await?;
+534: 
+535:     // Wait for ok/error response from agent (10s timeout).
+536:     let attach_response =
+537:         tokio::time::timeout(std::time::Duration::from_secs(10), agent_read.next()).await;
+538:     match attach_response {
+539:         Ok(Some(Ok(msg))) => {
+540:             if let Ok(text) = msg.to_text() {
+541:                 if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(text) {
+542:                     let resp_type = parsed
+543:                         .get("msg_type")
+  0.790 web/src/app/useAppConnection.ts:60-76
+60:     () => params.get('server_url') || localStorage.getItem('nession_server_url') || DEFAULT_SERVER_URL,
+61:   );
+62:   // The service instance this render currently owns. Cleanup disposes only
+63:   // when it is still the owner — a later connectInternal() replaces the ref
+64:   // before the effect cleanup of the superseded instance runs (StrictMode
+65:   // and token/status updates both re-run the effects).
+66:   const serviceRef = useRef<WebSocketService | null>(null);
+67: 
+68:   useEffect(() => {
+69:     return () => {
+70:       // Only tear down the service if it is still this instance. Otherwise a
+71:       // later connectInternal() would have already replaced it, and disposing
+72:       // here would close the *new* socket (StrictMode double-mount).
+73:       if (wsService && serviceRef.current === wsService) {
+74:         serviceRef.current?.dispose();
+75:         serviceRef.current = null;
+76:       }
+  0.790 web/src/app/useAppConnection.ts:112-126
+112:       });
+113: 
+114:       // Await the handshake so an auth failure lands in the catch below. The
+115:       // try used to be sync-only, letting the rejection escape to callers —
+116:       // handleConnect swallowed it and the manual path lost its toast.
+117:       await service.connect();
+118:     } catch (error) {
+119:       // A rejection from a superseded service (disposed by a newer connect or
+120:       // by unmount) is not this attempt's failure — the successor owns the
+121:       // outcome and surfaces its own result. Only the current owner handles
+122:       // the error: auto-connect clears the token silently, manual connect
+123:       // toasts and drops back to the disconnected (login) state.
+124:       if (service === null || serviceRef.current === service) {
+125:         if (auto) {
+126:           // Restoring a stored session: the credentials are what failed, so
+  0.790 web/src/app/useAppConnection.ts:141-146
+141:   }, [authToken, serverUrl]);
+142: 
+143:   const handleConnect = useCallback((remember: boolean) => {
+144:     connectInternal(remember, false).catch(() => {
+145:       // Failure already surfaced inside connectInternal (toast + state) when
+146:       // this attempt owned the service; superseded rejections stay silent.
+  0.790 web/src/app/useAppConnection.ts:172-180
+172:   }, [autoConnect]);
+173: 
+174:   useVisibilityReconnect(wasEverAuthed, wsService);
+175: 
+176:   const handleDisconnect = useCallback(() => {
+177:     if (serviceRef.current) {
+178:       serviceRef.current.dispose();
+179:       serviceRef.current = null;
+180:       setWsService(null);
+  0.790 web/src/app/useRealtimeUpdates.ts:9-24
+9: type SessionDataReturn = ReturnType<typeof useSessionData>;
+10: 
+11: /**
+12:  * Subscribes to live agent/session events and performs the initial data
+13:  * fetch. Bridges the agent/session data hooks to the realtime push channel.
+14:  *
+15:  * Subscriptions go through the typed feature APIs (agentsApi/sessionsApi) so
+16:  * they see the same event set the legacy facade exposed — server pushes plus
+17:  * the echo of own list responses. The effects are still keyed on the
+18:  * wsService instance: a replaced transport re-installs the feature plugins
+19:  * with a new generation, so consumers must re-register when it changes or
+20:  * the plugin teardown drops their callbacks.
+21:  */
+22: export function useRealtimeUpdates(
+23:   wsService: WebSocketService,
+24:   agentData: AgentDataReturn,
+  0.790 web/src/app/useRealtimeUpdates.ts:46-50
+46:     // separate 'authenticated' anymore).
+47:     fetchIfConnected();
+48:     return wsService.onConnectionStateChange((state) => {
+49:       if (state === 'connected') {
+50:         fetchIfConnected();
+  0.790 web/src/platform/socket/WebSocketService.ts:153-161
+153:    * `dispose()`); an in-flight `connect()` is rejected so it cannot dangle.
+154:    */
+155:   disconnect(): void {
+156:     this.userClosed = true;
+157:     this.clearReconnectTimer();
+158:     this.teardownSocket();
+159:     this.rejectPendingConnect(new Error('WebSocketService is closed'));
+160:     const error = new Error('Connection lost');
+161:     this.router.failPending(error);
+  0.790 web/src/platform/socket/WebSocketService.ts:332-338
+332:       // The surface's request() bypasses the state gate — the socket is
+333:       // already OPEN and waiting on 'connected' would self-deadlock.
+334:       const surface: HandshakeSurface = {
+335:         send: (type, payload) => {
+336:           this.router.send({
+337:             msg_type: type,
+338:             id: this.generateMessageId(),
+  0.790 web/src/platform/socket/WebSocketService.ts:399-413
+399:     };
+400: 
+401:     ws.onerror = () => {
+402:       if (this.generation !== myGeneration) {
+403:         return;
+404:       }
+405:       const error = new Error('WebSocket connection failed');
+406:       if (this.connectPromise) {
+407:         this.connectPromise = null;
+408:         this.rejectConnect = null;
+409:         reject(error);
+410:         this.teardownSocket();
+411:         this.router.failPending(error);
+412:         this.rejectWaiters(error);
+413:         this.setState('disconnected');
+  0.790 web/src/platform/socket/WebSocketService.ts:417-436
+417:     };
+418: 
+419:     ws.onclose = () => {
+420:       if (this.generation !== myGeneration || this.userClosed) {
+421:         return;
+422:       }
+423:       if (this.connectPromise) {
+424:         this.connectPromise = null;
+425:         this.rejectConnect = null;
+426:         reject(new Error('Connection lost'));
+427:       }
+428:       this.handleSocketLoss();
+429:     };
+430:   }
+431: 
+432:   /**
+433:    * Settle a definitively failed connection: everything in flight fails the
+434:    * way it would on a lost socket, but no reconnect is scheduled. Used when
+435:    * the peer refused this client (a rejected handshake), where retrying the
+436:    * same handshake can only be refused again.
+  0.790 web/src/platform/terminal-runtime/ConnectionManager.ts:222-226
+222:     // intra-budget loss window, surfaced by the lifecycle hooks — mirroring
+223:     // the old facade, which collapsed them onto 'connecting' and no-op'd.
+224:     this.relayUnsubState = svc.onConnectionStateChange((state) => {
+225:       if (this.disposed) { return; }
+226:       if (state === 'connected') {
+  0.790 web/src/platform/terminal-runtime/controller/TerminalController.ts:182-188
+182:   }
+183: 
+184:   /** Swap ConnectionManager after P2P reconnect without tearing down xterm. */
+185:   private rewireTransport(terminal: Terminal): void {
+186:     this.teardownTransport();
+187:     const transport = this.transportFactory();
+188:     this.transport = transport;
+  0.790 web/src/product/terminal/server.ts:74-82
+74:     this.connection = connection;
+75: 
+76:     const unsubs = [
+77:       connection.subscribe('agent.terminal.output', (payload) => {
+78:         this.handleRelayOutput(payload as Record<string, unknown>);
+79:       }),
+80:       connection.subscribe(TERMINAL_RESIZE_WIRE, (payload) => {
+81:         this.handleRelayResize(payload as Record<string, unknown>);
+82:       }),
+  0.780 crates/nession-agent/src/connection/server_client.rs:162-167
+162:     }
+163: 
+164:     /// Queue a heartbeat message for delivery to the server.
+165:     pub async fn send_heartbeat(
+166:         &self,
+167:         status: AgentStatus,
+  0.780 crates/nession-agent/src/connection/server_client.rs:337-344
+337:         };
+338: 
+339:         // Spawn the supervisor; it owns the reconnect loop and never returns
+340:         // until shutdown.
+341:         tokio::spawn(async move {
+342:             self.supervise(outbox_rx, shutdown_rx, interval_tx, sync_needed, connected)
+343:                 .await;
+344:         });
+  0.780 crates/nession-agent/src/connection/server_client.rs:519-524
+519:                     // Ignore any other message arriving before the response.
+520:                 }
+521:                 Some(Ok(WsMessage::Ping(data))) => {
+522:                     sink.send(WsMessage::Pong(data)).await.ok();
+523:                 }
+524:                 Some(Ok(_)) => {}
+  0.780 crates/nession-agent/src/connection/server_client.rs:570-574
+570:                     match response {
+571:                         Some(msg) => {
+572:                             if let Err(e) = sink.send(msg).await {
+573:                                 warn!("Failed to send to server: {:#}", e);
+574:                                 return ConnectionOutcome::Disconnected;
+  0.780 crates/nession-agent/src/server/websocket.rs:272-277
+272: /// Returns `true` on success, `false` if the sink is closed (in which case
+273: /// the caller should stop forwarding).
+274: async fn send_terminal_resize_msg(
+275:     sink: &Arc<Mutex<futures_util::stream::SplitSink<WebSocketStream<TcpOrTls>, WsMessage>>>,
+276:     session_name: &str,
+277:     cols: u16,
+  0.780 crates/nession-agent/src/server/websocket.rs:923-928
+923:                     Err(e) => return ctx.err("parse_error", &e.to_string()),
+924:                 };
+925:                 let mut sessions_guard = ctx.sessions.lock().await;
+926:                 match sessions_guard.get_mut(&payload.session_name) {
+927:                     Some(session) => match session.backend.resize(payload.cols, payload.rows).await
+928:                     {
+  0.780 crates/nession-agent/src/server/websocket.rs:1479-1484
+1479:                     )
+1480:                     .await;
+1481:                     let mut s = sink.lock().await;
+1482:                     if let Err(e) = s.send(WsMessage::Text(response)).await {
+1483:                         warn!("WebSocket write error to {}: {:#}", addr, e);
+1484:                         break;
+  0.780 crates/nession-agent/src/server/websocket.rs:2082-2087
+2082:             .unwrap();
+2083: 
+2084:         let msg = stream.next().await.unwrap().unwrap();
+2085:         match msg {
+2086:             WsMessage::Text(text) => {
+2087:                 let resp: Message<ErrorPayload> = serde_json::from_str(&text).unwrap();
+  0.780 crates/nession-server/src/server/client_registry.rs:25-39
+25:     pub fn new() -> Self {
+26:         Self {
+27:             clients: RwLock::new(HashMap::new()),
+28:         }
+29:     }
+30: 
+31:     /// Register a client connection for a session.
+32:     pub async fn register(&self, session_id: &str, client_id: &str, sender: WsMessageSender) {
+33:         let mut clients = self.clients.write().await;
+34:         clients
+35:             .entry(session_id.to_string())
+36:             .or_default()
+37:             .insert(client_id.to_string(), sender);
+38:         debug!(
+39:             "ClientRegistry: registered client {} for session {}",
+  0.780 crates/nession-server/src/server/websocket.rs:75-79
+75:     }
+76: 
+77:     pub async fn run(&mut self) -> anyhow::Result<()> {
+78:         let listener = self
+79:             .listener
+  0.780 crates/nession-server/src/server/websocket.rs:92-99
+92:         };
+93: 
+94:         let heartbeat_interval_secs = self.config.heartbeat_interval_secs;
+95: 
+96:         // Background sweeper: periodically mark agents that have missed their
+97:         // heartbeat window as offline so clients stop targeting dead agents.
+98:         // Sessions for offline agents are cleaned after a 30s grace period
+99:         // to allow for agent reconnection.
+  0.780 crates/nession-server/src/server/websocket.rs:646-650
+646:                     return;
+647:                 }
+648:                 if let Err(e) = agent_write.send(msg).await {
+649:                     error!("Failed to forward client message to agent: {}", e);
+650:                     break;
+  0.780 crates/nession-server/src/server/websocket.rs:695-699
+695:                 // Outside throttle window — send immediately (leading edge).
+696:                 last_terminal_input = std::time::Instant::now();
+697:                 if let Err(e) = agent_write.send(msg).await {
+698:                     error!("Failed to forward client message to agent: {}", e);
+699:                     break;
+  0.780 web/src/app/useAppConnection.ts:38-49
+38: ];
+39: 
+40: export function useAppConnection() {
+41:   const params = new URLSearchParams(window.location.search);
+42:   // Whether to restore a session on load, frozen at the first render. Reading
+43:   // this per render would flip it true the moment a connect() writes the token
+44:   // to storage, and the auto-connect effect below would then supersede the
+45:   // connection that just started (#688).
+46:   const [autoConnect] = useState(() => params.get('token') !== null || getToken() !== null);
+47:   const [connectionStatus, setConnectionStatus] = useState<ConnectionState>(
+48:     () => autoConnect ? 'connecting' : 'disconnected',
+49:   );
+  0.780 web/src/app/useRealtimeUpdates.ts:34-39
+34:   }, [wsService, applyAgentUpdate, setSessions]);
+35: 
+36:   useEffect(() => {
+37:     const fetchIfConnected = () => {
+38:       if (wsService.connectionState !== 'connected') {
+39:         return;
+  0.780 web/src/platform/socket/MessageRouter.ts:48-63
+48:     const id = this.deps.generateId();
+49:     const msg: SocketMessage = { msg_type: type, id, timestamp: Date.now(), payload };
+50:     const timeoutMs = options.timeoutMs ?? 15_000;
+51:     return new Promise<T>((resolve, reject) => {
+52:       const timer = setTimeout(() => {
+53:         this.pending.delete(id);
+54:         reject(new Error(`Request timeout: ${type}`));
+55:       }, timeoutMs);
+56:       this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timer });
+57:       try {
+58:         this.send(msg);
+59:       } catch (err) {
+60:         clearTimeout(timer);
+61:         this.pending.delete(id);
+62:         reject(err instanceof Error ? err : new Error(String(err)));
+63:       }
+  0.780 web/src/platform/socket/WebSocketService.ts:92-97
+92:     private readonly options: WebSocketServiceOptions = {},
+93:   ) {
+94:     this.router = new MessageRouterImpl({
+95:       send: (message) => this.sendRaw(message),
+96:       generateId: () => this.generateMessageId(),
+97:     });
+  0.780 web/src/platform/socket/WebSocketService.ts:206-219
+206:   }
+207: 
+208:   /**
+209:    * Envelope-send a message. Throws 'WebSocketService disposed' when the
+210:    * service was disposed, and 'WebSocket not connected' when the physical
+211:    * socket is gone or not yet OPEN.
+212:    */
+213:   send(type: string, payload: Record<string, unknown>): void {
+214:     if (this.disposed) {
+215:       throw new Error('WebSocketService disposed');
+216:     }
+217:     this.sendRaw({
+218:       msg_type: type,
+219:       id: this.generateMessageId(),
+  0.780 web/src/platform/terminal-runtime/ConnectionManager.ts:15-22
+15:   private p2pUnsubResize: (() => void) | null = null;
+16:   private p2pUnsubError: (() => void) | null = null;
+17:   private disposed = false;
+18:   /** Input typed before client.attach is acked — flushed once attached. */
+19:   private inputBuffer: string[] = [];
+20:   /**
+21:    * Resize pending while state !== 'attached'. Coalesced — only the latest
+22:    * {cols, rows} survives; intermediate sizes during the connect/reconnect
+  0.780 web/src/product/terminal/agent.ts:132-137
+132:     },
+133: 
+134:     ping: (): void => {
+135:       surface.send(KEEPALIVE_PING_WIRE, {});
+136:     },
+137:   };
+  0.770 crates/nession-agent/src/connection/server_client.rs:186-191
+186:     }
+187: 
+188:     /// Queue a session update message for delivery to the server.
+189:     pub async fn send_session_update(
+190:         &self,
+191:         session_name: &str,
+  0.770 crates/nession-agent/src/connection/server_client.rs:307-323
+307:     }
+308: 
+309:     /// Start the supervisor task and return a handle plus the heartbeat
+310:     /// interval the server requested on first registration.
+311:     ///
+312:     /// The supervisor connects, registers, services the connection, and
+313:     /// reconnects with exponential backoff whenever the link drops — it runs
+314:     /// until [`ServerClientHandle::shutdown`] is called. This call waits for
+315:     /// the first successful connect+register so the returned interval reflects
+316:     /// the server's configured cadence; on the (unlikely) event the supervisor
+317:     /// stops before the first registration it falls back to `None`.
+318:     pub async fn connect_and_run(self) -> Result<(ServerClientHandle, Option<u64>)> {
+319:         let (outbox_tx, outbox_rx) = mpsc::unbounded_channel();
+320:         let (shutdown_tx, shutdown_rx) = mpsc::channel(1);
+321:         // One-shot-ish channel to learn the heartbeat interval from the first
+322:         // registration. Using a bounded channel of 1 keeps it simple.
+323:         // The first attempt's outcome: the heartbeat interval on acceptance,
+  0.770 crates/nession-cli/src/client/connection.rs:517-521
+517:     info!("Connecting to agent at {} to kill session", url);
+518: 
+519:     let (mut ws_stream, _) = connect_async(&url)
+520:         .await
+521:         .with_context(|| format!("Failed to connect to agent at {url}"))?;
+  0.770 crates/nession-cli/src/client/connection.rs:537-549
+537: 
+538:     debug!("Sending session.kill to agent: {}", request);
+539:     ws_stream
+540:         .send(Message::Text(request.to_string()))
+541:         .await
+542:         .with_context(|| "Failed to send session.kill to agent")?;
+543: 
+544:     // Wait for response
+545:     if let Some(msg) = ws_stream.next().await {
+546:         match msg {
+547:             Ok(Message::Text(text)) => {
+548:                 let response: serde_json::Value = serde_json::from_str(&text)?;
+549:                 let resp_type = response
+  0.770 crates/nession-server/src/server/handler.rs:1242-1248
+1242:             self.attached_client_id = Some(client_id.clone());
+1243: 
+1244:             // Send attach response to browser BEFORE entering relay mode,
+1245:             // so the browser's requestAttach() resolves instead of timing out.
+1246:             if let Some(ref sender) = self.client_sender {
+1247:                 let response = Message::Text(
+1248:                     serde_json::json!({
+  0.770 crates/nession-server/src/server/web_client_registry.rs:109-119
+109:     /// Build a `sessions.changed` payload from the session registry and push
+110:     /// it to every connected web client.
+111:     ///
+112:     /// Web clients only fetch the session list on mount, so without this push
+113:     /// any change made elsewhere (another browser, an agent reconnecting, a
+114:     /// session dying) would stay invisible until a manual refresh. The session
+115:     /// JSON is produced by the same helper as `server.session.list.response`,
+116:     /// so both paths always carry an identical field set.
+117:     pub async fn broadcast_sessions_changed(
+118:         &self,
+119:         session_registry: Arc<crate::registry::SessionRegistry>,
+  0.770 crates/nession-server/src/server/websocket.rs:219-224
+219:             let tls_acceptor = tls_acceptor.clone();
+220: 
+221:             tokio::spawn(async move {
+222:                 if let Err(e) = handle_connection(tcp_stream, tls_acceptor, ctx).await {
+223:                     error!("Connection error: {}", e);
+224:                 }
+  0.770 crates/nession-server/src/server/websocket.rs:415-432
+415: 
+416:     // Clean up: unregister agent from CommandBroker on disconnect
+417:     if let Some(agent_id) = handler.registered_agent_id() {
+418:         command_broker.unregister_agent(agent_id).await;
+419:     }
+420: 
+421:     // Clean up: unregister client from ClientRegistry on disconnect
+422:     if let (Some(session_id), Some(client_id)) = (
+423:         handler.attached_session_id().map(String::from),
+424:         handler.attached_client_id().map(String::from),
+425:     ) {
+426:         client_registry.unregister(&session_id, &client_id).await;
+427:     }
+428: 
+429:     // Drop the sender to signal the relay task to exit
+430:     drop(sender);
+431:     // Wait for the relay task to finish
+432:     let _ = relay_task.await;
+  0.770 crates/nession-server/src/server/websocket.rs:506-510
+506:     };
+507: 
+508:     let (mut agent_write, mut agent_read) = agent_ws.split();
+509: 
+510:     // ── Step 1: Send agent.attach to the agent ──
+  0.770 crates/nession-server/src/server/websocket.rs:721-725
+721:     };
+722: 
+723:     tokio::select! {
+724:         _ = client_to_agent => {
+725:             info!("Client to agent relay ended for session '{}'", session_name);
+  0.770 crates/nession-server/src/server/websocket.rs:746-751
+746:                 }
+747:             });
+748:             let _ = detach_ws
+749:                 .send(tokio_tungstenite::tungstenite::Message::Text(
+750:                     detach_msg.to_string(),
+751:                 ))
+  0.770 web/src/platform/attach/relayServerConnection.ts:45-51
+45:   >;
+46: 
+47: /**
+48:  * Build a relay handle for a server WebSocket service. Transport state
+49:  * (subscription + readiness) delegates to the service; the relay lifecycle
+50:  * and terminal I/O delegate to the terminal-server capability singleton,
+51:  * which binds to whichever service instance is currently installed.
+  0.770 web/src/platform/attach/relayServerConnection.ts:66-87
+66:   return {
+67:     onConnectionStateChange: (cb) => service.onConnectionStateChange(cb),
+68:     isReady: () => !stale() && service.connectionState === 'connected',
+69:     beginRelay: (sessionId, relayUrl, cols, rows) => {
+70:       if (stale()) { return; }
+71:       terminalServerApi.beginRelay(sessionId, relayUrl, cols, rows);
+72:     },
+73:     endRelay: (sessionId) => {
+74:       if (stale()) { return; }
+75:       terminalServerApi.endRelay(sessionId);
+76:     },
+77:     sendRelayInput: (sessionName, data) => {
+78:       if (stale()) { return; }
+79:       terminalServerApi.sendRelayInput(sessionName, data);
+80:     },
+81:     sendRelayResize: (sessionName, cols, rows) => {
+82:       if (stale()) { return; }
+83:       terminalServerApi.sendRelayResize(sessionName, cols, rows);
+84:     },
+85:     onRelayOutput: (sessionName, cb) => {
+86:       if (stale()) { return () => {}; }
+87:       return terminalServerApi.onRelayOutput(sessionName, cb);
+  0.770 web/src/platform/session-runtime/SessionRuntime.ts:552-562
+552:   }
+553: 
+554:   private wireConnectionHandler(): void {
+555:     this.teardownConnectionHandler();
+556:     if (!this.agentWs) {
+557:       return;
+558:     }
+559:     this.connectionUnsub = this.agentWs.onConnectionStateChange((next) => {
+560:       this.emitConnectionState(next);
+561:       if (next === 'connected') {
+562:         this.maybeStartP2PAttach();
+  0.770 web/src/platform/socket/WebSocketService.ts:489-515
+489:   }
+490: 
+491:   private rejectWaiters(error: Error): void {
+492:     const pending = [...this.waiters];
+493:     this.waiters.clear();
+494:     for (const waiter of pending) {
+495:       waiter.reject(error);
+496:     }
+497:   }
+498: 
+499:   private clearReconnectTimer(): void {
+500:     if (this.reconnectTimer) {
+501:       clearTimeout(this.reconnectTimer);
+502:       this.reconnectTimer = null;
+503:     }
+504:   }
+505: 
+506:   /**
+507:    * Reject the in-flight connect() promise, if any. disconnect()/dispose()
+508:    * call this so a connect() still awaiting the socket open or its handshake
+509:    * does not dangle once the transport stops — teardownSocket() nulls the
+510:    * ws handlers that would otherwise settle it, and a handshake completing
+511:    * after teardown trips the socket-identity guard and returns silently.
+512:    */
+513:   private rejectPendingConnect(error: Error): void {
+514:     if (!this.connectPromise) {
+515:       return;
+  0.770 web/src/platform/socket/WebSocketService.ts:521-525
+521:   }
+522: 
+523:   private teardownSocket(): void {
+524:     if (!this.ws) {
+525:       return;
+  0.770 web/src/platform/terminal-runtime/ConnectionManager.ts:93-107
+93:    * size is flushed as a single terminal.resize by flushAllOutbound once the
+94:    * agent acks attach. This avoids the `not_attached` toast the agent would
+95:    * otherwise return for a resize that arrives before its session map has an
+96:    * entry — a race that is trivially triggered on mobile by viewport churn
+97:    * during attach/reconnect (virtual keyboard, input panel, rotation).
+98:    */
+99:   sendResize(cols: number, rows: number): void {
+100:     if (this.disposed) { return; }
+101:     if (!this.isAttached()) {
+102:       this.pendingResize = { cols, rows };
+103:       return;
+104:     }
+105:     this.sendResizeRaw(cols, rows);
+106:   }
+107: 
+  0.770 web/src/platform/terminal-runtime/ConnectionManager.ts:131-147
+131:   }
+132: 
+133:   private sendResizeRaw(cols: number, rows: number): void {
+134:     if (this.mode === 'p2p' && this.agentApi) {
+135:       try {
+136:         this.agentApi.sendResize(this.sessionName, cols, rows);
+137:       } catch { /* transport reconnecting — coalesced via the isAttached gate */ }
+138:     } else if (this.mode === 'relay' && this.serverConnection?.isReady()) {
+139:       this.serverConnection.sendRelayResize(this.sessionName, cols, rows);
+140:     }
+141:   }
+142: 
+143:   dispose(): void {
+144:     this.disposed = true;
+145:     if (this.pingTimer) { clearInterval(this.pingTimer); this.pingTimer = null; }
+146:     this.p2pUnsubOutput?.();
+147:     this.p2pUnsubResize?.();
+  0.770 web/src/platform/terminal-runtime/ConnectionManager.ts:172-177
+172:     });
+173: 
+174:     this.p2pUnsubError = api.onError((err) => {
+175:       if (this.disposed) { return; }
+176:       // Belt-and-suspenders: the outbound gate should make `not_attached`
+177:       // unreachable, but if a race slips through (e.g. a stale message
+  0.770 web/src/product/terminal/server.ts:87-91
+87:         unsub();
+88:       }
+89:       if (this.generation === generation && this.connection === connection) {
+90:         this.connection = null;
+91:         // Current release — no newer binding exists, so every remaining
+  0.770 web/src/shared/hooks/useWebSocket.ts:12-17
+12:  *   to inject a mock without mounting the provider.
+13:  */
+14: export function useWebSocket(override?: WebSocketService): WebSocketService {
+15:   const ctx = useContext(WebSocketContext);
+16:   const svc = override ?? ctx;
+17:   if (!svc) {
+  0.760 crates/nession-agent/src/connection/mod.rs:1-6
+1: //! Connection module for agent-to-server communication.
+2: //!
+3: //! This module provides the WebSocket client that connects the agent to the
+4: //! central nession-server for registration, heartbeat, and session updates.
+5: 
+6: mod server_client;
+  0.760 crates/nession-agent/src/connection/server_client.rs:440-445
+440:                         e, reconnect_delay
+441:                     );
+442:                     tokio::select! {
+443:                         _ = tokio::time::sleep(reconnect_delay) => {}
+444:                         _ = shutdown_rx.recv() => {
+445:                             info!("Server client shutting down during backoff");
+  0.760 crates/nession-agent/src/connection/server_client.rs:615-621
+615:                 }
+616:                 // Shutdown: close the socket and stop the supervisor.
+617:                 _ = shutdown_rx.recv() => {
+618:                     info!("Shutdown signal received");
+619:                     let _ = sink.send(WsMessage::Close(None)).await;
+620:                     return ConnectionOutcome::Shutdown;
+621:                 }
+  0.760 crates/nession-agent/src/connection/server_client.rs:1022-1027
+1022:                     }
+1023:                 });
+1024:                 let _ = sink.send(WsMessage::Text(response.to_string())).await;
+1025:                 while let Some(Ok(_)) = stream.next().await {}
+1026:             }
+1027:         });
+  0.760 crates/nession-agent/src/server/websocket.rs:1463-1468
+1463:             };
+1464: 
+1465:             match msg {
+1466:                 WsMessage::Text(text) => {
+1467:                     let response = Self::handle_request(
+1468:                         &text,
+  0.760 crates/nession-cli/src/client/connection.rs:1-3
+1: //! Client WebSocket connection to central server.
+2: 
+3: use anyhow::{Context, Result};
+  0.760 crates/nession-server/src/server/handler.rs:142-150
+142:     }
+143: 
+144:     pub async fn handle_message(&mut self, msg: Message) -> anyhow::Result<HandlerAction> {
+145:         match msg {
+146:             Message::Text(text) => {
+147:                 let protocol_msg: ProtocolMessage<serde_json::Value> = serde_json::from_str(&text)?;
+148:                 self.handle_protocol_message(protocol_msg).await
+149:             }
+150:             Message::Close(_) => {
+  0.760 crates/nession-server/src/server/handler.rs:539-547
+539:     /// Push the current session list to every connected web client.
+540:     ///
+541:     /// Called after any mutation so browsers don't have to poll or wait for a
+542:     /// manual refresh to notice changes.
+543:     async fn broadcast_sessions(&self) {
+544:         self.web_client_registry
+545:             .broadcast_sessions_changed(Arc::clone(&self.session_registry))
+546:             .await;
+547:     }
+  0.760 crates/nession-server/src/server/handler.rs:887-893
+887:         self.command_broker.unregister_agent(agent_id).await;
+888: 
+889:         // Broadcast updated lists to all connected web clients.
+890:         self.web_client_registry
+891:             .broadcast_agents_changed(Arc::clone(&self.agent_registry))
+892:             .await;
+893:         self.broadcast_sessions().await;
+  0.760 crates/nession-server/src/server/handler.rs:1835-1840
+1835: 
+1836:         let sent = self
+1837:             .client_registry
+1838:             .broadcast(&payload.session_id, broadcast_msg.to_string())
+1839:             .await;
+1840: 
+  0.760 crates/nession-server/src/server/handler.rs:4929-4935
+4929:     }
+4930: 
+4931:     /// Regression #743: the agent WebSocket loop re-registers the agent's
+4932:     /// sender on **every** inbound agent message (`server/websocket.rs`), so
+4933:     /// that can happen while a command is in flight. It is a transport update
+4934:     /// and must not cancel the command — otherwise the client is told
+4935:     /// "Agent disconnected" for a session the agent actually created, and the
+  0.760 crates/nession-server/src/server/websocket.rs:183-187
+183:                                     row.session_id, row.agent_id, row.last_activity
+184:                                 );
+185:                                 session_registry.remove(&row.session_id).await;
+186:                                 // Release env usage locks held by this session.
+187:                                 env_service.usage.clear_session(&row.session_id);
+  0.760 crates/nession-server/src/server/websocket.rs:260-271
+260: }
+261: 
+262: /// Shared, cheaply-cloneable state handed to each connection handler task.
+263: #[derive(Clone)]
+264: struct ServerContext {
+265:     agent_registry: Arc<AgentRegistry>,
+266:     session_registry: Arc<SessionRegistry>,
+267:     command_broker: Arc<CommandBroker>,
+268:     client_registry: Arc<ClientRegistry>,
+269:     web_client_registry: Arc<WebClientRegistry>,
+270:     env_service: Arc<EnvService>,
+271:     db: Arc<Database>,
+  0.760 crates/nession-server/src/server/websocket.rs:402-408
+402:                 )
+403:                 .await?;
+404:                 // Relay ended — clean up the client registration so the
+405:                 // cleanup block below (WS-close path) doesn't double-free.
+406:                 client_registry.unregister(&session_id, &client_id).await;
+407:                 // Don't break — the WebSocket stays open for dashboard use.
+408:                 continue;
+  0.760 crates/nession-server/src/server/websocket.rs:687-691
+687: 
+688:                 // Send the latest buffered terminal.input.
+689:                 if let Err(e) = agent_write.send(latest).await {
+690:                     error!("Failed to forward client message to agent: {}", e);
+691:                     break;
+  0.760 web/src/app/useAppConnection.ts:101-109
+101:       setWsService(service);
+102: 
+103:       // Unsubscribed by dispose() (it clears the listener set) rather than by
+104:       // an effect cleanup. An effect that unsubscribed on StrictMode's
+105:       // simulated unmount would leave the live service silent — nothing would
+106:       // ever drive this hook to 'connected' again (#697).
+107:       service.onConnectionStateChange((status) => {
+108:         if (status === 'connected') {
+109:           setWasEverAuthed(true);
+  0.760 web/src/platform/attach/relayServerConnection.ts:5-16
+5: import type { TerminalServerApi } from '@/product/terminal';
+6: 
+7: /**
+8:  * Relay-mode lifecycle surface SessionRuntime needs from the server
+9:  * connection. A {@link RelayServerHandle} is the narrow, dependency-free view
+10:  * of the app's server WebSocket plus the server-side terminal capability;
+11:  * injecting the raw service into the runtime would couple it to the transport
+12:  * implementation. Handles are built by {@link relayServerHandle}.
+13:  */
+14: export interface RelayServerHandle {
+15:   /**
+16:    * Subscribe to server-connection state ('connecting' | 'connected' |
+  0.760 web/src/platform/session-runtime/SessionRuntime.ts:629-635
+629:     // onConnectionStateChange (the router rejects in-flight requests). A
+630:     // teardown/dispose while the socket is still opening rejects this pending
+631:     // connect — swallow so it cannot dangle as an unhandled rejection.
+632:     void ws.connect().catch(() => {});
+633:     this.wireConnectionHandler();
+634:     if (ws.connectionState === 'connected') {
+635:       this.maybeStartP2PAttach();
+  0.760 web/src/platform/socket/WebSocketService.ts:175-185
+175:     this.disposed = true;
+176:     this.userClosed = true;
+177:     this.clearReconnectTimer();
+178:     this.teardownSocket();
+179:     this.rejectPendingConnect(new Error('WebSocketService disposed'));
+180:     this.router.dispose();
+181:     this.rejectWaiters(new Error('WebSocketService disposed'));
+182:     this.setState('disconnected');
+183:     for (const entry of this.plugins.values()) {
+184:       entry.teardown();
+185:     }
+  0.760 web/src/platform/terminal-runtime/controller/TerminalController.ts:360-365
+360: 
+361:   /** Resize the local xterm grid optimistically and notify the transport. */
+362:   resize(cols: number, rows: number): void {
+363:     this.resizeLocal(cols, rows);
+364:     this.sendResize(cols, rows);
+365:   }
+  0.760 web/src/product/session/state/session.ts:63-71
+63:     // Re-attaching the session the client is ALREADY attached to keeps the
+64:     // leased SessionRuntime alive (sessionIdAtom does not change), but the
+65:     // dialog confirm carries a fresh connection token (the server mints one
+66:     // per attach-info request). Without a route-intent bump the runtime would
+67:     // silently rebuild its agent socket under the stale 'attached' phase and
+68:     // never re-issue client.attach — freezing the terminal (#668). Bumping
+69:     // the epoch routes the confirm through handleRouteIntentChange, the same
+70:     // disconnect → reconnect cycle a manual address switch uses. Attaching a
+71:     // DIFFERENT session needs no bump: the sessionId change releases the old
+  0.760 web/src/product/terminal/hooks/useTerminal.ts:76-81
+76:     // attach. TerminalViewport attaches the controller in a useLayoutEffect,
+77:     // and the controller publishes transport readiness during that attach; a
+78:     // late (passive-effect) binding used to miss that first event, leaving
+79:     // terminalTransportReadyAtom false and blocking the SessionRuntime's
+80:     // transportReady-gated attach forever (issue #598).
+81:     const events = createTerminalRuntimeAdapter(runtime);
+  0.760 web/src/product/terminal/hooks/useTerminal.ts:99-103
+99:   const activeControllerRef = useRef<TerminalController | null>(null);
+100:   const controllerEffectGenerationRef = useRef(0);
+101:   useEffect(() => {
+102:     const previous = activeControllerRef.current;
+103:     const generation = ++controllerEffectGenerationRef.current;
+  0.760 web/src/product/terminal/server.ts:119-125
+119:   }
+120: 
+121:   sendRelayInput(sessionName: string, data: string): void {
+122:     const encoded = encodeBase64(data);
+123:     this.requireConnection().send(TERMINAL_INPUT_WIRE, { session_name: sessionName, data: encoded });
+124:   }
+125: 
+  0.760 web/src/product/terminal/useTerminalOrchestration.ts:245-251
+245:   // transport factory captures at build time — so the rebuild must never run
+246:   // BEFORE the runtime has swapped its live API, or the fresh transport binds
+247:   // the pre-swap (soon-disposed) socket and the terminal freezes (#668).
+248:   // routeIntentEpoch / transportGeneration change in the same commit whose
+249:   // passive parent effects perform the swap, while (layout) viewport effects
+250:   // run first — keying on either races the swap. The mirrored agentTerminalApi
+251:   // commits only AFTER the swap, so its identity is the safe trigger.
+  0.750 crates/nession-agent/src/connection/server_client.rs:49-57
+49: type WsStreamHalf = futures_util::stream::SplitStream<WsStream>;
+50: 
+51: /// Maximum delay for exponential backoff (30 seconds).
+52: const MAX_RECONNECT_DELAY: Duration = Duration::from_secs(30);
+53: 
+54: /// Initial delay for exponential backoff (1 second).
+55: const INITIAL_RECONNECT_DELAY: Duration = Duration::from_secs(1);
+56: 
+57: /// Message type constants for agent-to-server protocol.
+  0.750 crates/nession-agent/src/connection/server_client.rs:428-436
+428:                     }
+429: 
+430:                     // Make sure connect_and_run doesn't block forever if the
+431:                     // very first connection fails. `Ok(None)` rather than an
+432:                     // error: a connection failure is transient and the loop
+433:                     // below keeps trying.
+434:                     if !reported_interval {
+435:                         let _ = interval_tx.try_send(Ok(None));
+436:                         reported_interval = true;
+  0.750 crates/nession-agent/src/connection/server_client.rs:511-515
+511:                                 self.agent_id, payload.message
+512:                             );
+513:                             interval = payload.heartbeat_interval_secs;
+514:                             break;
+515:                         } else {
+  0.750 crates/nession-agent/src/connection/server_client.rs:624-635
+624:     }
+625: 
+626:     /// Handle a message received from the server, writing any response to the
+627:     /// `responses` channel (drained onto the socket by `run_connection`).
+628:     async fn handle_server_message(
+629:         &self,
+630:         text: &str,
+631:         responses: &mpsc::UnboundedSender<WsMessage>,
+632:     ) -> Result<()> {
+633:         let msg: ProtocolMessage<serde_json::Value> =
+634:             serde_json::from_str(text).context("failed to parse server message")?;
+635: 
+  0.750 crates/nession-agent/src/connection/server_client.rs:1085-1089
+1085: 
+1086:                     // Read the register message and report it.
+1087:                     if let Some(Ok(WsMessage::Text(text))) = stream.next().await {
+1088:                         let parsed: serde_json::Value = serde_json::from_str(&text).unwrap();
+1089:                         if parsed["msg_type"] == "server.agent.register" {
+  0.750 crates/nession-agent/src/connection/server_client.rs:2375-2380
+2375:         let first = tokio::time::timeout(Duration::from_secs(15), async {
+2376:             loop {
+2377:                 let msg = msg_rx.recv().await.expect("server closed");
+2378:                 let parsed: serde_json::Value = serde_json::from_str(&msg).unwrap();
+2379:                 let command = parsed
+2380:                     .get("payload")
+  0.750 crates/nession-agent/src/server/websocket.rs:37-47
+37: use std::pin::Pin;
+38: use std::sync::Arc;
+39: use tokio::net::TcpListener;
+40: use tokio::sync::{mpsc, Mutex};
+41: use tokio_tungstenite::tungstenite::Message as WsMessage;
+42: use tokio_tungstenite::WebSocketStream;
+43: use tracing::{error, info, warn};
+44: 
+45: /// A tmux attach session, shared by all clients attached through this
+46: /// connection. Created on first attach, destroyed on last detach.
+47: ///
+  0.750 crates/nession-agent/src/server/websocket.rs:350-360
+350: 
+351: /// WebSocket server that accepts P2P client connections and routes
+352: /// terminal I/O to/from per-client PTY sessions.
+353: pub struct AgentServer {
+354:     tmux_manager: SessionManager,
+355:     file_ops: Arc<FileOps>,
+356:     shutdown_tx: mpsc::Sender<()>,
+357:     shutdown_rx: Option<mpsc::Receiver<()>>,
+358:     tls_acceptor: Option<tokio_rustls::TlsAcceptor>,
+359:     listen_address: String,
+360:     agent_id: String,
+  0.750 crates/nession-agent/src/server/websocket.rs:645-649
+645:                     }
+646: 
+647:                     // Session doesn't exist yet: create PtySession + first subscriber.
+648:                     match crate::tmux::pty::PtySession::attach(
+649:                         &session_name,
+  0.750 crates/nession-agent/src/server/websocket.rs:753-758
+753:                                 };
+754: 
+755:                             // Send captured scrollback so xterm.js can pre-fill its buffer.
+756:                             if !scrollback_bytes.is_empty() {
+757:                                 use base64::Engine;
+758:                                 let encoded = base64::engine::general_purpose::STANDARD
+  0.750 crates/nession-agent/src/server/websocket.rs:833-841
+833:                                     ),
+834:                                 }
+835:                                 while let Some((cols, rows)) = resize_rx.recv().await {
+836:                                     let full_id =
+837:                                         format!("{agent_id_resize}:{session_name_resize}");
+838:                                     let _ = resize_tx_resize.send((full_id, cols, rows));
+839:                                     if !send_terminal_resize_msg(
+840:                                         &sink_resize,
+841:                                         &session_name_resize,
+  0.750 crates/nession-agent/src/server/websocket.rs:1500-1508
+1500:         // Close any tmux sessions that were attached through this
+1501:         // connection so that the underlying tmux attach children are
+1502:         // terminated promptly. Closing also drops the subscriber senders,
+1503:         // stopping each session's broadcast task.
+1504:         let mut sessions_guard = sessions.lock().await;
+1505:         for (name, mut session) in sessions_guard.drain() {
+1506:             if let Err(e) = session.backend.close().await {
+1507:                 warn!("Error closing session {}: {:#}", name, e);
+1508:             }
+  0.750 crates/nession-server/src/server/handler.rs:571-577
+571:         if auth_ok {
+572:             self.authenticated_client = true;
+573:             // Subscribe web client for real-time push (agents.changed, etc.)
+574:             if let Some(ref sender) = self.client_sender {
+575:                 self.web_client_registry.subscribe(sender.clone());
+576:             }
+577:             info!("Client authenticated successfully");
+  0.750 crates/nession-server/src/server/web_client_registry.rs:145-149
+145:     /// Broadcast `server.commands.changed` to all connected web clients to
+146:     /// notify them that the quick-command list has been modified.
+147:     pub async fn broadcast_commands_changed(&self) {
+148:         let payload = serde_json::json!({
+149:             "msg_type": "server.commands.changed",
+  0.750 crates/nession-server/src/server/websocket.rs:203-210
+203: 
+204:         loop {
+205:             let (tcp_stream, addr) = listener.accept().await?;
+206:             info!("New connection from: {}", addr);
+207: 
+208:             let ctx = ServerContext {
+209:                 agent_registry: Arc::clone(&self.agent_registry),
+210:                 session_registry: Arc::clone(&self.session_registry),
+  0.750 crates/nession-server/src/server/websocket.rs:605-610
+605:     // ── Step 2: Bidirectional forwarding ──
+606: 
+607:     // Helper: detect terminal.input JSON messages.
+608:     fn is_terminal_input(msg: &tokio_tungstenite::tungstenite::Message) -> bool {
+609:         msg.to_text()
+610:             .ok()
+  0.750 web/src/platform/attach/relayServerConnection.ts:59-64
+59:  * consumer no longer owns on a connection it never authenticated for.
+60:  */
+61: export function relayServerHandle(
+62:   service: WebSocketService,
+63:   terminalServerApi: TerminalServerApi,
+64: ): RelayServerTransport {
+  0.750 web/src/platform/session-runtime/SessionRuntime.ts:99-103
+99:   readonly attachController: SessionAttachController;
+100:   private addressPolicy: AddressAttachPolicy;
+101:   /** Live P2P WebSocket service to the current agent candidate (or null in relay). */
+102:   private agentWs: WebSocketService | null = null;
+103:   private agentTerminalApi: TerminalAgentApi | null = null;
+  0.750 web/src/platform/socket/MessageRouter.ts:65-73
+65:   }
+66: 
+67:   handleIncoming(message: SocketMessage): void {
+68:     const pending = this.pending.get(message.id);
+69:     if (pending) {
+70:       clearTimeout(pending.timer);
+71:       this.pending.delete(message.id);
+72:       if (message.msg_type === 'error') {
+73:         const errMsg = ((message.payload as Record<string, unknown>)?.message as string) || 'Remote error';
+  0.750 web/src/platform/socket/MessageRouter.ts:80-84
+80:     const set = this.handlers.get(message.msg_type);
+81:     if (set) {
+82:       for (const h of set) {
+83:         h(message.payload, message);
+84:       }
+  0.750 web/src/platform/socket/WebSocketService.ts:253-257
+253:   }
+254: 
+255:   subscribe(
+256:     type: string,
+257:     handler: (payload: unknown, raw: SocketMessage) => void,
+  0.750 web/src/platform/socket/WebSocketService.ts:477-487
+477:     }
+478:     this.state = next;
+479:     for (const listener of this.stateListeners) {
+480:       listener(next);
+481:     }
+482:     if (next === 'connected') {
+483:       const pending = [...this.waiters];
+484:       this.waiters.clear();
+485:       for (const waiter of pending) {
+486:         waiter.resolve();
+487:       }
+  0.750 web/src/product/terminal/server.ts:22-28
+22: }
+23: 
+24: /**
+25:  * Server (relay) terminal capability — the application's single server
+26:  * connection. Relay traffic (begin/end, terminal I/O proxied by the server)
+27:  * travels this connection, so the plugin owns both the outbound relay
+28:  * lifecycle and the inbound per-session terminal.output / terminal.resize
+  0.740 crates/nession-agent/src/connection/server_client.rs:41-45
+41: 
+42: /// Type alias for the WebSocket stream.
+43: type WsStream = WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>;
+44: 
+45: /// Type alias for the split sink (write half).
+  0.740 crates/nession-agent/src/connection/server_client.rs:328-332
+328:         let connected = Arc::new(AtomicBool::new(false));
+329: 
+330:         let handle = ServerClientHandle {
+331:             outbox: outbox_tx,
+332:             shutdown_tx,
+  0.740 crates/nession-agent/src/connection/server_client.rs:447-451
+447:                         }
+448:                     }
+449:                     reconnect_delay = std::cmp::min(reconnect_delay * 2, MAX_RECONNECT_DELAY);
+450:                 }
+451:             }
+  0.740 crates/nession-agent/src/connection/server_client.rs:926-930
+926:             .expect("heartbeat failed");
+927: 
+928:         let msg = tokio::time::timeout(Duration::from_secs(5), msg_rx.recv())
+929:             .await
+930:             .expect("timeout waiting for heartbeat")
+  0.740 crates/nession-agent/src/connection/server_client.rs:1099-1108
+1099:                     }
+1100: 
+1101:                     // On the first round, drop the connection to force a reconnect.
+1102:                     if round == 0 {
+1103:                         drop(sink);
+1104:                         drop(stream);
+1105:                     } else {
+1106:                         while let Some(Ok(_)) = stream.next().await {}
+1107:                     }
+1108:                 }
+  0.740 crates/nession-agent/src/connection/server_client.rs:1422-1427
+1422:                 let _ = sink.send(WsMessage::Text(ack.to_string())).await;
+1423: 
+1424:                 // Keep connection alive.
+1425:                 while let Some(Ok(_)) = stream.next().await {}
+1426:             }
+1427:         });
+  0.740 crates/nession-agent/src/server/websocket.rs:434-439
+434:     tmux: &'a Arc<SessionManager>,
+435:     sessions: &'a Arc<Mutex<SessionMap>>,
+436:     client_id: &'a Arc<Mutex<Option<String>>>,
+437:     sink: &'a Arc<Mutex<futures_util::stream::SplitSink<WebSocketStream<TcpOrTls>, WsMessage>>>,
+438:     default_working_dir: &'a str,
+439:     file_ops: &'a Arc<FileOps>,
+  0.740 crates/nession-agent/src/server/websocket.rs:593-597
+593:                 };
+594: 
+595:                 if matches!(ctx.attach_mode, AttachMode::Plain) {
+596:                     // ---- Plain PTY path (session-shared) ----
+597:                     let session_name = payload.session_name.clone();
+  0.740 crates/nession-agent/src/server/websocket.rs:1105-1111
+1105:             }
+1106: 
+1107:             // --- Keepalive ---
+1108:             "agent.keepalive.ping" => "agent.keepalive.ping" => {
+1109:                 serde_json::to_string(&make_response(ctx.id, msg_types::KEEPALIVE_PONG, ()))
+1110:                     .unwrap_or_default()
+1111:             }
+  0.740 crates/nession-cli/src/client/connection.rs:111-115
+111: 
+112:     /// Authenticate with the server.
+113:     async fn authenticate(&mut self, auth_token: &str, client_id: &str) -> Result<()> {
+114:         let msg_id = format!(
+115:             "auth_{}",
+  0.740 crates/nession-cli/src/commands/client.rs:167-172
+167:             );
+168: 
+169:             // Connect directly to agent
+170:             let agent_ws = crate::client::connection::connect_to_agent(&p2p_info.agent_address)
+171:                 .await
+172:                 .with_context(|| {
+  0.740 crates/nession-server/src/server/handler.rs:46-50
+46:     /// Enter relay mode: forward messages between this client and the agent.
+47:     /// The server tries each URL in order with a fast timeout until one connects.
+48:     Relay {
+49:         /// Candidate agent WebSocket URLs, best-first (Reachable > Unknown > Unreachable).
+50:         agent_ws_urls: Vec<String>,
+  0.740 crates/nession-server/src/server/handler.rs:1041-1047
+1041:     ///
+1042:     /// In P2P mode, the response includes the agent's IP:port so the client can
+1043:     /// connect directly. In relay mode, the server opens a WebSocket to the agent
+1044:     /// and bidirectionally forwards terminal I/O.
+1045:     async fn handle_client_session_attach(
+1046:         &mut self,
+1047:         msg: ProtocolMessage<serde_json::Value>,
+  0.740 crates/nession-server/src/server/handler.rs:1229-1235
+1229: 
+1230:             let client_id = uuid::Uuid::new_v4().to_string();
+1231:             if let Some(ref sender) = self.client_sender {
+1232:                 self.client_registry
+1233:                     .register(session_id, &client_id, sender.clone())
+1234:                     .await;
+1235:             } else {
+  0.740 crates/nession-server/src/server/handler.rs:1305-1311
+1305:     /// Phase 1 (server.session.attach, relay mode) returned the candidate
+1306:     /// addresses but did NOT enter relay forwarding.  Now the Terminal is
+1307:     /// mounted and subscribed — the browser sends this to actually start
+1308:     /// the relay data flow.
+1309:     async fn handle_client_session_relay_begin(
+1310:         &mut self,
+1311:         msg: ProtocolMessage<serde_json::Value>,
+  0.740 crates/nession-server/src/server/web_client_registry.rs:25-30
+25: }
+26: 
+27: impl WebClientRegistry {
+28:     /// Create a new registry with room for 16 unread messages per subscriber.
+29:     pub fn new() -> Self {
+30:         let (tx, _) = broadcast::channel(16);
+  0.740 crates/nession-server/src/server/web_client_registry.rs:76-80
+76: 
+77:     /// Build an `agents.changed` payload from the agent registry and push it.
+78:     pub async fn broadcast_agents_changed(
+79:         &self,
+80:         agent_registry: Arc<crate::registry::AgentRegistry>,
+  0.740 crates/nession-server/src/server/web_client_registry.rs:234-238
+234:         let registry = WebClientRegistry::new();
+235:         let (sender, mut rx) = WsMessageSender::new();
+236:         registry.subscribe(sender);
+237: 
+238:         registry
+  0.740 crates/nession-server/src/server/websocket.rs:435-439
+435: }
+436: 
+437: /// Relay mode using channel-based sender for client writes.
+438: /// Used when the write sink is managed by a relay task.
+439: ///
+  0.740 crates/nession-server/src/server/websocket.rs:451-458
+451: ) -> anyhow::Result<()>
+452: where
+453:     RS: futures_util::Stream<
+454:             Item = Result<
+455:                 tokio_tungstenite::tungstenite::Message,
+456:                 tokio_tungstenite::tungstenite::Error,
+457:             >,
+458:         > + Unpin,
+  0.740 web/src/platform/attach/relayServerConnection.ts:21-30
+21:   /** True once the handshake completed — connectionState === 'connected'. */
+22:   isReady(): boolean;
+23:   /**
+24:    * Ask the server to relay terminal traffic for a session (server →
+25:    * agent direction). No-op when the connection is not ready; the caller
+26:    * (terminal state machine) gates on {@link isReady}.
+27:    */
+28:   beginRelay(sessionId: string, relayUrl?: string, cols?: number, rows?: number): void;
+29:   /** Ask the server to stop relaying terminal traffic for a session. */
+30:   endRelay(sessionId: string): void;
+  0.740 web/src/platform/session-runtime/SessionRuntime.ts:278-282
+278:     this.syncAgentConnection();
+279:     this.wireRelayServerHandler();
+280:     if (!prevTransportReady && this.transportReady) {
+281:       this.maybeStartP2PAttach();
+282:     }
+  0.740 web/src/platform/session-runtime/SessionRuntime.ts:312-321
+312:     const result = this.attachController.dispatch({ type: 'SESSION_SELECTED' });
+313:     this.transportGeneration += 1;
+314:     this.syncAgentConnection({ forceReconnect: true });
+315:     this.emitRuntimeEvent({ type: 'route-intent-changed', phase: result.phase });
+316:   }
+317: 
+318:   private maybeStartP2PAttach(): void {
+319:     if (this.config.forcedRelay || !this.agentWs || !this.agentTerminalApi) {
+320:       return;
+321:     }
+  0.740 web/src/platform/session-runtime/SessionRuntime.ts:491-496
+491:         }
+492:       } else {
+493:         // Server WS (re)established — begin (or re-begin) relay if attach is due.
+494:         this.driveRelayAttach();
+495:       }
+496:     });
+  0.740 web/src/platform/session-runtime/SessionRuntime.ts:503-507
+503:    * transitions; phase guards make it idempotent per loss cycle.
+504:    */
+505:   private driveRelayAttach(): void {
+506:     const conn = this.config.serverConnection;
+507:     if (!conn || !this.config.attachInfo) {
+  0.740 web/src/platform/session-runtime/SessionRuntime.ts:619-624
+619:     this.filesApi = null;
+620: 
+621:     const files = this.config.createFilesApi();
+622:     const ws = new WebSocketService(builtUrl, [files], {
+623:       maxReconnectAttempts: this.addressPolicy.maxReconnectAttempts(),
+624:     });
+  0.740 web/src/platform/socket/WebSocketService.ts:223-227
+223:   }
+224: 
+225:   request<T>(
+226:     type: string,
+227:     payload: Record<string, unknown>,
+  0.740 web/src/platform/terminal-runtime/ConnectionManager.ts:160-164
+160:     const api = this.agentApi!;
+161: 
+162:     this.p2pUnsubOutput = api.onOutput((data: Uint8Array) => {
+163:       if (!this.disposed) {
+164:         this.onOutput?.(data);
+  0.740 web/src/product/session/SessionsPlugin.ts:52-57
+52:     this.connection = connection;
+53: 
+54:     const unsubs = [
+55:       connection.subscribe('sessions.changed', (payload) => {
+56:         const sessions = (payload as { sessions?: Session[] })?.sessions;
+57:         if (sessions) {
+  0.740 web/src/product/terminal/useTerminalOrchestration.ts:190-198
+190: 
+191:   const wsService = useWebSocket();
+192:   // One relay handle per service instance, shared by every relay consumer —
+193:   // the runtime (begin/endRelay + state), the transport factory (relay I/O),
+194:   // the banner, and disconnect cleanup. Rebuilt only when the service does.
+195:   const relayServer = useMemo(() => relayServerHandle(wsService, terminalServerApi), [wsService]);
+196:   const { waitingForAddressPlan, agentTerminalApi, connectionState, runtime, snapshot, fileOps } = useP2PAttachTransport({
+197:     attachInfo,
+198:     sessionName,
+  0.730 crates/nession-agent/src/connection/server_client.rs:227-231
+227:     /// `handle_agent_terminal_resize` looks up relay clients by `payload.session_id`
+228:     /// (not the bare session name).
+229:     pub async fn send_terminal_resize(&self, session_id: &str, cols: u16, rows: u16) -> Result<()> {
+230:         let payload = AgentTerminalResizePayload {
+231:             session_id: session_id.to_string(),
+  0.730 crates/nession-agent/src/connection/server_client.rs:982-986
+982:             .expect("session update failed");
+983: 
+984:         let msg = tokio::time::timeout(Duration::from_secs(5), msg_rx.recv())
+985:             .await
+986:             .expect("timeout waiting for session update")
+  0.730 crates/nession-agent/src/connection/server_client.rs:1663-1667
+1663:         let (outbox_tx, mut outbox_rx) = mpsc::unbounded_channel();
+1664:         let (shutdown_tx, _shutdown_rx) = mpsc::channel(1);
+1665:         let handle = ServerClientHandle {
+1666:             outbox: outbox_tx,
+1667:             shutdown_tx,
+  0.730 crates/nession-agent/src/main.rs:294-299
+294: 
+295:     // 6. Start HeartbeatLoop
+296:     let heartbeat_shutdown = if let Some(ref handle) = client_handle {
+297:         let heartbeat = HeartbeatLoop::new(
+298:             handle.clone(),
+299:             SessionManager::new(),
+  0.730 crates/nession-agent/src/server/websocket.rs:80-90
+80: }
+81: 
+82: impl tokio::io::AsyncWrite for TcpOrTls {
+83:     fn poll_write(
+84:         self: Pin<&mut Self>,
+85:         cx: &mut std::task::Context<'_>,
+86:         buf: &[u8],
+87:     ) -> std::task::Poll<std::io::Result<usize>> {
+88:         match self.get_mut() {
+89:             TcpOrTls::Plain(s) => Pin::new(s).poll_write(cx, buf),
+90:             TcpOrTls::Tls(s) => Pin::new(s).poll_write(cx, buf),
+  0.730 crates/nession-agent/src/server/websocket.rs:462-466
+462: // below read together: this is what an agent answers on its own socket, and
+463: // `handle_request` is only the envelope parsing in front of it.
+464: p2p_routes! { ctx, msg_type, payload_value;
+465:             "agent.session.list" => "agent.session.list" => { match ctx.tmux.list_sessions().await {
+466:                 Ok(sessions_list) => {
+  0.730 crates/nession-agent/src/sync/heartbeat.rs:97-103
+97: 
+98:     /// Collect metrics and send a single heartbeat.
+99:     async fn send_heartbeat(&self) -> Result<()> {
+100:         // Check if we're connected before collecting metrics and sending.
+101:         // During reconnection, heartbeats would be queued but dropped,
+102:         // so skip sending to avoid wasted work and make the issue visible.
+103:         if !self.handle.is_connected() {
+  0.730 crates/nession-server/src/server/handler.rs:79-83
+79:     registered_agent_id: Option<String>,
+80:     /// Outgoing message sender for this client connection (set after construction).
+81:     client_sender: Option<WsMessageSender>,
+82:     /// Session this client is attached to via relay (for cleanup on disconnect).
+83:     attached_session_id: Option<String>,
+  0.730 crates/nession-server/src/server/handler.rs:156-160
+156:     }
+157: 
+158:     async fn handle_protocol_message(
+159:         &mut self,
+160:         msg: ProtocolMessage<serde_json::Value>,
+  0.730 crates/nession-server/src/server/handler.rs:1418-1424
+1418: 
+1419:         let client_id = uuid::Uuid::new_v4().to_string();
+1420:         if let Some(ref sender) = self.client_sender {
+1421:             self.client_registry
+1422:                 .register(session_id, &client_id, sender.clone())
+1423:                 .await;
+1424:         }
+  0.730 crates/nession-server/src/server/web_client_registry.rs:201-205
+201:         let registry = WebClientRegistry::new();
+202:         let (sender, mut rx) = WsMessageSender::new();
+203:         registry.subscribe(sender);
+204: 
+205:         let sessions = new_session_registry().await;
+  0.730 crates/nession-server/src/server/web_client_registry.rs:210-214
+210:             .await;
+211: 
+212:         let msg = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv())
+213:             .await
+214:             .expect("timeout waiting for broadcast")
+  0.730 crates/nession-server/src/server/web_client_registry.rs:240-244
+240:             .await;
+241: 
+242:         let msg = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv())
+243:             .await
+244:             .expect("timeout waiting for broadcast")
+  0.730 crates/nession-server/src/server/websocket.rs:554-560
+554:                             session_name, err_msg
+555:                         );
+556:                         // Forward error to the browser client
+557:                         let client_error = tokio_tungstenite::tungstenite::Message::Text(
+558:                             serde_json::json!({
+559:                                 "msg_type": "error",
+560:                                 "id": uuid::Uuid::new_v4().to_string(),
+  0.730 crates/nession-server/src/server/websocket.rs:613-618
+613:     }
+614: 
+615:     // Helper: detect server.session.relay.end — client wants to stop the
+616:     // relay without closing the WebSocket.
+617:     fn is_relay_end(msg: &tokio_tungstenite::tungstenite::Message) -> bool {
+618:         msg.to_text()
+  0.730 web/src/platform/session-runtime/SessionRuntime.ts:294-299
+294:     this.config = { ...this.config, forcedRelay: true };
+295:     this.addressPolicy.update({ forcedRelay: true });
+296:     this.attachedTransportGeneration = null;
+297:     this.attachController.cancelActiveAttach();
+298:     this.transportGeneration += 1;
+299:     this.syncAgentConnection();
+  0.730 web/src/platform/socket/MessageRouter.ts:12-24
+12: }
+13: 
+14: export class MessageRouterImpl {
+15:   private readonly handlers = new Map<string, Set<(payload: unknown, raw: SocketMessage) => void>>();
+16:   private readonly pending = new Map<string, Pending>();
+17:   private readonly binaryHandlers = new Set<(data: ArrayBuffer) => void>();
+18:   private disposed = false;
+19: 
+20:   constructor(private readonly deps: MessageRouterDeps) {}
+21: 
+22:   send(message: SocketMessage): void {
+23:     if (this.disposed) {
+24:       throw new Error('MessageRouter disposed');
+  0.730 web/src/platform/socket/MessageRouter.ts:42-46
+42:   }
+43: 
+44:   request<T>(type: string, payload: Record<string, unknown>, options: RequestOptions = {}): Promise<T> {
+45:     if (this.disposed) {
+46:       return Promise.reject(new Error('MessageRouter disposed'));
+  0.730 web/src/product/session/SessionsPlugin.ts:71-76
+71:         unsub();
+72:       }
+73:       if (this.generation === generation && this.connection === connection) {
+74:         this.connection = null;
+75:         // Current release — no newer binding exists, so every remaining
+76:         // registration belongs to this release. Drop them all.
+  0.730 web/src/product/terminal/agent.ts:93-98
+93:     },
+94: 
+95:     sendInput: (sessionName: string, data: string): void => {
+96:       surface.send(TERMINAL_INPUT_WIRE, { session_name: sessionName, data: encodeBase64(data) });
+97:     },
+98: 
+  0.730 web/src/product/terminal/hooks/useSessionRuntime.ts:204-208
+204:   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
+205: 
+206:   useEffect(() => {
+207:     if (
+208:       !sessionId
+  0.720 crates/nession-agent/src/connection/server_client.rs:139-147
+139:     sync_needed: Arc<AtomicBool>,
+140:     /// Set by the supervisor to indicate whether the connection is currently live.
+141:     /// The SessionWatcher checks this to skip sending updates while disconnected.
+142:     connected: Arc<AtomicBool>,
+143: }
+144: 
+145: impl ServerClientHandle {
+146:     /// Mark that a full session sync is needed (called by supervisor on reconnect).
+147:     pub fn mark_sync_needed(&self) {
+  0.720 crates/nession-agent/src/main.rs:280-284
+280:         let handle = handle.clone();
+281:         tokio::spawn(async move {
+282:             while let Some((session_id, cols, rows)) = resize_rx.recv().await {
+283:                 if handle.is_connected() {
+284:                     let _ = handle.send_terminal_resize(&session_id, cols, rows).await;
+  0.720 crates/nession-agent/src/server/websocket.rs:798-802
+798:                             // Spawn a second task that emits an initial
+799:                             // `terminal.resize` (so xterm.js can size its grid
+800:                             // to match the tmux pane before any output flows
+801:                             // in) and then forwards ongoing `%window-resize`
+802:                             // events on the same message type.
+  0.720 crates/nession-agent/src/server/websocket.rs:813-818
+813:                             let resize_tx_resize = ctx.resize_tx.clone();
+814:                             let agent_id_resize = ctx.agent_id.to_string();
+815:                             tokio::spawn(async move {
+816:                                 // Initial resize: query tmux for the pane's
+817:                                 // current size and forward it as one message.
+818:                                 // Runs inside the spawned task so the attach
+  0.720 crates/nession-agent/src/server/websocket.rs:1301-1305
+1301:     /// The server runs as a background tokio task until shutdown is signalled
+1302:     /// or the process exits.
+1303:     pub async fn start(mut self) -> Result<(ServerHandle, std::net::SocketAddr)> {
+1304:         let listener = TcpListener::bind(&self.listen_address)
+1305:             .await
+  0.720 crates/nession-agent/src/server/websocket.rs:1833-1837
+1833:         };
+1834:         let attach_req = new_message(msg_types::CLIENT_ATTACH, attach_payload);
+1835:         let attach_resp: Message<ClientAttachResponse> =
+1836:             send_and_receive(&mut sink, &mut stream, &attach_req).await;
+1837: 
+  0.720 crates/nession-agent/src/server/websocket.rs:1844-1848
+1844:         };
+1845:         let detach_req = new_message(msg_types::CLIENT_DETACH, detach_payload);
+1846:         let detach_resp: Message<ClientDetachResponse> =
+1847:             send_and_receive(&mut sink, &mut stream, &detach_req).await;
+1848: 
+  0.720 crates/nession-agent/src/sync/heartbeat.rs:23-27
+23: }
+24: 
+25: /// Background task that sends periodic heartbeats to the central server.
+26: ///
+27: /// Each heartbeat includes:
+  0.720 crates/nession-cli/src/commands/client.rs:177-181
+177:             let transport = crate::terminal::raw::WebSocketTransport::new(agent_ws);
+178: 
+179:             // Send agent.attach to agent with session name
+180:             use nession_agent::server::websocket::{
+181:                 msg_types as agent_msg_types, ClientAttachPayload, Message as AgentMessage,
+  0.720 crates/nession-cli/src/commands/client.rs:235-241
+235:             // Use server connection as relay transport
+236:             let relay_ws = conn.into_relay_transport();
+237:             let transport = crate::terminal::raw::WebSocketTransport::new(relay_ws);
+238: 
+239:             // For relay mode, the server expects us to send terminal protocol messages
+240:             // The server will forward them to the agent
+241:             use nession_agent::server::websocket::{
+  0.720 crates/nession-server/src/broker.rs:25-29
+25: }
+26: 
+27: pub struct ConnectionBroker {
+28:     tokens: Arc<RwLock<HashMap<String, P2PConnectionInfo>>>,
+29:     token_expiry_secs: i64,
+  0.720 crates/nession-server/src/server/client_registry.rs:42-50
+42:     }
+43: 
+44:     /// Remove a client connection from a session.
+45:     pub async fn unregister(&self, session_id: &str, client_id: &str) {
+46:         let mut clients = self.clients.write().await;
+47:         if let Some(session_clients) = clients.get_mut(session_id) {
+48:             session_clients.remove(client_id);
+49:             if session_clients.is_empty() {
+50:                 clients.remove(session_id);
+  0.720 crates/nession-server/src/server/handler.rs:414-419
+414:             .await;
+415: 
+416:         // Push updated agent state to all connected web dashboard clients
+417:         // only when a meaningful field changed (status, session counts).
+418:         // Timestamp-only heartbeats don't need a broadcast.
+419:         if changed {
+  0.720 crates/nession-server/src/server/web_client_registry.rs:99-103
+99:         });
+100:         match serde_json::to_string(&payload) {
+101:             Ok(json) => self.broadcast(json),
+102:             Err(e) => error!(
+103:                 "WebClientRegistry: failed to serialize agents.changed: {}",
+  0.720 crates/nession-server/src/server/web_client_registry.rs:135-139
+135:         });
+136:         match serde_json::to_string(&payload) {
+137:             Ok(json) => self.broadcast(json),
+138:             Err(e) => error!(
+139:                 "WebClientRegistry: failed to serialize sessions.changed: {}",
+  0.720 web/src/app/useAttachFlow.ts:33-37
+33:    *  overtaken flight's finally from clearing a slot a NEWER flight for the
+34:    *  same session owns (A → B → A: flight 1 must not clear flight 3's guard). */
+35:   const inFlightRef = useRef<{ sessionId: string; token: number } | null>(null);
+36:   const nextTokenRef = useRef(0);
+37: 
+  0.720 web/src/app/useVisibilityReconnect.ts:24-33
+24: 
+25:       console.log('[visibility] Tab became visible — reconnecting WebSocket');
+26:       wsService.connect().catch((err) => {
+27:         console.error('[visibility] Reconnect on wake failed:', err);
+28:       });
+29:     };
+30: 
+31:     document.addEventListener('visibilitychange', handleVisibility);
+32:     return () => document.removeEventListener('visibilitychange', handleVisibility);
+33:   }, [wasEverAuthed, wsService]);
+  0.720 web/src/platform/attach/AttachStateMachine.ts:162-166
+162:     flags: { forceRelay: boolean; bumpRouteEpoch: boolean; retryAttach: boolean },
+163:   ): void {
+164:     this.reconnectCount = event.attempt;
+165:     if (event.attempt > P2P_MAX_RECONNECT) {
+166:       if (event.manualRoute) {
+  0.720 web/src/platform/session-runtime/SessionRuntime.ts:109-113
+109:   private transportReady = false;
+110:   /** Transport generation for which client.attach succeeded. */
+111:   private attachedTransportGeneration: number | null = null;
+112:   private connectionUnsub: (() => void) | null = null;
+113:   private readonly connectionStateListeners = new Set<(state: ConnectionState) => void>();
+  0.720 web/src/platform/socket/MessageRouter.ts:27-31
+27:   }
+28: 
+29:   subscribe(type: string, handler: (payload: unknown, raw: SocketMessage) => void): () => void {
+30:     let set = this.handlers.get(type);
+31:     if (!set) {
+  0.720 web/src/platform/socket/MessageRouter.ts:33-37
+33:       this.handlers.set(type, set);
+34:     }
+35:     set.add(handler);
+36:     return () => {
+37:       set!.delete(handler);
+  0.720 web/src/platform/socket/MessageRouter.ts:86-98
+86:   }
+87: 
+88:   onBinary(handler: (data: ArrayBuffer) => void): () => void {
+89:     this.binaryHandlers.add(handler);
+90:     return () => {
+91:       this.binaryHandlers.delete(handler);
+92:     };
+93:   }
+94: 
+95:   handleBinary(data: ArrayBuffer): void {
+96:     for (const h of this.binaryHandlers) {
+97:       h(data);
+98:     }
+  0.720 web/src/platform/socket/WebSocketService.ts:529-533
+529:     this.ws.onmessage = null;
+530:     this.ws.onclose = null;
+531:     this.ws.close();
+532:     this.ws = null;
+533:   }
+  0.720 web/src/platform/socket/types.ts:69-75
+69: }
+70: 
+71: export interface WebSocketServiceOptions {
+72:   handshake?: (surface: HandshakeSurface) => Promise<void>;
+73:   maxReconnectAttempts?: number; // default 10
+74:   reconnectBaseDelay?: number;   // default 1_000, exp backoff, cap 30_000
+75:   onError?: (error: Error) => void;
+  0.720 web/src/platform/terminal-runtime/ConnectionManager.ts:115-119
+115:     const { cols, rows } = this.pendingResize;
+116:     this.pendingResize = null;
+117:     this.sendResizeRaw(cols, rows);
+118:   }
+119: 
+  0.720 web/src/platform/terminal-runtime/controller/TerminalController.ts:199-208
+199:       this.onStateChange?.(mapConnectionState(state));
+200:     };
+201:     transport.onError = (err: Error) => { this.onError?.(err); };
+202:     transport.onDisconnect = () => { this.onDisconnect?.(); };
+203:     this.events?.onTransportReady?.(true);
+204:   }
+205: 
+206:   private teardownTransport(): void {
+207:     this.events?.onTransportReady?.(false);
+208:     if (this.transport) {
+  0.720 web/src/product/session/SessionsPlugin.ts:59-63
+59:         }
+60:       }),
+61:       connection.subscribe('client.sessions.list.response', (payload) => {
+62:         const sessions = (payload as { sessions?: Session[] })?.sessions;
+63:         if (sessions) {
+  0.720 web/src/product/terminal/agent.ts:104-108
+104:       return surface.subscribe('agent.terminal.output', (payload) => {
+105:         const data = (payload as { data?: unknown })?.data as string | undefined;
+106:         if (data) {
+107:           // Strict decode (throws on invalid base64) — see './base64' for why
+108:           // this side is strict while server.ts (relay) is tolerant.
+  0.720 web/src/product/terminal/hooks/useP2PAttachTransport.ts:28-32
+28: 
+29: /**
+30:  * P2P attach transport: address rotation + relay fallback via shared SessionRuntime.
+31:  */
+32: export function useP2PAttachTransport({
+  0.720 web/src/product/terminal/hooks/useSessionRuntime.ts:219-223
+219: 
+220:     const unsubState = inP2PTransport
+221:       ? runtime.subscribeConnectionState((next) => {
+222:         setConnectionState(next);
+223:         setP2pState(next);
+  0.720 web/src/product/terminal/useTerminalOrchestration.ts:211-219
+211:   const reconnectCount = snapshot?.reconnectCount ?? mirroredAttach.reconnectCount;
+212: 
+213:   const handleDisconnect = useEndRelayOnDisconnect({
+214:     effectiveMode, serverConnection: relayServer, sessionId, onDisconnect,
+215:   });
+216:   useSessionEnvSourcing({ envRefs, sessionId, effectiveMode, agentTerminalApi, connectionState });
+217:   const transportFactory = useTransportFactory({
+218:     effectiveMode, sessionName, sessionId, agentTerminalApi, serverConnection: relayServer,
+219:     isAttached: createAttachGate(() => terminalState),
+  0.710 crates/nession-agent/src/connection/server_client.rs:804-808
+804:         mpsc::Receiver<String>,
+805:     ) {
+806:         let (msg_tx, msg_rx) = mpsc::channel(100);
+807:         let listener = TcpListener::bind("127.0.0.1:0")
+808:             .await
+  0.710 crates/nession-agent/src/connection/server_client.rs:920-924
+920:         let _ = msg_rx.recv().await;
+921: 
+922:         // Send heartbeat.
+923:         handle
+924:             .send_heartbeat(AgentStatus::Online, 5, 2, 3600, [1.0, 2.0, 3.0])
+  0.710 crates/nession-agent/src/connection/server_client.rs:1142-1146
+1142: 
+1143:         // After the server drops the connection, the supervisor should
+1144:         // reconnect and re-register within the backoff window.
+1145:         let second = tokio::time::timeout(Duration::from_secs(5), re_rx.recv())
+1146:             .await
+  0.710 crates/nession-agent/src/connection/server_client.rs:1159-1165
+1159:         std::net::SocketAddr,
+1160:         tokio::task::JoinHandle<()>,
+1161:         mpsc::Receiver<String>,
+1162:     ) {
+1163:         let (msg_tx, msg_rx) = mpsc::channel(100);
+1164:         let listener = TcpListener::bind("127.0.0.1:0")
+1165:             .await
+  0.710 crates/nession-agent/src/connection/server_client.rs:1274-1280
+1274:         std::net::SocketAddr,
+1275:         tokio::task::JoinHandle<()>,
+1276:         mpsc::Receiver<String>,
+1277:     ) {
+1278:         let (msg_tx, msg_rx) = mpsc::channel(100);
+1279:         let listener = TcpListener::bind("127.0.0.1:0")
+1280:             .await
+  0.710 crates/nession-agent/src/connection/server_client.rs:1297-1301
+1297:                     }
+1298:                 });
+1299:                 let _ = sink.send(WsMessage::Text(response.to_string())).await;
+1300: 
+1301:                 // Skip registration message from client.
+  0.710 crates/nession-agent/src/connection/server_client.rs:1579-1583
+1579:         let (outbox_tx, _outbox_rx) = mpsc::unbounded_channel();
+1580:         let (shutdown_tx, _shutdown_rx) = mpsc::channel(1);
+1581:         let handle = ServerClientHandle {
+1582:             outbox: outbox_tx,
+1583:             shutdown_tx,
+  0.710 crates/nession-agent/src/connection/server_client.rs:1608-1612
+1608:         let (outbox_tx, _outbox_rx) = mpsc::unbounded_channel();
+1609:         let (shutdown_tx, _shutdown_rx) = mpsc::channel(1);
+1610:         let handle = ServerClientHandle {
+1611:             outbox: outbox_tx,
+1612:             shutdown_tx,
+  0.710 crates/nession-agent/src/connection/server_client.rs:1682-1686
+1682:             .unwrap();
+1683: 
+1684:         let msg = outbox_rx.recv().await.expect("no message in outbox");
+1685:         let WsMessage::Text(text) = msg else {
+1686:             panic!("expected WsMessage::Text, got {msg:?}");
+  0.710 crates/nession-agent/src/connection/server_client.rs:1971-1975
+1971:         std::net::SocketAddr,
+1972:         tokio::task::JoinHandle<()>,
+1973:         mpsc::Receiver<String>,
+1974:     ) {
+1975:         let (msg_tx, msg_rx) = mpsc::channel(100);
+  0.710 crates/nession-agent/src/connection/server_client.rs:2223-2227
+2223:                     }
+2224:                 });
+2225:                 let _ = sink.send(WsMessage::Text(create_cmd.to_string())).await;
+2226: 
+2227:                 let list_cmd = serde_json::json!({
+  0.710 crates/nession-agent/src/main.rs:189-193
+189:     // Skip server connection if server_url is empty (standalone mode).
+190:     // The supervisor reconnects on its own, so we capture the handle and the
+191:     // server-advertised heartbeat interval (falling back to the local config).
+192:     let (client_handle, heartbeat_interval_secs) = if config.server_url.trim().is_empty() {
+193:         eprintln!("[DIAGNOSTIC] No server_url configured — standalone mode");
+  0.710 crates/nession-agent/src/protocol/mod.rs:183-187
+183:         /// rather than collecting it.
+184:         pub(crate) async fn dispatch_p2p(
+185:             $ctx: crate::server::websocket::P2pRequest<'_>,
+186:             $msg_type: &str,
+187:             $payload: serde_json::Value,
+  0.710 crates/nession-agent/src/server/websocket.rs:820-824
+820:                                 match query_window_size(&session_name_resize).await {
+821:                                     Ok((cols, rows)) => {
+822:                                         send_terminal_resize_msg(
+823:                                             &sink_resize,
+824:                                             &session_name_resize,
+  0.710 crates/nession-agent/src/server/websocket.rs:1265-1269
+1265:         resize_tx: mpsc::UnboundedSender<(String, u16, u16)>,
+1266:     ) -> Result<Self> {
+1267:         let tls_acceptor = match tls {
+1268:             Some((certs, key)) => {
+1269:                 let config = tokio_rustls::rustls::ServerConfig::builder()
+  0.710 crates/nession-agent/src/server/websocket.rs:1310-1314
+1310:             .context("failed to get local address after bind")?;
+1311: 
+1312:         let shutdown_rx = self
+1313:             .shutdown_rx
+1314:             .take()
+  0.710 crates/nession-agent/src/server/websocket.rs:1826-1830
+1826: 
+1827:         // Attach via WebSocket.
+1828:         let attach_payload = ClientAttachPayload {
+1829:             session_name: session_name.to_string(),
+1830:             width: 80,
+  0.710 crates/nession-agent/src/server/websocket.rs:1876-1880
+1876:         };
+1877:         let attach_req = new_message(msg_types::CLIENT_ATTACH, attach_payload);
+1878:         let attach_resp: Message<ClientAttachResponse> =
+1879:             send_and_receive(&mut sink, &mut stream, &attach_req).await;
+1880:         assert_eq!(attach_resp.msg_type, msg_types::OK);
+  0.710 crates/nession-agent/src/sync/heartbeat.rs:80-86
+80: 
+81:         loop {
+82:             tokio::select! {
+83:                 _ = ticker.tick() => {
+84:                     if let Err(e) = self.send_heartbeat().await {
+85:                         error!("Failed to send heartbeat: {:#}", e);
+86:                     }
+  0.710 crates/nession-cli/src/client/connection.rs:415-419
+415: }
+416: 
+417: /// Create a new tmux session directly on an agent via its WebSocket server.
+418: ///
+419: /// Connects to the agent at `agent_address` (host:port), sends a
+  0.710 crates/nession-server/src/server/handler.rs:330-334
+330:         // removed here or they linger forever.
+331:         let removed = self
+332:             .session_registry
+333:             .remove_by_agent(&payload.agent_id)
+334:             .await;
+  0.710 crates/nession-server/src/server/handler.rs:340-346
+340:                 removed
+341:             );
+342:             // Tell web clients the list shrank — otherwise their view keeps
+343:             // showing sessions the registry no longer has.
+344:             self.broadcast_sessions().await;
+345:         }
+346: 
+  0.710 crates/nession-server/src/server/handler.rs:938-944
+938:         let stale_agents = if force {
+939:             let stale = self.refresh_sessions_from_agents(agent_id).await;
+940:             // The rebuild may have changed the list for everyone, not just the
+941:             // requester — push it so other open browsers converge too.
+942:             self.broadcast_sessions().await;
+943:             stale
+944:         } else {
+  0.710 crates/nession-server/src/server/handler.rs:5222-5227
+5222: 
+5223:         // Phase 1: query relay — returns info but does NOT enter relay forwarding.
+5224:         let (relay_sender, mut relay_rx) = WsMessageSender::new();
+5225:         h.set_client_sender(relay_sender);
+5226:         let action = h
+5227:             .handle_message(proto_msg(
+  0.710 crates/nession-server/src/server/web_client_registry.rs:156-160
+156:         });
+157:         match serde_json::to_string(&payload) {
+158:             Ok(json) => self.broadcast(json),
+159:             Err(e) => error!(
+160:                 "WebClientRegistry: failed to serialize server.commands.changed: {}",
+  0.710 web/src/platform/socket/MessageRouter.ts:108-113
+108:   }
+109: 
+110:   failPending(error: Error): void {
+111:     for (const p of this.pending.values()) {
+112:       clearTimeout(p.timer);
+113:       p.reject(error);
+  0.710 web/src/platform/socket/types.ts:15-19
+15: 
+16: /** Transport-facing surface given to the post-open handshake (not readiness-gated). */
+17: export interface HandshakeSurface {
+18:   send(type: string, payload: Record<string, unknown>): void;
+19:   request<T>(type: string, payload: Record<string, unknown>, options?: RequestOptions): Promise<T>;
+  0.710 web/src/platform/terminal-runtime/transport/TerminalTransport.ts:2-6
+2: 
+3: /** Abstraction over ConnectionManager so Controller never touches WebSocket/P2P details. */
+4: export interface TerminalTransport {
+5:   readonly mode: 'p2p' | 'relay';
+6: 
+  0.710 web/src/product/terminal/agent.ts:119-126
+119:     },
+120: 
+121:     onError: (cb: (error: AgentError) => void): (() => void) => {
+122:       return surface.subscribe('error', (payload, raw) => {
+123:         // Keepalive-ping errors (agent replies echoing the legacy `ka-` ids)
+124:         // are connection watchdogs, not session errors — drop them silently
+125:         // like the old ConnectionManager filter did.
+126:         if (typeof raw.id === 'string' && raw.id.startsWith('ka-')) {
+  0.710 web/src/product/terminal/hooks/useSessionRuntime.ts:309-313
+309: 
+310:   const forcedRelay = manualOverride ? false : forcedRelayState;
+311:   const addressPlan = useAddressPlan(attachInfo, { orderedUrls, manualUrl: manualOverride });
+312:   const planUrlsKey = addressPlan.urls.join(',');
+313:   const addressPlanReady = addressPlan.ready;
+  0.710 web/src/product/terminal/hooks/useSessionRuntime.ts:362-366
+362:   const snapshot = useSessionRuntimeSnapshot(runtime);
+363: 
+364:   const { agentTerminalApi, connectionState } = useRuntimeConnectionSync({
+365:     sessionId,
+366:     runtime,
+  0.710 web/src/product/terminal/server.ts:101-105
+101:   }
+102: 
+103:   beginRelay(sessionId: string, relayUrl?: string, cols?: number, rows?: number): void {
+104:     const payload: Record<string, unknown> = { session_id: sessionId };
+105:     if (relayUrl) {
+  0.710 web/src/product/terminal/server.ts:150-154
+150: 
+151:     const callbacks = this.outputCallbacks.get(sessionId);
+152:     if (callbacks) {
+153:       for (const entry of callbacks) {
+154:         entry.cb(data);
+  0.710 web/src/product/terminal/useTerminalAttach.ts:26-30
+26:     }
+27:     return runtime.attachController.subscribeOutcomes((result) => {
+28:       setTerminalState(result.phase);
+29:       setReconnectCount(result.reconnectCount);
+30:       if (result.forceRelay) {
+  0.710 web/src/product/terminal/useTerminalOrchestration.ts:86-90
+86:   // candidate is built — e.g. relay mode — making the transport inert).
+87:   transportFactoryRef.current = () =>
+88:     new ConnectionManager({
+89:       mode: effectiveMode,
+90:       sessionName,
+  0.710 web/src/product/terminal/useTerminalOrchestration.ts:126-130
+126:     // 'reconnecting' via the runtime phase mirror (old facade collapsed it
+127:     // onto 'connecting', which this hook ignored too).
+128:     return serverConnection.onConnectionStateChange((state) => {
+129:       if (state === 'connected') {
+130:         setRelayLost(false);
+  0.700 crates/nession-agent/src/connection/server_client.rs:1385-1391
+1385:         std::net::SocketAddr,
+1386:         tokio::task::JoinHandle<()>,
+1387:         mpsc::Receiver<String>,
+1388:     ) {
+1389:         let (_msg_tx, msg_rx) = mpsc::channel(100);
+1390:         let listener = TcpListener::bind("127.0.0.1:0")
+1391:             .await
+  0.700 crates/nession-agent/src/connection/server_client.rs:1413-1417
+1413:                 let _ = stream.next().await;
+1414: 
+1415:                 // Send heartbeat ack.
+1416:                 let ack = serde_json::json!({
+1417:                     "msg_type": "server.heartbeat.ack",
+  0.700 crates/nession-agent/src/connection/server_client.rs:1635-1639
+1635:         let (outbox_tx, outbox_rx) = mpsc::unbounded_channel();
+1636:         let (shutdown_tx, _shutdown_rx) = mpsc::channel(1);
+1637:         let handle = ServerClientHandle {
+1638:             outbox: outbox_tx,
+1639:             shutdown_tx,
+  0.700 crates/nession-agent/src/connection/server_client.rs:1805-1809
+1805:                     "payload": { "status": "accepted", "message": "ok" }
+1806:                 });
+1807:                 let _ = sink.send(WsMessage::Text(response.to_string())).await;
+1808:                 let _ = stream.next().await;
+1809: 
+  0.700 crates/nession-agent/src/connection/server_client.rs:1899-1903
+1899:                     "payload": { "status": "accepted", "message": "ok" }
+1900:                 });
+1901:                 let _ = sink.send(WsMessage::Text(response.to_string())).await;
+1902:                 let _ = stream.next().await;
+1903: 
+  0.700 crates/nession-agent/src/connection/server_client.rs:2190-2194
+2190:         std::net::SocketAddr,
+2191:         tokio::task::JoinHandle<()>,
+2192:         mpsc::Receiver<String>,
+2193:     ) {
+2194:         let (msg_tx, msg_rx) = mpsc::channel(100);
+  0.700 crates/nession-agent/src/server/websocket.rs:963-967
+963:                     .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+964: 
+965:                 // Store the client_id for this connection
+966:                 {
+967:                     let mut cid = ctx.client_id.lock().await;
+  0.700 crates/nession-agent/src/server/websocket.rs:1788-1792
+1788:         };
+1789:         let create_req = new_message(msg_types::SESSION_CREATE, create_payload);
+1790:         let create_resp: Message<SessionCreateResponse> =
+1791:             send_and_receive(&mut sink, &mut stream, &create_req).await;
+1792: 
+  0.700 crates/nession-agent/src/server/websocket.rs:1888-1892
+1888:             data: input_data,
+1889:         };
+1890:         let input_req = new_message(msg_types::TERMINAL_INPUT, input_payload);
+1891:         let input_resp: Message<OkPayload> =
+1892:             send_and_receive(&mut sink, &mut stream, &input_req).await;
+  0.700 crates/nession-agent/src/server/websocket.rs:2689-2693
+2689:         };
+2690:         let create_req = new_message(msg_types::CLIENT_SESSION_CREATE, create_payload);
+2691:         let create_resp: Message<WebSessionCreateResponse> =
+2692:             send_and_receive(&mut sink, &mut stream, &create_req).await;
+2693: 
+  0.700 crates/nession-agent/src/sync/heartbeat.rs:67-71
+67:         let mut ticker = tokio::time::interval(self.interval);
+68:         // The first tick fires immediately; skip it so we don't send a
+69:         // heartbeat before the first real interval has elapsed.
+70:         ticker.tick().await;
+71: 
+  0.700 crates/nession-cli/src/client/connection.rs:118-122
+118:         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+119: 
+120:         let auth_msg = json!({
+121:             "msg_type": "server.auth",
+122:             "id": msg_id,
+  0.700 crates/nession-cli/src/client/connection.rs:853-857
+853:             .unwrap();
+854: 
+855:         let response = conn
+856:             .request_attach("agent1:session1", "relay")
+857:             .await
+  0.700 crates/nession-server/src/server/handler.rs:2-6
+2: use std::sync::Arc;
+3: use std::time::Duration;
+4: use tokio_tungstenite::tungstenite::Message;
+5: use tracing::{info, warn};
+6: 
+  0.700 crates/nession-server/src/server/handler.rs:3187-3191
+3187:             ));
+3188:         }
+3189:         self.web_client_registry.broadcast_commands_changed().await;
+3190:         Ok(reply_json(
+3191:             &msg.id,
+  0.700 crates/nession-server/src/server/websocket.rs:43-47
+43: 
+44:         let command_broker = Arc::new(CommandBroker::new());
+45:         let client_registry = Arc::new(ClientRegistry::new());
+46:         let web_client_registry = Arc::new(WebClientRegistry::new());
+47: 
+  0.700 crates/nession-server/src/server/websocket.rs:68-72
+68:             command_broker,
+69:             client_registry,
+70:             web_client_registry,
+71:             env_service,
+72:             db,
+  0.700 crates/nession-server/src/server/websocket.rs:158-162
+158:         }
+159: 
+160:         // Background sweep: periodically clean up orphaned sessions whose
+161:         // agent has been unreachable for more than 24 hours.
+162:         {
+  0.700 crates/nession-server/src/server/websocket.rs:295-299
+295:     use futures_util::StreamExt;
+296: 
+297:     let ServerContext {
+298:         agent_registry,
+299:         session_registry,
+  0.700 crates/nession-server/src/server/websocket.rs:495-499
+495:     }
+496: 
+497:     let agent_ws = match agent_ws {
+498:         Some(ws) => ws,
+499:         None => {
+  0.700 web/src/app/useAppConnection.ts:15-19
+15: import { getToken, setToken, clearToken, getRememberPreference } from './auth';
+16: import { getOrCreateClientId } from '../platform/socket/clientId';
+17: import { useVisibilityReconnect } from './useVisibilityReconnect';
+18: 
+19: const DEFAULT_SERVER_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
+  0.700 web/src/platform/attach/SessionAttachController.ts:24-28
+24:  * attach" — transport-level failure surfaces of the WebSocket service and its
+25:  * message router. Legacy had no per-attach transport signal: a dropped socket
+26:  * left the attach unanswered until the controller timer fired, so every one of
+27:  * these converges to the legacy timer's outcome (ATTACH_TIMEOUT with the
+28:  * reconnect-budget attempt). Only a genuine agent error ack (prose in the
+  0.700 web/src/platform/attach/relayServerConnection.ts:39-43
+39:  * handle — structural subtyping narrows it at each call site.
+40:  */
+41: export type RelayServerTransport = RelayServerHandle &
+42:   Pick<
+43:     TerminalServerApi,
+  0.700 web/src/platform/session-runtime/SessionRuntime.ts:115-119
+115:   private readonly attachOutcomeListeners = new Set<(result: AttachTransitionResult) => void>();
+116:   /** Guards against re-entrant / duplicate terminal-disconnect handling. */
+117:   private disconnectHandling = false;
+118:   private relayServerUnsub: (() => void) | null = null;
+119:   private disposed = false;
+  0.700 web/src/platform/session-runtime/SessionRuntime.ts:450-454
+450:   }
+451: 
+452:   private handleTerminalDisconnect(): void {
+453:     if (this.disconnectHandling) {
+454:       return;
+  0.700 web/src/platform/session-runtime/SessionRuntime.ts:472-476
+472:   }
+473: 
+474:   private wireRelayServerHandler(): void {
+475:     this.teardownRelayServerHandler();
+476:     const conn = this.config.serverConnection;
+  0.700 web/src/platform/session-runtime/SessionRuntime.ts:527-531
+527:   }
+528: 
+529:   private beginRelayOnce(): void {
+530:     const conn = this.config.serverConnection;
+531:     if (!conn || this.attachState.phase === 'attached') {
+  0.700 web/src/platform/socket/WebSocketService.ts:1-5
+1: import { ProtocolDirectory } from '@/platform/protocol';
+2: import { MessageRouterImpl } from './MessageRouter';
+3: import type {
+4:   TransportPlugin,
+5:   ConnectionState,
+  0.700 web/src/platform/socket/WebSocketService.ts:52-56
+52:  *    `SocketMessage` envelope instead of exposing raw frames.
+53:  *
+54:  * The handshake runs again for every physical socket (each reconnect), and is
+55:  * given a {@link HandshakeSurface} whose `request()` bypasses the readiness
+56:  * gate — the socket is already OPEN at that point.
+  0.700 web/src/platform/socket/WebSocketService.ts:164-173
+164:   }
+165: 
+166:   /**
+167:    * Permanently stop the transport: plugins are torn down (each once), an
+168:    * in-flight `connect()` is rejected with 'WebSocketService disposed', and
+169:    * the state ends at 'disconnected' (never left frozen mid-connect).
+170:    */
+171:   dispose(): void {
+172:     if (this.disposed) {
+173:       return;
+  0.700 web/src/platform/socket/types.ts:21-28
+21: 
+22: /** Plugin-facing surface — everything a plugin may do with the transport. */
+23: export interface PluginSurface {
+24:   readonly connectionState: ConnectionState;
+25:   send(type: string, payload: Record<string, unknown>): void;
+26:   subscribe(
+27:     type: string,
+28:     handler: (payload: unknown, raw: SocketMessage) => void,
+  0.700 web/src/platform/terminal-runtime/controller/TerminalController.ts:67-71
+67: }
+68: 
+69: /**
+70:  * Imperative facade over xterm + TerminalTransport. React components interact
+71:  * with this class instead of touching xterm or WebSocket/P2P details directly.
+  0.700 web/src/product/terminal/hooks/useSessionRuntime.ts:95-99
+95:     setRuntime(lease.runtime);
+96: 
+97:     return () => {
+98:       lease.release();
+99:       if (!sessionRuntimeRegistry.get(sessionId)) {
+  0.700 web/src/product/terminal/server.ts:144-148
+144:     let data: Uint8Array;
+145:     if (isRelay) {
+146:       data = decodeTerminalData(rawData);
+147:     } else {
+148:       data = new TextEncoder().encode(rawData);
+  0.700 web/src/product/terminal/useTerminalAttach.ts:43-47
+43: }): void {
+44:   const { sessionId, runtime, terminalState, setTerminalState, setReconnectCount } = opts;
+45:   const prevSessionIdRef = useRef<string | null>(null);
+46: 
+47:   useEffect(() => {
+  0.700 web/src/product/terminal/useTerminalAttach.ts:85-89
+85:   const setForcedRelay = useSetAtom(forcedRelayAtom);
+86: 
+87:   const [reconnectCount, setReconnectCount] = useState(0);
+88: 
+89:   useAttachOutcomeMirror(runtime, setTerminalState, setForcedRelay, setReconnectCount);
+metrics: {"model_calls": 598, "input_tokens": 5766575, "output_tokens": 498656, "directories_exposed": 382, "directories_selected": 89, "files_exposed": 1040, "files_selected": 92, "lines_exposed": 25006, "lines_selected": 1321, "snippets": 377, "elapsed_ms": 198050.963}
