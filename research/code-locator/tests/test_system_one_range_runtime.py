@@ -203,7 +203,7 @@ class SelectorTest(unittest.TestCase):
         self.assertEqual(["stop"], [item["id"] for item in selected])
         self.assertEqual("model_stop", mode)
 
-    def test_control_choice_continue_uses_read_policy(self):
+    def test_unreconciled_continue_below_threshold_is_rejected(self):
         stop = {
             "id": "stop",
             "kind": "stop_file",
@@ -226,13 +226,71 @@ class SelectorTest(unittest.TestCase):
                 "score": 0.40,
             },
         ]
+        with self.assertRaises(RuntimeError):
+            MODULE.select_file_actions_with_control(
+                stop,
+                reads,
+                0.65,
+            )
+
+    def test_reconciled_continue_can_authorize_low_utility_read(self):
+        stop = {
+            "id": "stop",
+            "kind": "stop_file",
+            "choice": "continue",
+            "stop_probability": 0.39,
+            "reconciled": True,
+            "reconcile_choice": "read",
+            "read_authorized": True,
+        }
+        reads = [{
+            "id": "a",
+            "kind": "read_range",
+            "start_line": 1,
+            "end_line": 100,
+            "score": 0.58,
+        }]
         selected, mode = MODULE.select_file_actions_with_control(
             stop,
             reads,
             0.65,
         )
         self.assertEqual(["a"], [item["id"] for item in selected])
-        self.assertEqual("fallback_top1", mode)
+        self.assertEqual("reconciled_top1", mode)
+
+    def test_exploration_view_tracks_low_utility_streak(self):
+        state = {
+            "parallel_threshold": 0.65,
+            "action_history": [
+                {
+                    "epoch": 1,
+                    "stop_decision": {"choice": "continue"},
+                    "scores": [{"score": 0.82}],
+                    "selected_ids": ["read:1"],
+                    "selection_mode": "parallel_above_threshold",
+                },
+                {
+                    "epoch": 2,
+                    "stop_decision": {"choice": "continue"},
+                    "scores": [{"score": 0.54}],
+                    "selected_ids": ["read:2"],
+                    "selection_mode": "reconciled_top1",
+                },
+                {
+                    "epoch": 3,
+                    "stop_decision": {"choice": "continue"},
+                    "scores": [{"score": 0.43}],
+                    "selected_ids": ["read:3"],
+                    "selection_mode": "reconciled_top1",
+                },
+            ],
+        }
+        view = MODULE.exploration_view(state)
+        self.assertEqual(2, view["consecutive_low_utility_epochs"])
+        self.assertEqual(
+            0.43,
+            view["recent_epochs"][-1]["max_read_utility"],
+        )
 
     def test_low_stop_never_terminates_when_read_exists(self):
         scored = [
