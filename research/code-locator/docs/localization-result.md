@@ -50,6 +50,10 @@ The final Claude result is assembled programmatically. If Session B changes a fi
   "schema_version": 1,
   "kind": "code-localization-result",
   "task": "Help me optimize the websocket connection implementation",
+  "subject": {
+    "repository": "BestNathan/nession",
+    "revision": "<immutable commit sha>"
+  },
   "producer": {
     "system": "system_one",
     "model": "jev-latest",
@@ -275,6 +279,11 @@ This keeps the original search path, immutable localization output, independent 
 ## Comparison contract
 
 Future comparisons consume only two canonical `localization-result.json` files.
+
+For cross-system experiments, both results must carry the same canonical
+`subject.repository` and immutable `subject.revision`. The comparator fails
+closed when subject identity is missing or the revisions differ; line/range
+overlap across different revisions is not considered meaningful.
 
 The generic comparator records symmetric observations:
 
