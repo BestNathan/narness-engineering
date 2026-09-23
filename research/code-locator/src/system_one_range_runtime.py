@@ -15,6 +15,7 @@ import sys
 import time
 from pathlib import Path
 
+from localization_result import build_system_one_range_result
 from system_one_code_locator import (
     API_URL,
     MODEL,
@@ -1323,6 +1324,10 @@ def run(
         "result_files": result_files,
         "metrics": metrics,
     }
+    result["localization_result"] = build_system_one_range_result(
+        result,
+        decider.model,
+    )
     trace.emit("range_runtime_completed", result=result)
     return result
 
@@ -1369,6 +1374,7 @@ def main(argv=None):
     parser.add_argument("--offline-decider", action="store_true")
     parser.add_argument("--trace-file")
     parser.add_argument("--output-json")
+    parser.add_argument("--output-localization-json")
     parser.add_argument(
         "--typesafe-endpoint",
         default=os.getenv("TYPESAFE_API_URL", API_URL),
@@ -1429,6 +1435,16 @@ def main(argv=None):
             payload + "\n",
             encoding="utf-8",
         )
+    if args.output_localization_json:
+        Path(args.output_localization_json).write_text(
+            json.dumps(
+                result["localization_result"],
+                indent=2,
+                ensure_ascii=False,
+            ) + "\n",
+            encoding="utf-8",
+        )
+    if args.output_json:
         print(json.dumps(result["metrics"], ensure_ascii=False))
     else:
         print(payload)
