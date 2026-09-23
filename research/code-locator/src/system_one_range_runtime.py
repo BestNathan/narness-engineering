@@ -1237,6 +1237,8 @@ def run(
     evidence_threshold=DEFAULT_EVIDENCE_THRESHOLD,
     max_jumps=DEFAULT_MAX_JUMPS,
     max_file_epochs=DEFAULT_MAX_FILE_EPOCHS,
+    subject_repository=None,
+    subject_revision=None,
 ):
     started = time.perf_counter()
     selected_dirs, selected_files, phase1_metrics = run_phase1(
@@ -1324,6 +1326,11 @@ def run(
         "result_files": result_files,
         "metrics": metrics,
     }
+    if subject_repository and subject_revision:
+        result["subject"] = {
+            "repository": subject_repository,
+            "revision": subject_revision,
+        }
     result["localization_result"] = build_system_one_range_result(
         result,
         decider.model,
@@ -1375,6 +1382,8 @@ def main(argv=None):
     parser.add_argument("--trace-file")
     parser.add_argument("--output-json")
     parser.add_argument("--output-localization-json")
+    parser.add_argument("--subject-repository")
+    parser.add_argument("--subject-revision")
     parser.add_argument(
         "--typesafe-endpoint",
         default=os.getenv("TYPESAFE_API_URL", API_URL),
@@ -1427,6 +1436,8 @@ def main(argv=None):
         evidence_threshold=args.evidence_threshold,
         max_jumps=args.max_jumps,
         max_file_epochs=args.max_file_epochs,
+        subject_repository=args.subject_repository,
+        subject_revision=args.subject_revision,
     )
 
     payload = json.dumps(result, indent=2, ensure_ascii=False)
