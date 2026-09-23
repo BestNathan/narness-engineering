@@ -254,6 +254,12 @@ That enables:
 6. Compare System One localization against a System Two coding agent under the same gold tasks and evidence contract.
 7. Test a System One -> System Two handoff where the fast locator supplies grounded code context to the reasoning model.
 
+## Pilot evidence
+
+- [Nession WebSocket localization pilot — 2026-09-23](nession-websocket-pilot-2026-09-23.md)
+
+The first real run confirmed useful semantic localization, while also showing that threshold-only whole-tree search spends most of its cost at the line layer. This is the baseline for the next recursive-beam / symbol-level experiment.
+
 ## Reference implementation
 
 See [System One Code Locator](../../../examples/system-one-code-locator/README.md).
