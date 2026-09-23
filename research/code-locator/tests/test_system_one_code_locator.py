@@ -28,11 +28,10 @@ class DemoTest(unittest.TestCase):
                 trace,
                 directory_threshold=0.50,
                 file_threshold=0.65,
-                phase1_max_files=8,
-                reader_file_batch_size=2,
+                reader_file_activation_threshold=0.65,
                 reader_window_lines=40,
-                reader_soft_rounds=2,
-                reader_hard_rounds=4,
+                reader_soft_reads=2,
+                reader_hard_reads=4,
                 reader_action_threshold=0.40,
                 observation_threshold=0.65,
             )
@@ -51,7 +50,7 @@ class DemoTest(unittest.TestCase):
                 for item in result["snippets"]
             ))
             self.assertEqual(
-                "two_phase_file_locator_plus_progressive_reader",
+                "two_phase_global_file_scheduler_progressive_reader",
                 result["architecture"],
             )
 
@@ -350,6 +349,15 @@ class DemoTest(unittest.TestCase):
                     MODULE.empty_usage(),
                 )
 
+            def score_reader_files(self, query, state, file_states):
+                return (
+                    [
+                        {"path": item["path"], "score": 0.99}
+                        for item in file_states
+                    ],
+                    MODULE.empty_usage(),
+                )
+
             def choose_read_actions(self, query, state, action_sets):
                 decisions = []
                 for item in action_sets:
@@ -410,10 +418,10 @@ class DemoTest(unittest.TestCase):
                 decider,
                 [file],
                 trace,
-                file_batch_size=1,
+                file_activation_threshold=0.65,
                 window_lines=20,
-                soft_rounds=1,
-                hard_rounds=1,
+                soft_reads=1,
+                hard_reads=1,
                 action_threshold=0.4,
                 observation_threshold=0.65,
             )
@@ -430,6 +438,15 @@ class DemoTest(unittest.TestCase):
 
             def __init__(self):
                 self.score_round = 0
+
+            def score_reader_files(self, query, state, file_states):
+                return (
+                    [
+                        {"path": item["path"], "score": 0.99}
+                        for item in file_states
+                    ],
+                    MODULE.empty_usage(),
+                )
 
             def choose_read_actions(self, query, state, action_sets):
                 decisions = []
@@ -491,10 +508,10 @@ class DemoTest(unittest.TestCase):
                 BudgetDecider(),
                 [file],
                 trace,
-                file_batch_size=1,
+                file_activation_threshold=0.65,
                 window_lines=20,
-                soft_rounds=2,
-                hard_rounds=5,
+                soft_reads=2,
+                hard_reads=5,
                 action_threshold=0.4,
                 observation_threshold=0.65,
             )
@@ -502,7 +519,6 @@ class DemoTest(unittest.TestCase):
             self.assertEqual(3, states[0]["round"])
             self.assertEqual(3, metrics["reads_executed"])
             self.assertEqual(1, metrics["soft_budget_extensions"])
-            self.assertEqual(1, metrics["batches_extended"])
             self.assertEqual(0, metrics["hard_budget_hits"])
             self.assertEqual(2, len(snippets))
 
@@ -510,12 +526,21 @@ class DemoTest(unittest.TestCase):
                 json.loads(line)["event"]
                 for line in (pathlib.Path(temp) / "trace.jsonl").read_text().splitlines()
             ]
-            self.assertIn("reader_budget_extended", events)
-            self.assertIn("reader_soft_budget_stop", events)
+            self.assertIn("reader_file_budget_extended", events)
+            self.assertIn("reader_file_soft_budget_stop", events)
 
     def test_hard_round_budget_caps_continuous_high_signal(self):
         class AlwaysRelevantDecider:
             model = "budget-test"
+
+            def score_reader_files(self, query, state, file_states):
+                return (
+                    [
+                        {"path": item["path"], "score": 0.99}
+                        for item in file_states
+                    ],
+                    MODULE.empty_usage(),
+                )
 
             def choose_read_actions(self, query, state, action_sets):
                 decisions = []
@@ -571,10 +596,10 @@ class DemoTest(unittest.TestCase):
                 AlwaysRelevantDecider(),
                 [file],
                 trace,
-                file_batch_size=1,
+                file_activation_threshold=0.65,
                 window_lines=20,
-                soft_rounds=1,
-                hard_rounds=3,
+                soft_reads=1,
+                hard_reads=3,
                 action_threshold=0.4,
                 observation_threshold=0.65,
             )
@@ -584,12 +609,21 @@ class DemoTest(unittest.TestCase):
             self.assertEqual(2, metrics["soft_budget_extensions"])
             self.assertEqual(1, metrics["hard_budget_hits"])
 
-    def test_soft_budget_extension_is_file_scoped_inside_batch(self):
+    def test_soft_budget_extension_is_file_scoped_in_global_scheduler(self):
         class PerFileBudgetDecider:
             model = "budget-test"
 
             def __init__(self):
                 self.round_paths = []
+
+            def score_reader_files(self, query, state, file_states):
+                return (
+                    [
+                        {"path": item["path"], "score": 0.99}
+                        for item in file_states
+                    ],
+                    MODULE.empty_usage(),
+                )
 
             def choose_read_actions(self, query, state, action_sets):
                 self.round_paths.append([
@@ -662,10 +696,10 @@ class DemoTest(unittest.TestCase):
                 decider,
                 files,
                 trace,
-                file_batch_size=2,
+                file_activation_threshold=0.65,
                 window_lines=20,
-                soft_rounds=1,
-                hard_rounds=3,
+                soft_reads=1,
+                hard_reads=3,
                 action_threshold=0.4,
                 observation_threshold=0.65,
             )
@@ -682,11 +716,11 @@ class DemoTest(unittest.TestCase):
                 "soft_budget_no_high_signal",
                 by_path["src/cold.py"]["stop_reason"],
             )
-            self.assertEqual(1, metrics["file_soft_budget_extensions"])
+            self.assertEqual(1, metrics["soft_budget_extensions"])
             self.assertEqual(2, metrics["files_stopped_by_soft_budget"])
             self.assertEqual(3, metrics["reads_executed"])
 
-    def test_phase1_caps_files_after_higher_threshold(self):
+    def test_phase1_keeps_all_threshold_files_in_reader_state(self):
         class Phase1Decider:
             model = "phase1-test"
 
@@ -699,6 +733,15 @@ class DemoTest(unittest.TestCase):
                     })
                 scored.sort(key=lambda item: (-item["score"], item["id"]))
                 return scored, MODULE.empty_usage()
+
+            def score_reader_files(self, query, state, file_states):
+                return (
+                    [
+                        {"path": item["path"], "score": 0.99}
+                        for item in file_states
+                    ],
+                    MODULE.empty_usage(),
+                )
 
             def choose_read_actions(self, query, state, action_sets):
                 return (
@@ -737,17 +780,110 @@ class DemoTest(unittest.TestCase):
                 trace,
                 directory_threshold=0.5,
                 file_threshold=0.65,
-                phase1_max_files=3,
-                reader_file_batch_size=2,
+                reader_file_activation_threshold=0.65,
                 reader_window_lines=20,
-                reader_soft_rounds=1,
-                reader_hard_rounds=1,
+                reader_soft_reads=1,
+                reader_hard_reads=1,
                 reader_action_threshold=0.4,
                 observation_threshold=0.65,
             )
 
-            self.assertEqual(3, len(result["files"]))
-            self.assertEqual(2, result["metrics"]["reader_batches"])
+            self.assertEqual(10, len(result["files"]))
+            self.assertEqual(10, len(result["reader_states"][0]["files"]))
+            self.assertEqual(
+                10,
+                result["metrics"]["reader_file_activations"],
+            )
+
+    def test_global_scheduler_can_defer_then_activate_a_file(self):
+        class GlobalSchedulerDecider:
+            model = "scheduler-test"
+
+            def __init__(self):
+                self.priority_round = 0
+                self.action_round_paths = []
+
+            def score_reader_files(self, query, state, file_states):
+                self.priority_round += 1
+                scores = []
+                for item in file_states:
+                    if self.priority_round == 1:
+                        score = 0.95 if item["path"].endswith("first.py") else 0.20
+                    else:
+                        score = 0.95 if item["path"].endswith("second.py") else 0.20
+                    scores.append({"path": item["path"], "score": score})
+                return scores, MODULE.empty_usage()
+
+            def choose_read_actions(self, query, state, action_sets):
+                self.action_round_paths.append([
+                    item["path"] for item in action_sets
+                ])
+                decisions = []
+                for item in action_sets:
+                    action = next(
+                        action for action in item["actions"]
+                        if action["kind"] == "read_range"
+                    )
+                    decisions.append({
+                        "path": item["path"],
+                        "action": action,
+                        "choice": "read_0",
+                        "probability": 0.95,
+                        "confidence": 0.95,
+                        "probabilities": {"read_0": 0.95, "stop": 0.05},
+                    })
+                return decisions, MODULE.empty_usage()
+
+            def score_observations(self, query, state, observation_ids):
+                return (
+                    {observation_id: 0.20 for observation_id in observation_ids},
+                    MODULE.empty_usage(),
+                )
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp) / "repo"
+            src = root / "src"
+            src.mkdir(parents=True)
+            files = []
+            for name in ("first.py", "second.py"):
+                source = src / name
+                source.write_text(
+                    "\n".join(f"line_{i} = 1" for i in range(1, 41)) + "\n",
+                    encoding="utf-8",
+                )
+                files.append({
+                    "id": f"src/{name}",
+                    "payload": {
+                        "path": f"src/{name}",
+                        "filename": name,
+                        "extension": ".py",
+                        "size_bytes": source.stat().st_size,
+                    },
+                    "score": 0.9,
+                })
+
+            trace = MODULE.Trace(pathlib.Path(temp) / "trace.jsonl")
+            decider = GlobalSchedulerDecider()
+            states, _, metrics = MODULE.progressive_read(
+                root,
+                "find implementation",
+                decider,
+                files,
+                trace,
+                file_activation_threshold=0.65,
+                window_lines=20,
+                soft_reads=1,
+                hard_reads=1,
+                action_threshold=0.4,
+                observation_threshold=0.65,
+            )
+
+            self.assertEqual(
+                [["src/first.py"], ["src/second.py"]],
+                decider.action_round_paths,
+            )
+            self.assertEqual(2, metrics["unique_files_read"])
+            self.assertEqual(2, len(states[0]["files"]))
 
     def test_transient_520_is_retried(self):
         with tempfile.TemporaryDirectory() as temp:
