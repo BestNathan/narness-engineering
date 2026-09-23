@@ -22,12 +22,11 @@ SUFFIXES = {".py", ".rs", ".go", ".java", ".ts", ".tsx", ".js", ".jsx", ".vue", 
 
 DEFAULT_DIRECTORY_THRESHOLD = 0.50
 DEFAULT_FILE_THRESHOLD = 0.65
-DEFAULT_PHASE1_MAX_FILES = 16
 
-DEFAULT_READER_FILE_BATCH_SIZE = 4
+DEFAULT_READER_FILE_ACTIVATION_THRESHOLD = 0.65
 DEFAULT_READER_WINDOW_LINES = 140
-DEFAULT_READER_SOFT_ROUNDS = 4
-DEFAULT_READER_HARD_ROUNDS = 8
+DEFAULT_READER_SOFT_READS = 4
+DEFAULT_READER_HARD_READS = 8
 DEFAULT_READER_ACTION_THRESHOLD = 0.40
 DEFAULT_OBSERVATION_THRESHOLD = 0.65
 MAX_RELEVANT_REGIONS = 3
@@ -73,8 +72,7 @@ def sanitize_source(value):
 def reader_model_state(state):
     return {
         "goal": state["goal"],
-        "phase": "progressive_reader",
-        "batch_index": state["batch_index"],
+        "phase": "global_progressive_reader",
         "round": state["round"],
         "thresholds": state.get("thresholds", {}),
         "budget": state.get("budget", {}),
@@ -84,6 +82,9 @@ def reader_model_state(state):
                 "phase1_score": item["phase1_score"],
                 "stat": item["stat"],
                 "coverage": item["coverage"],
+                "read_count": item.get("read_count", 0),
+                "activation_count": item.get("activation_count", 0),
+                "last_activation_score": item.get("last_activation_score"),
                 "stopped": item["stopped"],
                 "stop_reason": item.get("stop_reason"),
             }
@@ -205,6 +206,69 @@ class SystemOneDecider:
         return scored, usage
 
     score = score_candidates
+
+    def score_reader_files(self, query, state, file_states):
+        """Score every eligible file in one global scheduling request."""
+        if not file_states:
+            return [], empty_usage()
+
+        questions = {}
+        for index, file_state in enumerate(file_states):
+            latest = (
+                file_state["observations"][-1]
+                if file_state.get("observations")
+                else None
+            )
+            questions[f"file_{index}"] = {
+                "type": "noul",
+                "instructions": {
+                    "task": query,
+                    "file": {
+                        "path": file_state["path"],
+                        "phase1_score": file_state["phase1_score"],
+                        "stat": file_state["stat"],
+                        "coverage": file_state["coverage"],
+                        "read_count": file_state.get("read_count", 0),
+                        "latest_observation_relevance": (
+                            latest.get("relevance") if latest else None
+                        ),
+                    },
+                    "question": (
+                        "Given the complete current reader state, should this file "
+                        "receive a read action now? Score whether reading it in the "
+                        "next step is likely to add useful information for the task."
+                    ),
+                },
+                "criteria": {
+                    "true": (
+                        "Reading this file now is a useful next information-gathering "
+                        "step relative to the other available files and observations."
+                    ),
+                    "false": (
+                        "This file should be deferred or stopped for now because other "
+                        "files/actions are more useful or enough evidence already exists."
+                    ),
+                },
+            }
+
+        response, usage = self.send(
+            "reader_file_priority",
+            reader_model_state(state),
+            questions,
+        )
+        answers = response.get("answers", {})
+        scored = []
+        for index, file_state in enumerate(file_states):
+            answer = answers.get(f"file_{index}", {})
+            if answer.get("type") != "noul":
+                raise RuntimeError(
+                    f"unexpected reader-file answer: {answer!r}"
+                )
+            scored.append({
+                "path": file_state["path"],
+                "score": float(answer["noul"]),
+            })
+        return scored, usage
 
     def choose_read_actions(self, query, state, action_sets):
         """One Choice question per file, all files decided in one request."""
@@ -342,6 +406,22 @@ class OfflineDecider:
         return scored, empty_usage()
 
     score = score_candidates
+
+    def score_reader_files(self, query, state, file_states):
+        scored = []
+        for file_state in file_states:
+            observations = file_state.get("observations", [])
+            value = file_state["path"]
+            if observations:
+                value += "\n" + "\n".join(
+                    item.get("content", "") for item in observations[-2:]
+                )
+            scored.append({
+                "path": file_state["path"],
+                "score": self.lexical_score(query, value),
+            })
+        self.trace.emit("offline_reader_file_scores", scores=scored)
+        return scored, empty_usage()
 
     def choose_read_actions(self, query, state, action_sets):
         decisions = []
@@ -619,16 +699,16 @@ def read_range(root, action):
 
 def new_reader_state(
     query,
-    batch_index,
-    files_in_batch,
+    files_in_state,
     root,
     action_threshold,
     observation_threshold,
-    soft_rounds,
-    hard_rounds,
+    activation_threshold,
+    soft_reads,
+    hard_reads,
 ):
     state_files = []
-    for file in files_in_batch:
+    for file in files_in_state:
         stat = source_stat(root, file)
         if stat is None:
             continue
@@ -638,20 +718,23 @@ def new_reader_state(
             "stat": stat,
             "coverage": [],
             "observations": [],
+            "read_count": 0,
+            "activation_count": 0,
+            "last_activation_score": None,
             "stopped": False,
             "stop_reason": None,
         })
     return {
         "goal": query,
-        "batch_index": batch_index,
         "round": 0,
         "thresholds": {
+            "reader_file_activation": activation_threshold,
             "reader_action": action_threshold,
             "observation": observation_threshold,
         },
         "budget": {
-            "soft_rounds": soft_rounds,
-            "hard_rounds": hard_rounds,
+            "soft_reads_per_file": soft_reads,
+            "hard_reads_per_file": hard_reads,
         },
         "files": state_files,
         "observations": [],
@@ -707,126 +790,194 @@ def progressive_read(
     files_to_read,
     trace,
     *,
-    file_batch_size,
+    file_activation_threshold,
     window_lines,
-    soft_rounds,
-    hard_rounds,
+    soft_reads,
+    hard_reads,
     action_threshold,
     observation_threshold,
 ):
     usage = empty_usage()
-    reader_states = []
     decisions_made = 0
+    file_priority_decisions = 0
+    file_activations = 0
     reads_executed = 0
     soft_budget_extensions = 0
-    file_soft_budget_extensions = 0
     files_stopped_by_soft_budget = 0
-    batches_extended = 0
     hard_budget_hits = 0
+    scheduler_rounds = 0
+    unique_files_read = set()
 
-    for offset in range(0, len(files_to_read), file_batch_size):
-        batch_index = offset // file_batch_size
-        batch = files_to_read[offset: offset + file_batch_size]
-        state = new_reader_state(
+    state = new_reader_state(
+        query,
+        files_to_read,
+        root,
+        action_threshold,
+        observation_threshold,
+        file_activation_threshold,
+        soft_reads,
+        hard_reads,
+    )
+
+    trace.emit(
+        "reader_state_started",
+        files=[
+            {
+                "path": item["path"],
+                "phase1_score": item["phase1_score"],
+                "stat": item["stat"],
+            }
+            for item in state["files"]
+        ],
+        file_count=len(state["files"]),
+    )
+
+    # No harness-defined batches. Every eligible file remains in one shared
+    # state and System One decides which subset should receive reads next.
+    max_scheduler_rounds = max(1, len(state["files"]) * hard_reads)
+    for round_index in range(max_scheduler_rounds):
+        state["round"] = round_index + 1
+        scheduler_rounds += 1
+
+        eligible_files = [
+            item
+            for item in state["files"]
+            if not item["stopped"] and item["read_count"] < hard_reads
+        ]
+        if not eligible_files:
+            trace.emit(
+                "reader_scheduler_stop",
+                round=state["round"],
+                reason="no_eligible_files",
+            )
+            break
+
+        file_scores, current_usage = decider.score_reader_files(
             query,
-            batch_index,
-            batch,
-            root,
-            action_threshold,
-            observation_threshold,
-            soft_rounds,
-            hard_rounds,
+            state,
+            eligible_files,
         )
-        reader_states.append(state)
+        merge_usage(usage, current_usage)
+        file_priority_decisions += len(file_scores)
+
+        by_path = {item["path"]: item for item in state["files"]}
+        for item in file_scores:
+            by_path[item["path"]]["last_activation_score"] = item["score"]
+
+        selected_paths = [
+            item["path"]
+            for item in file_scores
+            if item["score"] >= file_activation_threshold
+        ]
+        trace.emit(
+            "reader_file_frontier",
+            round=state["round"],
+            threshold=file_activation_threshold,
+            scores=file_scores,
+            selected_paths=selected_paths,
+            eligible_count=len(eligible_files),
+            selected_count=len(selected_paths),
+        )
+
+        if not selected_paths:
+            trace.emit(
+                "reader_scheduler_stop",
+                round=state["round"],
+                reason="no_file_above_activation_threshold",
+            )
+            break
+
+        action_sets = []
+        for path in selected_paths:
+            file_state = by_path[path]
+            file_state["activation_count"] += 1
+            regions = relevant_regions(
+                file_state,
+                observation_threshold,
+            )
+            action_sets.append({
+                "path": path,
+                "relevant_regions": regions,
+                "actions": generate_read_actions(
+                    file_state,
+                    window_lines,
+                    observation_threshold,
+                ),
+            })
+        file_activations += len(action_sets)
 
         trace.emit(
-            "reader_batch_started",
-            batch_index=batch_index,
-            files=[
-                {"path": item["path"], "phase1_score": item["phase1_score"], "stat": item["stat"]}
-                for item in state["files"]
-            ],
+            "read_action_frontier",
+            round=state["round"],
+            file_count=len(action_sets),
+            action_sets=action_sets,
         )
+        decisions, current_usage = decider.choose_read_actions(
+            query,
+            state,
+            action_sets,
+        )
+        merge_usage(usage, current_usage)
+        decisions_made += len(decisions)
 
-        batch_extended = False
-        for round_index in range(hard_rounds):
-            state["round"] = round_index + 1
-            action_sets = []
-            for file_state in state["files"]:
-                if file_state["stopped"]:
-                    continue
-                regions = relevant_regions(
-                    file_state,
-                    observation_threshold,
-                )
-                action_sets.append({
-                    "path": file_state["path"],
-                    "relevant_regions": regions,
-                    "actions": generate_read_actions(
-                        file_state,
-                        window_lines,
-                        observation_threshold,
-                    ),
-                })
-            if not action_sets:
-                break
+        new_observations = []
+        state_changed = False
+
+        for decision in decisions:
+            file_state = by_path[decision["path"]]
+            action = decision["action"]
+            probability = decision["probability"]
 
             trace.emit(
-                "read_action_frontier",
-                batch_index=batch_index,
+                "read_action_decision",
                 round=state["round"],
-                file_count=len(action_sets),
-                action_sets=action_sets,
+                path=decision["path"],
+                action=action,
+                probability=probability,
+                confidence=decision["confidence"],
+                probabilities=decision["probabilities"],
+                threshold=action_threshold,
             )
-            decisions, current_usage = decider.choose_read_actions(query, state, action_sets)
-            merge_usage(usage, current_usage)
-            decisions_made += len(decisions)
 
-            by_path = {item["path"]: item for item in state["files"]}
-            new_observations = []
+            if action["kind"] == "stop_file":
+                file_state["stopped"] = True
+                file_state["stop_reason"] = "model_stop"
+                state_changed = True
+                continue
 
-            for decision in decisions:
-                file_state = by_path[decision["path"]]
-                action = decision["action"]
-                probability = decision["probability"]
-
+            if probability < action_threshold:
+                file_state["stopped"] = True
+                file_state["stop_reason"] = "action_below_threshold"
+                state_changed = True
                 trace.emit(
-                    "read_action_decision",
-                    batch_index=batch_index,
-                    round=state["round"],
+                    "read_action_rejected",
                     path=decision["path"],
-                    action=action,
                     probability=probability,
-                    confidence=decision["confidence"],
-                    probabilities=decision["probabilities"],
                     threshold=action_threshold,
                 )
+                continue
 
-                if action["kind"] == "stop_file":
-                    file_state["stopped"] = True
-                    file_state["stop_reason"] = "model_stop"
-                    continue
-                if probability < action_threshold:
-                    file_state["stopped"] = True
-                    file_state["stop_reason"] = "action_below_threshold"
-                    trace.emit(
-                        "read_action_rejected",
-                        path=decision["path"],
-                        probability=probability,
-                        threshold=action_threshold,
-                    )
-                    continue
+            observation = read_range(root, action)
+            item = append_observation(
+                state,
+                file_state,
+                observation,
+                probability,
+            )
+            file_state["read_count"] += 1
+            new_observations.append(item)
+            reads_executed += 1
+            unique_files_read.add(file_state["path"])
+            state_changed = True
+            trace.emit(
+                "file_observed",
+                round=state["round"],
+                observation=item,
+                file_read_count=file_state["read_count"],
+            )
 
-                observation = read_range(root, action)
-                item = append_observation(state, file_state, observation, probability)
-                new_observations.append(item)
-                reads_executed += 1
-                trace.emit("file_observed", batch_index=batch_index, round=state["round"], observation=item)
-
-            if not new_observations:
-                break
-
-            # New content is already loaded into state before its relevance is scored.
+        if new_observations:
+            # New content is in state before relevance is scored.
             scores, current_usage = decider.score_observations(
                 query,
                 state,
@@ -834,8 +985,10 @@ def progressive_read(
             )
             merge_usage(usage, current_usage)
 
+            observation_by_path = {}
             for item in new_observations:
                 item["relevance"] = scores[item["id"]]
+                observation_by_path[item["path"]] = item
                 trace.emit(
                     "observation_scored",
                     observation_id=item["id"],
@@ -847,47 +1000,34 @@ def progressive_read(
                     threshold=observation_threshold,
                 )
 
-            high_signal = [
-                item
-                for item in new_observations
-                if item["relevance"] >= observation_threshold
-            ]
-
-            if state["round"] >= soft_rounds:
-                high_signal_by_path = {}
-                for item in high_signal:
-                    high_signal_by_path.setdefault(item["path"], []).append(item)
-
-                eligible_paths = []
-                for file_state in state["files"]:
-                    if file_state["stopped"]:
-                        continue
-
-                    file_high_signal = high_signal_by_path.get(
-                        file_state["path"],
-                        [],
+            # Read budgets are owned by files, not scheduler rounds.
+            for path, item in observation_by_path.items():
+                file_state = by_path[path]
+                if file_state["read_count"] >= hard_reads:
+                    file_state["stopped"] = True
+                    file_state["stop_reason"] = "hard_read_budget_reached"
+                    hard_budget_hits += 1
+                    trace.emit(
+                        "reader_file_hard_budget_reached",
+                        round=state["round"],
+                        path=path,
+                        read_count=file_state["read_count"],
+                        hard_reads=hard_reads,
                     )
-                    if file_high_signal and state["round"] < hard_rounds:
-                        eligible_paths.append(file_state["path"])
-                        file_soft_budget_extensions += 1
+                elif file_state["read_count"] >= soft_reads:
+                    if item["relevance"] >= observation_threshold:
+                        soft_budget_extensions += 1
                         trace.emit(
                             "reader_file_budget_extended",
-                            batch_index=batch_index,
                             round=state["round"],
-                            path=file_state["path"],
-                            soft_rounds=soft_rounds,
-                            hard_rounds=hard_rounds,
-                            high_signal_observations=[
-                                {
-                                    "id": item["id"],
-                                    "start_line": item["start_line"],
-                                    "end_line": item["end_line"],
-                                    "relevance": item["relevance"],
-                                }
-                                for item in file_high_signal
-                            ],
+                            path=path,
+                            read_count=file_state["read_count"],
+                            soft_reads=soft_reads,
+                            hard_reads=hard_reads,
+                            observation_id=item["id"],
+                            relevance=item["relevance"],
                         )
-                    elif not file_high_signal:
+                    else:
                         file_state["stopped"] = True
                         file_state["stop_reason"] = (
                             "soft_budget_no_high_signal"
@@ -895,72 +1035,47 @@ def progressive_read(
                         files_stopped_by_soft_budget += 1
                         trace.emit(
                             "reader_file_soft_budget_stop",
-                            batch_index=batch_index,
                             round=state["round"],
-                            path=file_state["path"],
-                            soft_rounds=soft_rounds,
-                            hard_rounds=hard_rounds,
-                            reason="no_new_high_relevance_observation",
+                            path=path,
+                            read_count=file_state["read_count"],
+                            soft_reads=soft_reads,
+                            hard_reads=hard_reads,
+                            relevance=item["relevance"],
                         )
-                    else:
-                        file_state["stopped"] = True
-                        file_state["stop_reason"] = "hard_budget_reached"
 
-                if eligible_paths:
-                    soft_budget_extensions += 1
-                    if not batch_extended:
-                        batches_extended += 1
-                        batch_extended = True
-                    trace.emit(
-                        "reader_budget_extended",
-                        batch_index=batch_index,
-                        round=state["round"],
-                        soft_rounds=soft_rounds,
-                        hard_rounds=hard_rounds,
-                        eligible_paths=eligible_paths,
-                    )
-                elif state["round"] < hard_rounds:
-                    trace.emit(
-                        "reader_soft_budget_stop",
-                        batch_index=batch_index,
-                        round=state["round"],
-                        soft_rounds=soft_rounds,
-                        hard_rounds=hard_rounds,
-                        reason="no_file_earned_extension",
-                    )
-                    break
-                elif high_signal:
-                    hard_budget_hits += 1
-                    trace.emit(
-                        "reader_hard_budget_reached",
-                        batch_index=batch_index,
-                        round=state["round"],
-                        soft_rounds=soft_rounds,
-                        hard_rounds=hard_rounds,
-                        high_signal_count=len(high_signal),
-                    )
+        if not state_changed:
+            trace.emit(
+                "reader_scheduler_stop",
+                round=state["round"],
+                reason="no_state_change",
+            )
+            break
 
-        trace.emit(
-            "reader_batch_completed",
-            batch_index=batch_index,
-            rounds=state["round"],
-            observations=len(state["observations"]),
-            evidence=sum(
-                1
-                for item in state["observations"]
-                if item.get("relevance") is not None and item["relevance"] >= observation_threshold
-            ),
-        )
+    trace.emit(
+        "reader_state_completed",
+        rounds=state["round"],
+        observations=len(state["observations"]),
+        evidence=sum(
+            1
+            for item in state["observations"]
+            if (
+                item.get("relevance") is not None
+                and item["relevance"] >= observation_threshold
+            )
+        ),
+        files_read=len(unique_files_read),
+    )
 
-    return reader_states, evidence_snippets(reader_states, observation_threshold), {
+    return [state], evidence_snippets([state], observation_threshold), {
         **usage,
-        "reader_batches": len(reader_states),
+        "reader_scheduler_rounds": scheduler_rounds,
+        "reader_file_priority_decisions": file_priority_decisions,
+        "reader_file_activations": file_activations,
         "reader_decisions": decisions_made,
         "reads_executed": reads_executed,
+        "unique_files_read": len(unique_files_read),
         "soft_budget_extensions": soft_budget_extensions,
-        "file_soft_budget_extensions": file_soft_budget_extensions,
         "files_stopped_by_soft_budget": files_stopped_by_soft_budget,
-        "batches_extended": batches_extended,
         "hard_budget_hits": hard_budget_hits,
     }
 
@@ -972,11 +1087,10 @@ def run(
     trace,
     directory_threshold=DEFAULT_DIRECTORY_THRESHOLD,
     file_threshold=DEFAULT_FILE_THRESHOLD,
-    phase1_max_files=DEFAULT_PHASE1_MAX_FILES,
-    reader_file_batch_size=DEFAULT_READER_FILE_BATCH_SIZE,
+    reader_file_activation_threshold=DEFAULT_READER_FILE_ACTIVATION_THRESHOLD,
     reader_window_lines=DEFAULT_READER_WINDOW_LINES,
-    reader_soft_rounds=DEFAULT_READER_SOFT_ROUNDS,
-    reader_hard_rounds=DEFAULT_READER_HARD_ROUNDS,
+    reader_soft_reads=DEFAULT_READER_SOFT_READS,
+    reader_hard_reads=DEFAULT_READER_HARD_READS,
     reader_action_threshold=DEFAULT_READER_ACTION_THRESHOLD,
     observation_threshold=DEFAULT_OBSERVATION_THRESHOLD,
 ):
@@ -988,19 +1102,20 @@ def run(
         root=str(Path(root).resolve()),
         query=query,
         model=decider.model,
-        architecture="two_phase_file_locator_plus_progressive_reader",
+        architecture="two_phase_global_file_scheduler_progressive_reader",
         thresholds={
             "directory": directory_threshold,
             "file": file_threshold,
+            "reader_file_activation": reader_file_activation_threshold,
+            "reader_file_activation": reader_file_activation_threshold,
             "reader_action": reader_action_threshold,
             "observation": observation_threshold,
         },
         reader={
-            "file_batch_size": reader_file_batch_size,
             "window_lines": reader_window_lines,
-            "soft_rounds": reader_soft_rounds,
-            "hard_rounds": reader_hard_rounds,
-            "phase1_max_files": phase1_max_files,
+            "soft_reads_per_file": reader_soft_reads,
+            "hard_reads_per_file": reader_hard_reads,
+            "scheduling": "global_file_frontier",
         },
     )
 
@@ -1026,13 +1141,12 @@ def run(
     selected_files = [
         item for item in scored_files
         if item["score"] >= file_threshold
-    ][:phase1_max_files]
+    ]
     trace.emit(
         "phase1_completed",
         exposed=len(file_candidates),
         selected=len(selected_files),
         threshold=file_threshold,
-        max_files=phase1_max_files,
         files=selected_files,
     )
 
@@ -1043,10 +1157,10 @@ def run(
         decider,
         selected_files,
         trace,
-        file_batch_size=reader_file_batch_size,
+        file_activation_threshold=reader_file_activation_threshold,
         window_lines=reader_window_lines,
-        soft_rounds=reader_soft_rounds,
-        hard_rounds=reader_hard_rounds,
+        soft_reads=reader_soft_reads,
+        hard_reads=reader_hard_reads,
         action_threshold=reader_action_threshold,
         observation_threshold=observation_threshold,
     )
@@ -1056,7 +1170,7 @@ def run(
         "query": query,
         "root": str(Path(root).resolve()),
         "model": decider.model,
-        "architecture": "two_phase_file_locator_plus_progressive_reader",
+        "architecture": "two_phase_global_file_scheduler_progressive_reader",
         "thresholds": {
             "directory": directory_threshold,
             "file": file_threshold,
@@ -1073,18 +1187,18 @@ def run(
             "directories_selected": len(selected_directories),
             "files_exposed": len(file_candidates),
             "files_selected": len(selected_files),
-            "phase1_max_files": phase1_max_files,
-            "reader_file_batch_size": reader_file_batch_size,
+            "reader_file_activation_threshold": reader_file_activation_threshold,
             "reader_window_lines": reader_window_lines,
-            "reader_soft_rounds": reader_soft_rounds,
-            "reader_hard_rounds": reader_hard_rounds,
-            "reader_batches": reader_metrics["reader_batches"],
+            "reader_soft_reads": reader_soft_reads,
+            "reader_hard_reads": reader_hard_reads,
+            "reader_scheduler_rounds": reader_metrics["reader_scheduler_rounds"],
+            "reader_file_priority_decisions": reader_metrics["reader_file_priority_decisions"],
+            "reader_file_activations": reader_metrics["reader_file_activations"],
             "reader_decisions": reader_metrics["reader_decisions"],
             "reads_executed": reader_metrics["reads_executed"],
+            "unique_files_read": reader_metrics["unique_files_read"],
             "soft_budget_extensions": reader_metrics["soft_budget_extensions"],
-            "file_soft_budget_extensions": reader_metrics["file_soft_budget_extensions"],
             "files_stopped_by_soft_budget": reader_metrics["files_stopped_by_soft_budget"],
-            "batches_extended": reader_metrics["batches_extended"],
             "hard_budget_hits": reader_metrics["hard_budget_hits"],
             "observations": sum(len(state["observations"]) for state in reader_states),
             "evidence_observations": len(snippets),
@@ -1101,14 +1215,35 @@ def main(argv=None):
     parser.add_argument("query")
     parser.add_argument("--directory-threshold", type=float, default=DEFAULT_DIRECTORY_THRESHOLD)
     parser.add_argument("--file-threshold", type=float, default=DEFAULT_FILE_THRESHOLD)
-    parser.add_argument("--phase1-max-files", type=int, default=DEFAULT_PHASE1_MAX_FILES)
-    parser.add_argument("--reader-file-batch-size", type=int, default=DEFAULT_READER_FILE_BATCH_SIZE)
+    parser.add_argument(
+        "--reader-file-activation-threshold",
+        type=float,
+        default=DEFAULT_READER_FILE_ACTIVATION_THRESHOLD,
+    )
     parser.add_argument("--reader-window-lines", type=int, default=DEFAULT_READER_WINDOW_LINES)
-    parser.add_argument("--reader-soft-rounds", type=int, default=DEFAULT_READER_SOFT_ROUNDS)
-    parser.add_argument("--reader-hard-rounds", type=int, default=DEFAULT_READER_HARD_ROUNDS)
+    parser.add_argument("--reader-soft-reads", type=int, default=DEFAULT_READER_SOFT_READS)
+    parser.add_argument("--reader-hard-reads", type=int, default=DEFAULT_READER_HARD_READS)
+    # Legacy arguments are accepted but intentionally ignored: Phase 2 no
+    # longer uses a Phase-1 top-k cap or harness-defined file batches.
+    parser.add_argument("--phase1-max-files", type=int, help=argparse.SUPPRESS)
+    parser.add_argument("--reader-file-batch-size", type=int, help=argparse.SUPPRESS)
     parser.add_argument(
         "--reader-max-rounds",
-        dest="reader_soft_rounds",
+        dest="reader_soft_reads",
+        type=int,
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--reader-soft-rounds",
+        dest="reader_soft_reads",
+        type=int,
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--reader-hard-rounds",
+        dest="reader_hard_reads",
         type=int,
         default=argparse.SUPPRESS,
         help=argparse.SUPPRESS,
@@ -1124,16 +1259,14 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     for name in (
-        "phase1_max_files",
-        "reader_file_batch_size",
         "reader_window_lines",
-        "reader_soft_rounds",
-        "reader_hard_rounds",
+        "reader_soft_reads",
+        "reader_hard_reads",
     ):
         if getattr(args, name) < 1:
             parser.error(f"--{name.replace('_', '-')} must be >= 1")
-    if args.reader_hard_rounds < args.reader_soft_rounds:
-        parser.error("--reader-hard-rounds must be >= --reader-soft-rounds")
+    if args.reader_hard_reads < args.reader_soft_reads:
+        parser.error("--reader-hard-reads must be >= --reader-soft-reads")
 
     trace = Trace(args.trace_file)
     if args.offline_decider:
@@ -1152,11 +1285,10 @@ def main(argv=None):
         trace,
         directory_threshold=args.directory_threshold,
         file_threshold=args.file_threshold,
-        phase1_max_files=args.phase1_max_files,
-        reader_file_batch_size=args.reader_file_batch_size,
+        reader_file_activation_threshold=args.reader_file_activation_threshold,
         reader_window_lines=args.reader_window_lines,
-        reader_soft_rounds=args.reader_soft_rounds,
-        reader_hard_rounds=args.reader_hard_rounds,
+        reader_soft_reads=args.reader_soft_reads,
+        reader_hard_reads=args.reader_hard_reads,
         reader_action_threshold=args.reader_action_threshold,
         observation_threshold=args.observation_threshold,
     )
