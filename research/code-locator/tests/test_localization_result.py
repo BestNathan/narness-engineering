@@ -78,6 +78,63 @@ class LocalizationResultTest(unittest.TestCase):
             result["cost"]["stages"][0]["operations"]["reads_executed"],
         )
 
+    def test_range_runtime_builds_canonical_result_with_subject(self):
+        engine = {
+            "query": "find websocket",
+            "model": "jev-latest",
+            "subject": {
+                "repository": "BestNathan/nession",
+                "revision": "abc123",
+            },
+            "result_files": [{
+                "path": "src/ws.py",
+                "score": 0.87,
+                "phase1_score": 0.91,
+                "termination": "model_stop",
+                "read_count": 3,
+                "coverage": [[1, 140], [701, 840]],
+                "evidence": [{
+                    "start_line": 701,
+                    "end_line": 840,
+                    "score": 0.87,
+                    "content": "701: websocket",
+                    "navigation": "jump",
+                    "selected_action_score": 0.74,
+                }],
+            }],
+            "metrics": {
+                "elapsed_ms": 900,
+                "model_calls": 5,
+                "input_tokens": 500,
+                "output_tokens": 50,
+                "reads_executed": 3,
+                "file_runtimes": 1,
+            },
+        }
+
+        result = MODULE.build_system_one_range_result(engine)
+
+        self.assertEqual(
+            {
+                "repository": "BestNathan/nession",
+                "revision": "abc123",
+            },
+            result["subject"],
+        )
+        self.assertEqual(
+            "independent_file_range_runtime",
+            result["producer"]["algorithm"],
+        )
+        self.assertEqual("src/ws.py", result["files"][0]["path"])
+        self.assertEqual(
+            "model_stop",
+            result["files"][0]["provenance"]["termination"],
+        )
+        self.assertEqual(
+            0.87,
+            result["files"][0]["evidence"][0]["confidence"]["score"],
+        )
+
     def test_claude_localization_draft_has_no_confidence(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
