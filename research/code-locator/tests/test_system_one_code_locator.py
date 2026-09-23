@@ -18,7 +18,7 @@ class DemoTest(unittest.TestCase):
             result=MODULE.run(
                 self.fixture(),
                 'Help me optimize the websocket connection implementation',
-                scorer,trace,.35,.50,.50,.60,
+                scorer,trace,.35,.50,.50,.50,.60,
             )
             self.assertIn('web/src/ws',[x['id'] for x in result['directories']])
             self.assertIn('web/src/ws/client.ts',[x['id'] for x in result['files']])
@@ -96,17 +96,24 @@ class DemoTest(unittest.TestCase):
             self.assertTrue(all(
                 q['type']=='noul' for q in request['questions'].values()
             ))
-            self.assertNotIn('candidates',request['state'])
             instructions=request['questions']['candidate_0']['instructions']
             self.assertEqual(
                 {'path':'web/src/ws'},
                 instructions['candidate'],
             )
             self.assertEqual(
-                'Should `candidate` be retained for `goal` under `policy`?',
+                'optimize websocket',
+                instructions['task'],
+            )
+            self.assertEqual('directory',instructions['stage'])
+            self.assertIn(
+                'Would retaining this candidate materially help',
                 instructions['question'],
             )
-            self.assertIn('policy',request['state'])
+            self.assertIn(
+                'criteria',
+                request['questions']['candidate_0'],
+            )
 
     def test_system_one_scores_large_stage_in_one_request(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -214,6 +221,40 @@ class DemoTest(unittest.TestCase):
             self.assertEqual(1,first['start_line'])
             self.assertEqual(5,first['end_line'])
 
+    def test_file_outline_is_one_candidate_per_file(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)/'repo'
+            source=root/'src'
+            source.mkdir(parents=True)
+            (source/'client.ts').write_text(
+                'export class Client {\n'
+                '  connect() { return 1; }\n'
+                '  close() { return 2; }\n'
+                '}\n',
+                encoding='utf-8',
+            )
+            files=[{
+                'id':'src/client.ts',
+                'payload':{
+                    'path':'src/client.ts',
+                    'filename':'client.ts',
+                    'extension':'.ts',
+                },
+            }]
+
+            candidates,symbols_by_path=MODULE.file_outlines(root,files)
+
+            self.assertEqual(1,len(candidates))
+            outline=candidates[0]['payload']
+            self.assertEqual('src/client.ts',outline['path'])
+            self.assertGreaterEqual(outline['symbol_count'],3)
+            self.assertNotIn('content',outline)
+            self.assertTrue(any(
+                item['name']=='connect'
+                for item in outline['symbols']
+            ))
+            self.assertIn('src/client.ts',symbols_by_path)
+
     def test_outline_frontier_groups_symbols_by_scope(self):
         with tempfile.TemporaryDirectory() as temp:
             root=pathlib.Path(temp)/'repo'
@@ -310,7 +351,7 @@ class DemoTest(unittest.TestCase):
 
             def score(self,query,stage,candidates):
                 self.stages.append(stage)
-                if stage == 'outline':
+                if stage == 'file_outline':
                     scored=[]
                     for candidate in candidates:
                         score=0.99 if candidate['payload']['path'].endswith('one.py') else 0.01
@@ -345,11 +386,11 @@ class DemoTest(unittest.TestCase):
                 'locate websocket',
                 scorer,
                 trace,
-                .1,.1,.5,.1,
+                .1,.1,.5,.5,.1,
             )
 
             self.assertEqual(
-                ['directory','file','outline','symbol'],
+                ['directory','file','file_outline','scope','symbol'],
                 scorer.stages,
             )
             self.assertTrue(scorer.symbol_ids)
@@ -396,11 +437,14 @@ class DemoTest(unittest.TestCase):
                 'locate websocket connection',
                 scorer,
                 trace,
-                .1,.1,.1,.1,
+                .1,.1,.1,.1,.1,
             )
 
-            self.assertEqual(['directory','file','outline','symbol'],scorer.stages)
-            self.assertEqual(4,result['metrics']['model_calls'])
+            self.assertEqual(
+                ['directory','file','file_outline','scope','symbol'],
+                scorer.stages,
+            )
+            self.assertEqual(5,result['metrics']['model_calls'])
             self.assertEqual('one_request_per_stage',result['metrics']['request_strategy'])
             self.assertEqual(2,result['metrics']['files_selected'])
 
