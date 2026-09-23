@@ -363,7 +363,7 @@ jobs:
           path: .experiment-record/offline
 
       - name: Download TypeSafe evidence
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_typesafe }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_typesafe) || (github.event_name == 'push' && github.ref_name == 'fix/code-locator-three-stage-requests') }}
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
