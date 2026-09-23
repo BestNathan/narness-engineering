@@ -1,23 +1,23 @@
 # Experiment Runbook
 
-> Active execution: direct Claude Code pre-pilot R9. Follow
-> [EXECUTION-PREPILOT-R9.md](EXECUTION-PREPILOT-R9.md) for client installation,
+> Active execution: isolated Claude Code pre-pilot R10. Follow
+> [EXECUTION-PREPILOT-R10.md](EXECUTION-PREPILOT-R10.md) for client installation,
 > environment variables, pilots, isolation, and promotion. The Codex R4 and
 > containerized Claude R5 instructions below are historical and must not be used
 > for the new execution profile. Formal collection, analysis, and publication
-> procedures still apply after R9 freeze.
+> procedures still apply after R10 freeze.
 
 This is the operational path from the frozen benchmark to the final research report.
 
-The previous R1 formal artifact is incident evidence only. Do not pass it as a recovery artifact for the new R2 plan. After fresh R9 pilots and promotion, dispatch sequences 1–216 with the previous-artifact inputs empty.
+Previous R1/R2 formal artifacts are incident evidence only. Never restore them into R3. After fresh R10 pilots and promotion, start the new R3 cohort at sequence 1 with previous-artifact inputs empty. The registered schedule still has 216 entries; collect it in bounded manual batches, preserving the same R3 evidence across recovery dispatches.
 
 ## 1. Run the three non-reportable pilots on GitHub-hosted Actions
 
-The active R9 path is `.github/workflows/ai-native-claude-pilots.yml`. It uses a
+The active R10 path is `.github/workflows/ai-native-claude-pilots.yml`. It uses a
 GitHub-hosted `ubuntu-24.04` machine, checks out the exact execution SHA recorded
 in `EXECUTION-PREPILOT-LOCK.json`, installs the pinned Claude Code CLI, and runs
 T05/A, T08/B, and T20/C in fresh isolated subject checkouts. There is no active
-self-hosted-runner or local execution path for R9; the old Codex workflows remain
+self-hosted-runner or local execution path for R10; the old Codex workflows remain
 disabled historical records only.
 
 Configure the repository once:
@@ -30,21 +30,22 @@ Actions variable: ANTHROPIC_BASE_URL (optional; defaults to https://api.anthropi
 
 Dispatch **AI Native Claude Code Pilots** from the Actions tab. The workflow
 retains a non-reportable handoff artifact containing the three traces and the
-generated `execution-profile-r2.json`, `formal-schedule-r2.json`, and
-`formal-plan-r2.lock.json`. It validates the handoff against the registered R9
+generated `execution-profile-r3.json`, `formal-schedule-r3.json`, and
+`formal-plan-r3.lock.json`. It validates the handoff against the registered R10
 controller before the job can succeed.
 
 After reviewing the artifact, dispatch **AI Native Claude Pilot Promotion** with
 the source run ID and exact artifact name. That hosted workflow validates the
-handoff, writes `PILOT-FREEZE-r2.json`, and opens a draft pull request containing
+handoff, writes `PILOT-FREEZE-r3.json`, and opens a draft pull request containing
 the four required freeze files. Merge that pull request before formal collection;
 no local checkout is needed for promotion.
 
 The active formal path is `.github/workflows/ai-native-claude-formal.yml`. It is
-manual, requires the committed R9 profile/schedule/formal-plan lock, installs the
+manual, requires the committed R10 profile/schedule/formal-plan lock, installs the
 same pinned client on `ubuntu-24.04`, runs the registered schedule, verifies run
-seals, and uploads the formal collection artifact. The default dispatch covers all
-216 entries; sequence inputs allow a documented partial/recovery run.
+seals, and uploads the formal collection artifact. The default dispatch covers sequences 1–24 to fit the hosted six-hour job limit.
+Continue with the next registered range and restore the immediately prior R3
+artifact; the final combined collection must contain all 216 entries.
 
 The first three generated files are the hard collection-start gate. The fourth
 records promotion provenance. Never synthesize a profile or promote replay/selftest
@@ -52,17 +53,17 @@ evidence. Keep the source pilot artifact in Actions retention until the formal
 plan has been reviewed.
 
 The command-level details, isolation policy, and promotion checks are specified
-in [EXECUTION-PREPILOT-R9.md](EXECUTION-PREPILOT-R9.md). The pilot workflow
+in [EXECUTION-PREPILOT-R10.md](EXECUTION-PREPILOT-R10.md). The pilot workflow
 writes:
 
 ```text
-runner/execution-profile-r2.json
-runner/formal-schedule-r2.json
-runner/formal-plan-r2.lock.json
+runner/execution-profile-r3.json
+runner/formal-schedule-r3.json
+runner/formal-plan-r3.lock.json
 ```
 
 Review and merge the hosted promotion pull request before formal collection.
-`formal-plan-r2.lock.json` freezes the exact profile and schedule bytes.
+`formal-plan-r3.lock.json` freezes the exact profile and schedule bytes.
 
 The execution profile embeds a `pilot_set_digest_sha256` plus per-pilot artifact
 hashes. Keep the pilot directories until the profile has been reviewed; afterward
@@ -97,10 +98,10 @@ Inspect a long-running collection without mutating it:
 ```bash
 python3 scripts/inspect-ai-native-formal-progress.py \
   --runs-root /path/to/formal-runs \
-  --schedule docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-schedule-r2.json \
-  --execution-profile docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/execution-profile-r2.json \
+  --schedule docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-schedule-r3.json \
+  --execution-profile docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/execution-profile-r3.json \
   --benchmark-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/BENCHMARK-LOCK.json \
-  --formal-plan-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-plan-r2.lock.json
+  --formal-plan-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-plan-r3.lock.json
 ```
 
 The inspector distinguishes `sealed`, `pending`, `incomplete`, and `tampered` entries. A tampered sealed run is always a hard error.
@@ -201,9 +202,9 @@ research-artifact-manifest.json
 ```text
 benchmark semantics  -> BENCHMARK-LOCK.json
 analysis semantics   -> ANALYSIS-LOCK.json
-execution mechanics  -> execution-profile-r2.json (after pilots)
-formal order         -> formal-schedule-r2.json (after pilots)
-execution + order    -> formal-plan-r2.lock.json (after pilots)
+execution mechanics  -> execution-profile-r3.json (after pilots)
+formal order         -> formal-schedule-r3.json (after pilots)
+execution + order    -> formal-plan-r3.lock.json (after pilots)
 ```
 
 Do not change a frozen boundary after observing reportable outcomes. Create a new revision instead.
@@ -280,3 +281,4 @@ Every formal run is one fresh ephemeral Claude Code task and must emit exactly o
 `usage` event. This keeps token accounting unambiguous under the frozen scorer.
 A run with zero or multiple usage events is instrumentation-invalid and cannot be
 sealed for final analysis.
+

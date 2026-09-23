@@ -22,9 +22,9 @@ EXPERIMENT = (
 )
 RUNNER_DIR = EXPERIMENT / "runner"
 FREEZE_FILES = (
-    "execution-profile-r2.json",
-    "formal-schedule-r2.json",
-    "formal-plan-r2.lock.json",
+    "execution-profile-r3.json",
+    "formal-schedule-r3.json",
+    "formal-plan-r3.lock.json",
 )
 
 
@@ -109,9 +109,9 @@ def main() -> int:
             shutil.copy2(source, destination)
         promoted[name] = sha256_file(destination)
 
-    profile = load(RUNNER_DIR / "execution-profile-r2.json")
-    schedule = load(RUNNER_DIR / "formal-schedule-r2.json")
-    plan = load(RUNNER_DIR / "formal-plan-r2.lock.json")
+    profile = load(RUNNER_DIR / "execution-profile-r3.json")
+    schedule = load(RUNNER_DIR / "formal-schedule-r3.json")
+    plan = load(RUNNER_DIR / "formal-plan-r3.lock.json")
 
     workflow_metadata = parse_workflow_metadata(
         handoff / "workflow-metadata.txt"
@@ -138,7 +138,7 @@ def main() -> int:
         },
     }
 
-    promotion_path = RUNNER_DIR / "PILOT-FREEZE-r2.json"
+    promotion_path = RUNNER_DIR / "PILOT-FREEZE-r3.json"
     if promotion_path.exists():
         raise RuntimeError(
             f"refusing to overwrite existing pilot promotion record: {promotion_path}"
@@ -164,3 +164,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

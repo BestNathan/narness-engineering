@@ -58,7 +58,7 @@ def main() -> int:
     ap.add_argument(
         "--formal-plan-lock",
         type=Path,
-        default=EXPERIMENT / "runner" / "formal-plan-r2.lock.json",
+        default=EXPERIMENT / "runner" / "formal-plan-r3.lock.json",
     )
     ap.add_argument("--runs-root", required=True, type=Path)
     ap.add_argument("--start-sequence", type=int)
@@ -376,3 +376,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

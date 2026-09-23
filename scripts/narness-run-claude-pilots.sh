@@ -8,8 +8,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EXP="$ROOT/docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
 SOURCE_REPO="$(cd "$1" && pwd)"
 OUTPUT_DIR="${2:-$ROOT/research-runs/claude-pilots}"
-# The direct Claude Code path deliberately receives only the Anthropic credential
-# and base URL. Never accidentally reuse a Codex credential.
+# The parent gateway receives the provider credential and base URL; the agent
+# sees only its local bridge and a placeholder key. Never reuse Codex credentials.
 if [[ -z "${ANTHROPIC_API_KEY:-}${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
   echo 'Set ANTHROPIC_API_KEY (or ANTHROPIC_AUTH_TOKEN) before running pilots.' >&2
   exit 1
@@ -47,11 +47,12 @@ for pair in T05:A T08:B T20:C; do
 done
 python3 "$ROOT/scripts/freeze-ai-native-execution-profile.py" \
   --pilot "$OUTPUT_DIR/T05-A-01" --pilot "$OUTPUT_DIR/T08-B-01" --pilot "$OUTPUT_DIR/T20-C-01" \
-  --profile-id claude-code-r9-r2 --output "$EXP/runner/execution-profile-r2.json"
+  --profile-id claude-code-r10-r3 --output "$EXP/runner/execution-profile-r3.json"
 python3 "$ROOT/scripts/generate-ai-native-formal-schedule.py" --replications 3 \
-  --profile-id claude-code-r9-r2 --output "$EXP/runner/formal-schedule-r2.json"
+  --profile-id claude-code-r10-r3 --output "$EXP/runner/formal-schedule-r3.json"
 python3 "$ROOT/scripts/freeze-ai-native-formal-plan.py" \
-  --execution-profile "$EXP/runner/execution-profile-r2.json" \
-  --schedule "$EXP/runner/formal-schedule-r2.json" --benchmark-lock "$EXP/BENCHMARK-LOCK.json" \
-  --analysis-lock "$EXP/ANALYSIS-LOCK.json" --plan-id formal-plan-r2 --output "$EXP/runner/formal-plan-r2.lock.json"
+  --execution-profile "$EXP/runner/execution-profile-r3.json" \
+  --schedule "$EXP/runner/formal-schedule-r3.json" --benchmark-lock "$EXP/BENCHMARK-LOCK.json" \
+  --analysis-lock "$EXP/ANALYSIS-LOCK.json" --plan-id formal-plan-r3 --output "$EXP/runner/formal-plan-r3.lock.json"
 echo 'Review and promote the real pilot handoff before formal collection.'
+
