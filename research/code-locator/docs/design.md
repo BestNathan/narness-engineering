@@ -197,34 +197,39 @@ StopFile
 
 No text is inspected when these actions are generated.
 
-## Action scoring
+## Decision primitives and action selection
 
-All actions in one FileRuntime are independently Noul-scored against:
+Phase 2 contains two different decision semantics and therefore uses two
+different primitives in the same request:
 
 ~~~text
-goal + this file's DecisionView
+StopFile / ContinueFile
+  -> Choice
+  -> control-flow sufficiency
+
+ReadRange(...)
+  -> Noul
+  -> expected information-gathering utility
 ~~~
 
-The model decides semantic value.
+This distinction matters. Earlier experiments independently Noul-scored both
+StopFile and ReadRange and then compared the numeric scores. Prompt changes
+alone did not make early stopping reliable because stop sufficiency and read
+utility are not the same quantity.
 
-The Harness only applies a deterministic selector.
-
-Current threshold:
+Current ReadRange threshold:
 
 ~~~text
 parallel_action_threshold = 0.65
 ~~~
 
-The threshold is not a stop threshold.
-
 Selection policy:
 
 ~~~text
-if StopFile >= threshold
-   and StopFile >= best ReadRange:
+if Choice == StopFile:
     terminate with model_stop
 
-else:
+if Choice == ContinueFile:
     select all ReadRange actions >= threshold
     remove overlapping effects by keeping higher-scored ranges
 
@@ -232,33 +237,28 @@ if no ReadRange reaches threshold:
     execute the highest-scored ReadRange
 ~~~
 
-Therefore:
-
-~~~text
-low action confidence
-  != stop
-
-low action confidence
-  -> continue with top-1
-~~~
-
-The threshold controls concurrent exploration width only.
+The threshold controls concurrent exploration width only. It is not a
+termination threshold.
 
 ## Stop strategy
 
 There is no Harness rule such as:
 
 ~~~text
-best score < threshold
+best read score < threshold
   -> stop
 ~~~
 
-`StopFile` must win as an explicit model decision.
+`StopFile` is an explicit Choice result from System One.
 
-Its meaning is:
+Its current meaning is:
 
-> Current observations are sufficient to judge this file for the user goal,
-> and further reads are unlikely to materially improve localization.
+> Current observations contain enough representative evidence to finalize this
+> file-level localization result. Full-file coverage and exhaustive discovery
+> of every relevant range are not required.
+
+The model is told to continue only when another range can resolve a material
+uncertainty or qualitatively improve the final result.
 
 Mechanical terminal conditions are recorded separately:
 
@@ -596,3 +596,39 @@ stages[]
 ~~~
 
 System One currently has one localization stage. Claude has two independent stages, localization and confidence assessment, and the final cost is their sum. Missing provider metrics remain null rather than being estimated.
+
+
+### Stop control experiment
+
+Clean run `35864316780` validates the current Choice-based control decision.
+
+~~~text
+17 file runtimes
+4 model_stop
+12 action_space_exhausted
+1 budget_exhausted
+
+134 reads
+130 model calls
+1,272,639 input tokens
+25.952 s
+~~~
+
+The four genuine model stops happened before coverage exhaustion:
+
+~~~text
+server/websocket.rs        91.3%
+WebSocketService.ts        77.5%
+CLI connection.rs          86.0%
+web_client_registry.rs     99.3%
+~~~
+
+On the four common stopped files, the earlier exhaustive baseline used 24 reads
+while this run used 17. Evidence-line overlap with the earlier run ranged from
+0.775 to 1.000. Because System One scoring is stochastic, this is descriptive
+rather than a controlled accuracy estimate.
+
+The largest files still tend to continue until full coverage or the safety
+budget. The next stopping research should expose explicit exploration cost or
+diminishing-return state to the model, rather than reintroducing a
+Harness-owned low-score stop heuristic.
