@@ -99,9 +99,12 @@ print('filesystem, PID view, symlink, environment and private state: PASS')
     assert sandbox['enabled'] is True
     assert sandbox['failIfUnavailable'] is True
     assert sandbox['allowUnsandboxedCommands'] is False
+    assert sandbox['enableWeakerNestedSandbox'] is False
+    assert sandbox['excludedCommands'] == []
     assert sandbox['network']['strictAllowlist'] is True
     assert sandbox['network']['allowedDomains'] == []
     assert sandbox['network']['allowUnixSockets'] == []
+    assert sandbox['network']['allowAllUnixSockets'] is False
     denied_env = {item['name'] for item in sandbox['credentials']['envVars']
                   if item['mode'] == 'deny'}
     assert {'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL'} <= denied_env
