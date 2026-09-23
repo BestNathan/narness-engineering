@@ -103,16 +103,19 @@ ReadRange(tail)
 StopFile
 ~~~
 
-After observations exist:
+After observations exist, high-relevance observations are merged into disconnected `RelevantRegion[]` hotspots. The frontier is built from several retained hotspots rather than collapsing the file onto one strongest anchor:
 
 ~~~text
-ReadRange(after strongest observation)
-ReadRange(before strongest observation)
-ReadRange(largest unread gap)
+RelevantRegion #1 -> before / after
+RelevantRegion #2 -> before / after
+RelevantRegion #3 -> before / after
+largest unread gap
 StopFile
 ~~~
 
-The baseline generator is deliberately simple. Future generators may use identifiers, imports, declarations, or LSP information discovered from observations, but should not pre-expand the entire file.
+The baseline caps the file at three relevant regions and eight total actions, so multi-hotspot preservation does not become whole-file expansion. Regions are ranked by maximum relevance and recency. Low-relevance observations still contribute coverage but do not create local expansion actions.
+
+The generator remains deliberately simple. Future generators may use identifiers, imports, declarations, or LSP information discovered from observations, but should not pre-expand the entire file.
 
 ## Multi-file batches
 
@@ -200,3 +203,10 @@ State
 ~~~
 
 The action space is progressively disclosed by real observations rather than enumerated in full at the start.
+
+
+## Multi-hotspot trace finding
+
+The first real two-phase trace showed why a single strongest anchor is insufficient. In `crates/nession-agent/src/server/websocket.rs`, the reader found one relevant region at lines 1-140 (0.87), lost local relevance at 141-280 (0.60), then discovered a second relevant region at 1585-1724 (0.74). A strongest-only generator could not expose neighbors of the second hotspot because the first hotspot still had the higher score.
+
+The current baseline therefore treats disconnected high-relevance regions as separate action-space anchors. See [the trace analysis](pilots/nession-websocket-two-phase-trace-analysis-2026-09-23.md).
