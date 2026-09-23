@@ -1,0 +1,1820 @@
+{
+  "schema_version": 1,
+  "status": "pre-registered",
+  "profile_id": "claude-code-r9-r2",
+  "replications": 3,
+  "run_count": 216,
+  "design": "deterministically permuted task blocks per replication + balanced cyclic Latin-square treatment order within each task",
+  "task_order_policy": "sha256(seed:replication:task)",
+  "task_order_seed": 20260921,
+  "task_orders": {
+    "1": [
+      "T15",
+      "T22",
+      "T07",
+      "T20",
+      "T02",
+      "T18",
+      "T06",
+      "T08",
+      "T13",
+      "T05",
+      "T17",
+      "T10",
+      "T16",
+      "T24",
+      "T01",
+      "T09",
+      "T03",
+      "T11",
+      "T04",
+      "T12",
+      "T21",
+      "T14",
+      "T19",
+      "T23"
+    ],
+    "2": [
+      "T11",
+      "T07",
+      "T18",
+      "T05",
+      "T03",
+      "T02",
+      "T14",
+      "T10",
+      "T22",
+      "T21",
+      "T24",
+      "T09",
+      "T04",
+      "T06",
+      "T01",
+      "T19",
+      "T12",
+      "T08",
+      "T23",
+      "T16",
+      "T20",
+      "T13",
+      "T17",
+      "T15"
+    ],
+    "3": [
+      "T01",
+      "T03",
+      "T10",
+      "T09",
+      "T20",
+      "T23",
+      "T02",
+      "T14",
+      "T12",
+      "T06",
+      "T21",
+      "T04",
+      "T13",
+      "T24",
+      "T11",
+      "T07",
+      "T18",
+      "T17",
+      "T15",
+      "T05",
+      "T16",
+      "T22",
+      "T08",
+      "T19"
+    ]
+  },
+  "entries": [
+    {
+      "sequence": 1,
+      "replication": 1,
+      "task_id": "T15",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 2,
+      "replication": 1,
+      "task_id": "T15",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 3,
+      "replication": 1,
+      "task_id": "T15",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 4,
+      "replication": 1,
+      "task_id": "T22",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 5,
+      "replication": 1,
+      "task_id": "T22",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 6,
+      "replication": 1,
+      "task_id": "T22",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 7,
+      "replication": 1,
+      "task_id": "T07",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 8,
+      "replication": 1,
+      "task_id": "T07",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 9,
+      "replication": 1,
+      "task_id": "T07",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 10,
+      "replication": 1,
+      "task_id": "T20",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 11,
+      "replication": 1,
+      "task_id": "T20",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 12,
+      "replication": 1,
+      "task_id": "T20",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 13,
+      "replication": 1,
+      "task_id": "T02",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 14,
+      "replication": 1,
+      "task_id": "T02",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 15,
+      "replication": 1,
+      "task_id": "T02",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 16,
+      "replication": 1,
+      "task_id": "T18",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 17,
+      "replication": 1,
+      "task_id": "T18",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 18,
+      "replication": 1,
+      "task_id": "T18",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 19,
+      "replication": 1,
+      "task_id": "T06",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 20,
+      "replication": 1,
+      "task_id": "T06",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 21,
+      "replication": 1,
+      "task_id": "T06",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 22,
+      "replication": 1,
+      "task_id": "T08",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 23,
+      "replication": 1,
+      "task_id": "T08",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 24,
+      "replication": 1,
+      "task_id": "T08",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 25,
+      "replication": 1,
+      "task_id": "T13",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 26,
+      "replication": 1,
+      "task_id": "T13",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 27,
+      "replication": 1,
+      "task_id": "T13",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 28,
+      "replication": 1,
+      "task_id": "T05",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 29,
+      "replication": 1,
+      "task_id": "T05",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 30,
+      "replication": 1,
+      "task_id": "T05",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 31,
+      "replication": 1,
+      "task_id": "T17",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 32,
+      "replication": 1,
+      "task_id": "T17",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 33,
+      "replication": 1,
+      "task_id": "T17",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 34,
+      "replication": 1,
+      "task_id": "T10",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 35,
+      "replication": 1,
+      "task_id": "T10",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 36,
+      "replication": 1,
+      "task_id": "T10",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 37,
+      "replication": 1,
+      "task_id": "T16",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 38,
+      "replication": 1,
+      "task_id": "T16",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 39,
+      "replication": 1,
+      "task_id": "T16",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 40,
+      "replication": 1,
+      "task_id": "T24",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 41,
+      "replication": 1,
+      "task_id": "T24",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 42,
+      "replication": 1,
+      "task_id": "T24",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 43,
+      "replication": 1,
+      "task_id": "T01",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 44,
+      "replication": 1,
+      "task_id": "T01",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 45,
+      "replication": 1,
+      "task_id": "T01",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 46,
+      "replication": 1,
+      "task_id": "T09",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 47,
+      "replication": 1,
+      "task_id": "T09",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 48,
+      "replication": 1,
+      "task_id": "T09",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 49,
+      "replication": 1,
+      "task_id": "T03",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 50,
+      "replication": 1,
+      "task_id": "T03",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 51,
+      "replication": 1,
+      "task_id": "T03",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 52,
+      "replication": 1,
+      "task_id": "T11",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 53,
+      "replication": 1,
+      "task_id": "T11",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 54,
+      "replication": 1,
+      "task_id": "T11",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 55,
+      "replication": 1,
+      "task_id": "T04",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 56,
+      "replication": 1,
+      "task_id": "T04",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 57,
+      "replication": 1,
+      "task_id": "T04",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 58,
+      "replication": 1,
+      "task_id": "T12",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 59,
+      "replication": 1,
+      "task_id": "T12",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 60,
+      "replication": 1,
+      "task_id": "T12",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 61,
+      "replication": 1,
+      "task_id": "T21",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 62,
+      "replication": 1,
+      "task_id": "T21",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 63,
+      "replication": 1,
+      "task_id": "T21",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 64,
+      "replication": 1,
+      "task_id": "T14",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 65,
+      "replication": 1,
+      "task_id": "T14",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 66,
+      "replication": 1,
+      "task_id": "T14",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 67,
+      "replication": 1,
+      "task_id": "T19",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 68,
+      "replication": 1,
+      "task_id": "T19",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 69,
+      "replication": 1,
+      "task_id": "T19",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 70,
+      "replication": 1,
+      "task_id": "T23",
+      "treatment": "B",
+      "attempt": 1,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 71,
+      "replication": 1,
+      "task_id": "T23",
+      "treatment": "C",
+      "attempt": 1,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 72,
+      "replication": 1,
+      "task_id": "T23",
+      "treatment": "A",
+      "attempt": 1,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 73,
+      "replication": 2,
+      "task_id": "T11",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 74,
+      "replication": 2,
+      "task_id": "T11",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 75,
+      "replication": 2,
+      "task_id": "T11",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 76,
+      "replication": 2,
+      "task_id": "T07",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 77,
+      "replication": 2,
+      "task_id": "T07",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 78,
+      "replication": 2,
+      "task_id": "T07",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 79,
+      "replication": 2,
+      "task_id": "T18",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 80,
+      "replication": 2,
+      "task_id": "T18",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 81,
+      "replication": 2,
+      "task_id": "T18",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 82,
+      "replication": 2,
+      "task_id": "T05",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 83,
+      "replication": 2,
+      "task_id": "T05",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 84,
+      "replication": 2,
+      "task_id": "T05",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 85,
+      "replication": 2,
+      "task_id": "T03",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 86,
+      "replication": 2,
+      "task_id": "T03",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 87,
+      "replication": 2,
+      "task_id": "T03",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 88,
+      "replication": 2,
+      "task_id": "T02",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 89,
+      "replication": 2,
+      "task_id": "T02",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 90,
+      "replication": 2,
+      "task_id": "T02",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 91,
+      "replication": 2,
+      "task_id": "T14",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 92,
+      "replication": 2,
+      "task_id": "T14",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 93,
+      "replication": 2,
+      "task_id": "T14",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 94,
+      "replication": 2,
+      "task_id": "T10",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 95,
+      "replication": 2,
+      "task_id": "T10",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 96,
+      "replication": 2,
+      "task_id": "T10",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 97,
+      "replication": 2,
+      "task_id": "T22",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 98,
+      "replication": 2,
+      "task_id": "T22",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 99,
+      "replication": 2,
+      "task_id": "T22",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 100,
+      "replication": 2,
+      "task_id": "T21",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 101,
+      "replication": 2,
+      "task_id": "T21",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 102,
+      "replication": 2,
+      "task_id": "T21",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 103,
+      "replication": 2,
+      "task_id": "T24",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 104,
+      "replication": 2,
+      "task_id": "T24",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 105,
+      "replication": 2,
+      "task_id": "T24",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 106,
+      "replication": 2,
+      "task_id": "T09",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 107,
+      "replication": 2,
+      "task_id": "T09",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 108,
+      "replication": 2,
+      "task_id": "T09",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 109,
+      "replication": 2,
+      "task_id": "T04",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 110,
+      "replication": 2,
+      "task_id": "T04",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 111,
+      "replication": 2,
+      "task_id": "T04",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 112,
+      "replication": 2,
+      "task_id": "T06",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 113,
+      "replication": 2,
+      "task_id": "T06",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 114,
+      "replication": 2,
+      "task_id": "T06",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 115,
+      "replication": 2,
+      "task_id": "T01",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 116,
+      "replication": 2,
+      "task_id": "T01",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 117,
+      "replication": 2,
+      "task_id": "T01",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 118,
+      "replication": 2,
+      "task_id": "T19",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 119,
+      "replication": 2,
+      "task_id": "T19",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 120,
+      "replication": 2,
+      "task_id": "T19",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 121,
+      "replication": 2,
+      "task_id": "T12",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 122,
+      "replication": 2,
+      "task_id": "T12",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 123,
+      "replication": 2,
+      "task_id": "T12",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 124,
+      "replication": 2,
+      "task_id": "T08",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 125,
+      "replication": 2,
+      "task_id": "T08",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 126,
+      "replication": 2,
+      "task_id": "T08",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 127,
+      "replication": 2,
+      "task_id": "T23",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 128,
+      "replication": 2,
+      "task_id": "T23",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 129,
+      "replication": 2,
+      "task_id": "T23",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 130,
+      "replication": 2,
+      "task_id": "T16",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 131,
+      "replication": 2,
+      "task_id": "T16",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 132,
+      "replication": 2,
+      "task_id": "T16",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 133,
+      "replication": 2,
+      "task_id": "T20",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 134,
+      "replication": 2,
+      "task_id": "T20",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 135,
+      "replication": 2,
+      "task_id": "T20",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 136,
+      "replication": 2,
+      "task_id": "T13",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 137,
+      "replication": 2,
+      "task_id": "T13",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 138,
+      "replication": 2,
+      "task_id": "T13",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 139,
+      "replication": 2,
+      "task_id": "T17",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 140,
+      "replication": 2,
+      "task_id": "T17",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 141,
+      "replication": 2,
+      "task_id": "T17",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 142,
+      "replication": 2,
+      "task_id": "T15",
+      "treatment": "A",
+      "attempt": 2,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 143,
+      "replication": 2,
+      "task_id": "T15",
+      "treatment": "B",
+      "attempt": 2,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 144,
+      "replication": 2,
+      "task_id": "T15",
+      "treatment": "C",
+      "attempt": 2,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 145,
+      "replication": 3,
+      "task_id": "T01",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 146,
+      "replication": 3,
+      "task_id": "T01",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 147,
+      "replication": 3,
+      "task_id": "T01",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 148,
+      "replication": 3,
+      "task_id": "T03",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 149,
+      "replication": 3,
+      "task_id": "T03",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 150,
+      "replication": 3,
+      "task_id": "T03",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 151,
+      "replication": 3,
+      "task_id": "T10",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 152,
+      "replication": 3,
+      "task_id": "T10",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 153,
+      "replication": 3,
+      "task_id": "T10",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 154,
+      "replication": 3,
+      "task_id": "T09",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 155,
+      "replication": 3,
+      "task_id": "T09",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 156,
+      "replication": 3,
+      "task_id": "T09",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 157,
+      "replication": 3,
+      "task_id": "T20",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 158,
+      "replication": 3,
+      "task_id": "T20",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 159,
+      "replication": 3,
+      "task_id": "T20",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 160,
+      "replication": 3,
+      "task_id": "T23",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 161,
+      "replication": 3,
+      "task_id": "T23",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 162,
+      "replication": 3,
+      "task_id": "T23",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 163,
+      "replication": 3,
+      "task_id": "T02",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 164,
+      "replication": 3,
+      "task_id": "T02",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 165,
+      "replication": 3,
+      "task_id": "T02",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 166,
+      "replication": 3,
+      "task_id": "T14",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 167,
+      "replication": 3,
+      "task_id": "T14",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 168,
+      "replication": 3,
+      "task_id": "T14",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 169,
+      "replication": 3,
+      "task_id": "T12",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 170,
+      "replication": 3,
+      "task_id": "T12",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 171,
+      "replication": 3,
+      "task_id": "T12",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 172,
+      "replication": 3,
+      "task_id": "T06",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 173,
+      "replication": 3,
+      "task_id": "T06",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 174,
+      "replication": 3,
+      "task_id": "T06",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 175,
+      "replication": 3,
+      "task_id": "T21",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 176,
+      "replication": 3,
+      "task_id": "T21",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 177,
+      "replication": 3,
+      "task_id": "T21",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 178,
+      "replication": 3,
+      "task_id": "T04",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 179,
+      "replication": 3,
+      "task_id": "T04",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 180,
+      "replication": 3,
+      "task_id": "T04",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 181,
+      "replication": 3,
+      "task_id": "T13",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 182,
+      "replication": 3,
+      "task_id": "T13",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 183,
+      "replication": 3,
+      "task_id": "T13",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 184,
+      "replication": 3,
+      "task_id": "T24",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 185,
+      "replication": 3,
+      "task_id": "T24",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 186,
+      "replication": 3,
+      "task_id": "T24",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 187,
+      "replication": 3,
+      "task_id": "T11",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 188,
+      "replication": 3,
+      "task_id": "T11",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 189,
+      "replication": 3,
+      "task_id": "T11",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 190,
+      "replication": 3,
+      "task_id": "T07",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 191,
+      "replication": 3,
+      "task_id": "T07",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 192,
+      "replication": 3,
+      "task_id": "T07",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 193,
+      "replication": 3,
+      "task_id": "T18",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 194,
+      "replication": 3,
+      "task_id": "T18",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 195,
+      "replication": 3,
+      "task_id": "T18",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 196,
+      "replication": 3,
+      "task_id": "T17",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 197,
+      "replication": 3,
+      "task_id": "T17",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 198,
+      "replication": 3,
+      "task_id": "T17",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 199,
+      "replication": 3,
+      "task_id": "T15",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 200,
+      "replication": 3,
+      "task_id": "T15",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 201,
+      "replication": 3,
+      "task_id": "T15",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 202,
+      "replication": 3,
+      "task_id": "T05",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 203,
+      "replication": 3,
+      "task_id": "T05",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 204,
+      "replication": 3,
+      "task_id": "T05",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 205,
+      "replication": 3,
+      "task_id": "T16",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 206,
+      "replication": 3,
+      "task_id": "T16",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 207,
+      "replication": 3,
+      "task_id": "T16",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 208,
+      "replication": 3,
+      "task_id": "T22",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 209,
+      "replication": 3,
+      "task_id": "T22",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 210,
+      "replication": 3,
+      "task_id": "T22",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 211,
+      "replication": 3,
+      "task_id": "T08",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 212,
+      "replication": 3,
+      "task_id": "T08",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 213,
+      "replication": 3,
+      "task_id": "T08",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 3
+    },
+    {
+      "sequence": 214,
+      "replication": 3,
+      "task_id": "T19",
+      "treatment": "C",
+      "attempt": 3,
+      "within_task_position": 1
+    },
+    {
+      "sequence": 215,
+      "replication": 3,
+      "task_id": "T19",
+      "treatment": "A",
+      "attempt": 3,
+      "within_task_position": 2
+    },
+    {
+      "sequence": 216,
+      "replication": 3,
+      "task_id": "T19",
+      "treatment": "B",
+      "attempt": 3,
+      "within_task_position": 3
+    }
+  ]
+}
