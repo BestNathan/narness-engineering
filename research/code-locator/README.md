@@ -27,91 +27,40 @@ There is no Phase-1 top-k file cap. Every file that passes the Phase-1 file thre
 
 The directory stage enumerates the repository tree once. The file stage only exposes direct files of retained directories; it never recursively walks selected directories again.
 
-## Phase 2 — Global Progressive Reader
+## Phase 2 — Independent File Range Runtimes
 
-Potential files are not ordered into harness-defined batches and are not pre-expanded into lines, regions, outlines, or symbols.
+Phase 2 no longer puts every retained file into one shared System One state.
 
-All retained files enter one shared ReaderState with file stat metadata:
+The TypeSafe request context is bounded, and files do not need cross-file
+semantic comparison during range localization. Each Phase-1 file therefore
+owns an independent FileRuntime:
 
 ~~~text
 PotentialFile[]
-  -> stat(file)
-  -> one shared ReaderState
+  -> FileRuntime(file A)
+  -> FileRuntime(file B)
+  -> FileRuntime(file C)
+  -> ...
 ~~~
 
-Each scheduler epoch begins with a global file frontier:
+Each FileRuntime sees only:
 
 ~~~text
-all eligible files
-  -> one Noul question per file in one System One request
-  -> score: "should this file receive a read action now?"
-  -> activate every file above reader-file-activation threshold
+goal
+this file's metadata
+this file's coverage
+this file's raw observations
+this file's current range actions
 ~~~
 
-Only activated files receive per-file read-action Choice questions:
+No observation from one file is exposed to another file.
 
-~~~text
-activated files
-  -> bounded ReadRange / StopFile actions
-  -> Choice
-  -> read_file
-  -> Observation enters ReaderState
-  -> Noul observation relevance
-  -> update coverage / hotspots / budgets
-  -> rescore the complete global file frontier
-~~~
+The Harness does not parse source text. It does not use AST, LSP, symbols,
+imports, keywords, or semantic chunks.
 
-An unselected file is deferred, not discarded. It remains in state and can become active in a later scheduler epoch after observations change the state.
+### Dynamic range actions
 
-This removes two harness decisions from the previous baseline:
-
-~~~text
-no Phase-1 max-files cap
-no fixed file batch ordering
-~~~
-
-## Reader controls
-
-~~~text
-reader file activation threshold = 0.65
-read window                      = 140 lines
-soft reads per file              = 4
-hard reads per file              = 8
-read-action probability          = 0.40
-observation relevance            = 0.65
-~~~
-
-File activation, read-action confidence, and observation relevance are different decisions and have independent thresholds.
-
-## ReaderState
-
-~~~text
-ReaderState
-  goal
-  scheduler round
-
-  files[]
-    path
-    Phase-1 score
-    stat { line_count, size_bytes, extension }
-    coverage[]
-    read_count
-    activation_count
-    last_activation_score
-    stopped / stop_reason
-
-  observations[]
-    path / line range
-    content
-    action probability
-    relevance score
-~~~
-
-After read_file returns, content is appended to ReaderState before observation relevance is evaluated. The next global file scheduling request sees the updated state.
-
-## Dynamic read actions
-
-For an unread activated file, stat creates a coarse local action frontier:
+For an unread file:
 
 ~~~text
 ReadRange(head)
@@ -120,54 +69,127 @@ ReadRange(tail)
 StopFile
 ~~~
 
-After observations exist, high-relevance observations are merged into bounded disconnected RelevantRegion hotspots. The file can expose before/after actions around several hotspots plus one exploration-gap action.
-
-Source ranges are information-gathering actions, not precomputed semantic answer candidates.
-
-## File-owned read budget
-
-Read budgets belong to files rather than scheduler epochs.
-
-A file gets four normal reads. At or beyond the soft limit, a new high-relevance observation earns another read. A low-relevance observation stops that file. Eight reads is the unconditional per-file hard cap.
-
-This is independent of global scheduling: a file can be deferred for several scheduler epochs without consuming its read budget.
-
-## Decision primitives
+After reads exist, the Harness mechanically derives:
 
 ~~~text
-Phase-1 candidate relevance     -> Noul
-Phase-2 file activation         -> Noul
-Next read action for a file     -> Choice
-Observed-content relevance      -> Noul
+ReadRange(expand_before)
+ReadRange(expand_after)
+ReadRange(jump)
+StopFile
 ~~~
 
-The primitive is selected by decision semantics.
+`jump` probes the midpoint of large unread gaps. `before/after` expand
+around ranges selected in the previous epoch.
 
-## Run
+All actions are grounded only from line count, coverage, and runtime history.
 
-Offline fixture:
+### Action scoring and concurrency
+
+System One independently Noul-scores every action in a file-local action space.
+
+Current prototype threshold:
+
+~~~text
+parallel action threshold = 0.65
+~~~
+
+The threshold controls concurrency only:
+
+~~~text
+StopFile >= threshold and StopFile >= best read
+  -> model_stop
+
+otherwise:
+  execute all non-overlapping reads >= threshold
+
+if none reach threshold:
+  execute top-1 read
+~~~
+
+Low scores never cause Harness termination.
+
+### Stop semantics
+
+`StopFile` is an explicit model action. The prompt tells System One to raise
+its stop score when current evidence is sufficient to judge the file and
+further reads are unlikely to materially improve localization.
+
+Mechanical terminal states remain separate:
+
+~~~text
+model_stop
+action_space_exhausted
+budget_exhausted
+error / cancelled
+~~~
+
+### DecisionView versus durable state
+
+Each FileRuntime keeps complete durable observations, but the request
+DecisionView is mechanically bounded. It includes recent complete raw
+observations up to a character budget plus full coverage metadata.
+
+This is context management, not semantic summarization.
+
+### Result evidence
+
+After a FileRuntime terminates, observed ranges are scored for result relevance.
+Those post-loop scores do not affect navigation or stopping.
+
+## Run the range runtime
 
 ~~~bash
-python3 research/code-locator/src/system_one_code_locator.py \
-  research/code-locator/fixtures/repository \
+python3 research/code-locator/src/system_one_range_runtime.py \
+  <repository> \
   "Help me optimize the websocket connection implementation" \
-  --offline-decider
+  --window-lines 140 \
+  --parallel-threshold 0.65 \
+  --evidence-threshold 0.65 \
+  --max-jumps 2 \
+  --max-file-epochs 32
 ~~~
 
-Important controls:
+The dedicated manual workflow is:
 
 ~~~text
---directory-threshold
---file-threshold
---reader-file-activation-threshold
---reader-window-lines
---reader-soft-reads
---reader-hard-reads
---reader-action-threshold
---observation-threshold
+.github/workflows/system-one-range-runtime-v0.yml
 ~~~
 
-Legacy batch/top-k CLI flags are accepted only for compatibility and are ignored.
+## Current per-file baseline
+
+Real run `35857120750` on
+`BestNathan/nession@b76fe4921a63023a69ce91399328ab53d3526664`:
+
+~~~text
+Phase-1 files       17
+FileRuntime count   17
+
+model_stop           0
+space exhausted     16
+budget exhausted     1
+
+reads              138
+valuable files      11
+evidence regions    46
+
+model calls        145
+input tokens  1,316,145
+output tokens    19,858
+elapsed          33.243s
+~~~
+
+Sixteen files reached 100% coverage. The 6,617-line `handler.rs` reached
+94.2% coverage before the 32-epoch safety budget.
+
+The important result is architectural: the per-file runtime completed without
+the shared-state context overflow. It also showed that current `StopFile`
+semantics are conservative; no file stopped early by model choice.
+
+See:
+
+~~~text
+docs/pilots/nession-websocket-per-file-range-runtime-v0-2026-09-23.md
+~~~
 
 ## Claude Code cross-trace
 
@@ -217,7 +239,7 @@ The confidence session cannot alter Session A's file set or evidence ranges; str
 
 Claude Code is not treated as ground truth or as an optimization target for System One. File/range agreement is retained only as descriptive research data.
 
-## Current global-scheduler baseline
+## Historical global-scheduler baseline
 
 Real run `35839323377` on the Nession websocket task retained 18 Phase-1 files and allowed System One to schedule them globally.
 
@@ -249,12 +271,13 @@ docs/pilots/nession-websocket-global-scheduler-cross-trace-2026-09-23.md
 
 ## Research directions
 
-1. Separate file activation from an explicit task-sufficiency / stop decision.
-2. Observation-driven cross-file actions such as InspectDependency / FindReferences / InspectDefinition.
-3. Phase-1 and Phase-2 threshold studies using score snapshots rather than rerun drift.
-4. ReaderState compaction as observations accumulate.
-5. Noul versus Choice where the semantic decision can reasonably use either primitive.
-6. Multi-task cross-traces and later human-reviewed gold sets when absolute accuracy is needed.
+1. Improve `StopFile` semantics without reintroducing Harness-driven stopping.
+2. Study range-action generation density: seed / expand / jump geometry.
+3. Parallelize independent FileRuntime instances without changing semantics.
+4. Phase-1 threshold studies using frozen score snapshots.
+5. Bound DecisionView context mechanically while keeping durable FileState complete.
+6. Re-run cross-traces using the per-file runtime baseline.
+7. Human-reviewed gold datasets only when an absolute accuracy claim is required.
 
 See `docs/design.md` for the detailed model.
 
