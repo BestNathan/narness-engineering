@@ -222,7 +222,7 @@ def files(root, selected_dirs):
             }
     return [found[k] for k in sorted(found)]
 
-REGION_SPAN = 60
+REGION_SPAN = 120
 IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{2,}")
 DECLARATION_RE = re.compile(
     r"\\b(?:fn|function|def|func|class|struct|enum|trait|impl|interface|type|"
@@ -262,7 +262,7 @@ def regions(root, file, span=REGION_SPAN):
             stripped = line.strip()
             if not stripped:
                 continue
-            if DECLARATION_RE.search(stripped) and len(declarations) < 5:
+            if DECLARATION_RE.search(stripped) and len(declarations) < 4:
                 declarations.append(stripped[:120])
 
             for identifier in IDENTIFIER_RE.findall(stripped):
@@ -291,7 +291,7 @@ def regions(root, file, span=REGION_SPAN):
 
         identifiers = [
             stat["value"]
-            for stat in sorted(identifier_stats.values(), key=identifier_rank)[:20]
+            for stat in sorted(identifier_stats.values(), key=identifier_rank)[:16]
         ]
 
         start_line = start0 + 1
