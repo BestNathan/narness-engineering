@@ -1,0 +1,140 @@
+name: System One Range Runtime v0
+
+on:
+  push:
+    branches:
+      - fix/code-locator-three-stage-requests
+    paths:
+      - ".github/workflows/system-one-range-runtime-v0.yml"
+  workflow_dispatch:
+    inputs:
+      subject_repository:
+        description: Subject repository
+        required: true
+        default: BestNathan/nession
+        type: string
+      subject_ref:
+        description: Subject ref
+        required: true
+        default: staging
+        type: string
+      query:
+        description: Localization task
+        required: true
+        default: Help me optimize the websocket connection implementation
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  SUBJECT_REPOSITORY: ${{ inputs.subject_repository || 'BestNathan/nession' }}
+  SUBJECT_REF: ${{ inputs.subject_ref || 'staging' }}
+  QUERY: ${{ inputs.query || 'Help me optimize the websocket connection implementation' }}
+
+jobs:
+  range-runtime:
+    runs-on: ubuntu-24.04
+    environment: typesafe
+    timeout-minutes: 120
+    env:
+      TYPESAFE_MODEL: ${{ vars.TYPESAFE_MODEL || 'jev-latest' }}
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          path: narness
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout subject
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SUBJECT_REPOSITORY }}
+          ref: ${{ env.SUBJECT_REF }}
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Record subject revision
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/range-runtime
+          git -C subject rev-parse HEAD > artifacts/range-runtime/subject-sha.txt
+
+      - name: Run range-only runtime
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
+          TYPESAFE_API_URL: ${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
+        run: |
+          set -euo pipefail
+          test -n "$TYPESAFE_API_KEY"
+          python3 narness/research/code-locator/src/system_one_range_runtime.py \
+            subject \
+            "$QUERY" \
+            --directory-threshold 0.50 \
+            --file-threshold 0.65 \
+            --window-lines 140 \
+            --parallel-threshold 0.65 \
+            --max-jumps-per-file 2 \
+            --max-epochs 64 \
+            --model "$TYPESAFE_MODEL" \
+            --trace-file artifacts/range-runtime/trace.jsonl \
+            --output-json artifacts/range-runtime/result.json
+
+      - name: Write summary
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root=Path("artifacts/range-runtime")
+          result=json.loads((root/"result.json").read_text())
+          state=result["state"]
+          metrics=result["metrics"]
+
+          lines=[
+              "# System One Range Runtime v0",
+              "",
+              f"- Termination: {metrics['termination']}",
+              f"- Epochs: {metrics['epochs']}",
+              f"- Phase-1 files: {metrics['files_selected']}",
+              f"- Reads: {metrics['reads_executed']}",
+              f"- Unique files read: {metrics['unique_files_read']}",
+              f"- Model calls: {metrics['model_calls']}",
+              f"- Input tokens: {metrics['input_tokens']}",
+              f"- Output tokens: {metrics['output_tokens']}",
+              f"- Elapsed ms: {metrics['elapsed_ms']}",
+              "",
+              "## Final coverage",
+              "",
+          ]
+          for item in state["files"]:
+              if item["read_count"]:
+                  lines.append(
+                      f"- \`{item['path']}\`: "
+                      f"reads={item['read_count']} coverage={item['coverage']}"
+                  )
+          lines += ["", "## Epoch selections", ""]
+          for row in state["action_history"]:
+              selected=", ".join(row["selected_ids"])
+              lines.append(
+                  f"- epoch {row['epoch']}: "
+                  f"{row['selection_mode']} -> {selected}"
+              )
+          (root/"summary.md").write_text("\n".join(lines)+"\n")
+          PY
+          cat artifacts/range-runtime/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-one-range-runtime-v0-${{ github.run_id }}
+          path: artifacts/range-runtime/
+          if-no-files-found: error
+          retention-days: 90
