@@ -295,35 +295,37 @@ class SystemOneFileDecider(SystemOneDecider):
                         "goal": goal,
                         "file": file_state["path"],
                         "question": (
-                            "Score confidence that the localization result for "
-                            "THIS FILE is already stable enough to finalize. "
-                            "StopFile does NOT mean the whole file has been "
-                            "read, and full-file coverage is NOT required. "
-                            "Raise StopFile when the current observations are "
-                            "already sufficient to decide whether this file "
-                            "matters to the goal and which observed ranges are "
-                            "worth returning, and additional unread ranges are "
-                            "unlikely to materially change that final judgment. "
-                            "If the observed content is clearly irrelevant, "
-                            "that is also a reason to stop early. Do not keep "
-                            "reading merely for exhaustiveness or confirmation. "
-                            "Keep StopFile low only when a plausible unread "
-                            "range could still materially change the result."
+                            "Score whether the expected marginal value of "
+                            "another ReadRange is low enough that you would "
+                            "FINALIZE THIS FILE NOW. StopFile is a sufficiency "
+                            "decision, NOT a coverage-completion decision. "
+                            "Full coverage and certainty about every unread "
+                            "range are NOT required. Raise StopFile when the "
+                            "current observations already give enough evidence "
+                            "to characterize this file's contribution to the "
+                            "goal, or enough evidence to conclude the file is "
+                            "not useful, and more reading would mainly add "
+                            "detail, confirmation, or redundant evidence. "
+                            "Do not lower StopFile merely because unread ranges "
+                            "still exist. Prefer continued reading only when "
+                            "there is a concrete unresolved question inside "
+                            "this file that another range could materially "
+                            "resolve or when the current evidence is too weak "
+                            "to produce a useful final localization result."
                         ),
                     },
                     "criteria": {
                         "true": (
-                            "The file-level localization result is stable: "
-                            "current evidence is enough to decide relevance "
-                            "and useful observed ranges, or enough to conclude "
-                            "the file is not useful. Further coverage is "
-                            "unlikely to change the final result."
+                            "Finalize now: current observations are sufficient "
+                            "for a useful file-level localization result and "
+                            "the expected marginal benefit of another read is "
+                            "low. Unread ranges may remain."
                         ),
                         "false": (
-                            "The file-level result is still materially "
-                            "uncertain. Additional unread ranges could plausibly "
-                            "change whether the file is relevant or which "
-                            "ranges should be returned."
+                            "Continue: there is a concrete material uncertainty "
+                            "about this file's relevance or useful regions that "
+                            "another read could resolve, or current evidence is "
+                            "still too weak to finalize."
                         ),
                     },
                 }
