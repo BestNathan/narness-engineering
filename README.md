@@ -133,6 +133,7 @@ Current topics:
 | [Engineering Surfaces](docs/topics/engineering-surfaces/README.md) | How one semantic model can route context before a change and derive constraints and evidence after a change. |
 | [Agent-Native Repository Architecture](docs/topics/agent-native-repository-architecture/README.md) | How repositories can optimize for agent-first consumability while preserving human auditability and one canonical source of truth. |
 | [Change-to-Evidence Planning](docs/topics/change-to-evidence-planning/README.md) | How a repository change becomes an explainable set of affected Surfaces, evidence obligations, evidence records, and proof gates. |
+| [System One Progressive Action Spaces](docs/topics/system-one-progressive-action-space/README.md) | How progressively discovered environment state can be compiled into a small grounded action frontier for fast System One decisions. |
 
 This structure is expected to grow as Narness research expands into areas such as progressive context disclosure, capability architecture, evidence architecture, quality gates, and agent observability.
 
@@ -223,6 +224,8 @@ bash plugins/narness/scripts/narness-rust-test-integration.sh examples/rust-work
 
 The example contains a root workspace contract, a task Skill with progressive disclosure, unit and integration evidence, an environment declaration, and a stable CI required gate.
 
+The repository also contains research prototypes that are intentionally outside the canonical Narness runtime scope, including the [System One Kubernetes command generator](examples/system-one-k8s/README.md) used by the progressive-action-space topic.
+
 ## Adopt Narness
 
 Start with [docs/adoption.md](docs/adoption.md):
@@ -254,6 +257,8 @@ Start with [docs/adoption.md](docs/adoption.md):
 - [Engineering Surfaces topic](docs/topics/engineering-surfaces/README.md)
 - [Agent-Native Repository Architecture topic](docs/topics/agent-native-repository-architecture/README.md)
 - [Change-to-Evidence Planning topic](docs/topics/change-to-evidence-planning/README.md)
+- [System One Progressive Action Spaces topic](docs/topics/system-one-progressive-action-space/README.md)
+- [System One Kubernetes command generator](examples/system-one-k8s/README.md)
 - [AI Workspace architecture](docs/architecture.md)
 - [Adoption guide](docs/adoption.md)
 - [Runnable Rust example](examples/rust-workspace/README.md)
