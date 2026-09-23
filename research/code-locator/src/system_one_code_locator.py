@@ -32,7 +32,7 @@ def model_projection(stage, payload):
     attack payloads to an upstream WAF, while identifiers and code structure
     remain visible to System One.
     """
-    if stage != "line":
+    if stage not in {"line", "region"}:
         return payload
     projected = dict(payload)
     patterns = [
@@ -47,6 +47,16 @@ def model_projection(stage, payload):
         for pattern, replacement in patterns:
             value = re.sub(pattern, replacement, value)
         projected[key] = value
+    declarations = projected.get("declarations")
+    if isinstance(declarations, list):
+        normalized = []
+        for value in declarations:
+            if not isinstance(value, str):
+                continue
+            for pattern, replacement in patterns:
+                value = re.sub(pattern, replacement, value)
+            normalized.append(value)
+        projected["declarations"] = normalized
     return projected
 
 class SystemOneScorer:
@@ -245,8 +255,8 @@ def regions(root, file, span=REGION_SPAN):
             continue
 
         declarations = []
-        identifiers = []
-        seen_identifiers = set()
+        identifier_stats = {}
+        identifier_order = 0
 
         for line in chunk:
             stripped = line.strip()
@@ -257,14 +267,32 @@ def regions(root, file, span=REGION_SPAN):
 
             for identifier in IDENTIFIER_RE.findall(stripped):
                 key = identifier.lower()
-                if key in IDENTIFIER_STOPWORDS or key in seen_identifiers:
+                if key in IDENTIFIER_STOPWORDS:
                     continue
-                seen_identifiers.add(key)
-                identifiers.append(identifier[:80])
-                if len(identifiers) >= 20:
-                    break
-            if len(identifiers) >= 20 and len(declarations) >= 5:
-                break
+                stat = identifier_stats.get(key)
+                if stat is None:
+                    stat = {
+                        "value": identifier[:80],
+                        "count": 0,
+                        "order": identifier_order,
+                    }
+                    identifier_stats[key] = stat
+                    identifier_order += 1
+                stat["count"] += 1
+
+        def identifier_rank(stat):
+            value = stat["value"]
+            semantic_shape = int(
+                any(ch.isupper() for ch in value[1:])
+                or "_" in value
+                or len(value) >= 8
+            )
+            return (-stat["count"], -semantic_shape, stat["order"])
+
+        identifiers = [
+            stat["value"]
+            for stat in sorted(identifier_stats.values(), key=identifier_rank)[:20]
+        ]
 
         start_line = start0 + 1
         end_line = end0
