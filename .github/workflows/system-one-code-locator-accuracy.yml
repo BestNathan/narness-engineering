@@ -1,4 +1,4 @@
-name: System One Code Locator Accuracy Reference
+name: System One / Claude Code Cross-Trace Record
 
 on:
   workflow_dispatch:
@@ -83,7 +83,20 @@ jobs:
           set -euo pipefail
           test -n "$TYPESAFE_API_KEY"
           mkdir -p artifacts/system-one
-          python3 narness/research/code-locator/src/system_one_code_locator.py             subject             "$QUERY"             --directory-threshold 0.50             --file-threshold 0.65             --phase1-max-files 16             --reader-file-batch-size 4             --reader-window-lines 140             --reader-soft-rounds 4             --reader-hard-rounds 8             --reader-action-threshold 0.40             --observation-threshold 0.65             --model "$TYPESAFE_MODEL"             --trace-file artifacts/system-one/trace.jsonl             --output-json artifacts/system-one/result.json
+          python3 narness/research/code-locator/src/system_one_code_locator.py \
+            subject \
+            "$QUERY" \
+            --directory-threshold 0.50 \
+            --file-threshold 0.65 \
+            --reader-file-activation-threshold 0.65 \
+            --reader-window-lines 140 \
+            --reader-soft-reads 4 \
+            --reader-hard-reads 8 \
+            --reader-action-threshold 0.40 \
+            --observation-threshold 0.65 \
+            --model "$TYPESAFE_MODEL" \
+            --trace-file artifacts/system-one/trace.jsonl \
+            --output-json artifacts/system-one/result.json
           python3 - <<'PY'
           import json, os
           from pathlib import Path
@@ -119,6 +132,13 @@ jobs:
       CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
       ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
     steps:
+      - name: Checkout Narness harness
+        uses: actions/checkout@v4
+        with:
+          path: narness
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Checkout exact subject revision
         uses: actions/checkout@v4
         with:
@@ -211,70 +231,44 @@ jobs:
           Path("artifacts/claude-reference/prompt.txt").write_text(prompt)
           PY
 
-      - name: Run Claude Code reference locator
+      - name: Run Claude Code reference locator with raw execution trace
         working-directory: subject
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
-          claude -p             --output-format json             --model "$CLAUDE_MODEL"             --effort high             --max-turns 100             --permission-mode dontAsk             --no-session-persistence             --setting-sources ''             --strict-mcp-config             --mcp-config '{"mcpServers":{}}'             --disable-slash-commands             --tools 'Bash,Read,Glob,Grep'             --allowedTools 'Bash(*)' 'Read' 'Glob' 'Grep'             --disallowedTools 'Edit' 'Write' 'Agent' 'Task' 'WebFetch' 'WebSearch' 'EndConversation' 'mcp__*'             --settings '{"disableAllHooks":true}'             < ../artifacts/claude-reference/prompt.txt             > ../artifacts/claude-reference/envelope.json
+          claude -p \
+            --output-format stream-json \
+            --verbose \
+            --model "$CLAUDE_MODEL" \
+            --effort high \
+            --max-turns 100 \
+            --permission-mode dontAsk \
+            --no-session-persistence \
+            --setting-sources '' \
+            --strict-mcp-config \
+            --mcp-config '{"mcpServers":{}}' \
+            --disable-slash-commands \
+            --tools 'Bash,Read,Glob,Grep' \
+            --allowedTools 'Bash(*)' 'Read' 'Glob' 'Grep' \
+            --disallowedTools 'Edit' 'Write' 'Agent' 'Task' 'WebFetch' 'WebSearch' 'EndConversation' 'mcp__*' \
+            --settings '{"disableAllHooks":true}' \
+            < ../artifacts/claude-reference/prompt.txt \
+            > ../artifacts/claude-reference/claude.raw.jsonl
 
-      - name: Extract and validate Claude reference
+      - name: Normalize Claude execution path and final record
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import json, os, re
-          from pathlib import Path
-
-          root=Path("artifacts/claude-reference")
-          envelope=json.loads((root/"envelope.json").read_text())
-          raw=envelope.get("result")
-          if not isinstance(raw, str):
-              raise SystemExit("Claude JSON envelope omitted string result")
-
-          value=raw.strip()
-          if value.startswith("~~~") or value.startswith("```"):
-              value=re.sub(r"^(?:~~~|```)(?:json)?\s*", "", value)
-              value=re.sub(r"\s*(?:~~~|```)$", "", value)
-
-          reference=json.loads(value)
-          if not isinstance(reference.get("relevant_files"), list):
-              raise SystemExit("Claude reference omitted relevant_files")
-
-          seen=set()
-          for item in reference["relevant_files"]:
-              path=item.get("path")
-              if not isinstance(path, str) or path.startswith("/") or path.startswith("../"):
-                  raise SystemExit(f"invalid reference path: {path!r}")
-              if path in seen:
-                  raise SystemExit(f"duplicate reference path: {path}")
-              seen.add(path)
-              if item.get("relevance") not in {"primary","supporting","context"}:
-                  raise SystemExit(f"invalid relevance for {path}")
-              if item["relevance"] in {"primary","supporting"} and not item.get("evidence"):
-                  raise SystemExit(f"missing evidence for {path}")
-              if not Path("subject", path).is_file():
-                  raise SystemExit(f"reference file does not exist: {path}")
-
-          (root/"reference.json").write_text(
-              json.dumps(reference, indent=2, ensure_ascii=False)+"\n"
-          )
-          usage={
-              "model": os.environ["CLAUDE_MODEL"],
-              "claude_version": envelope.get("version"),
-              "session_id": envelope.get("session_id"),
-              "duration_ms": envelope.get("duration_ms"),
-              "duration_api_ms": envelope.get("duration_api_ms"),
-              "num_turns": envelope.get("num_turns"),
-              "usage": envelope.get("usage"),
-              "model_usage": envelope.get("modelUsage"),
-              "subject_sha": "${{ needs.resolve-subject.outputs.subject_sha }}",
-              "query": os.environ["QUERY"],
-          }
-          (root/"manifest.json").write_text(
-              json.dumps(usage, indent=2, ensure_ascii=False)+"\n"
-          )
-          PY
+          python3 narness/research/code-locator/src/claude_reference_trace.py \
+            --raw-jsonl artifacts/claude-reference/claude.raw.jsonl \
+            --subject-root subject \
+            --query "$QUERY" \
+            --model "$CLAUDE_MODEL" \
+            --subject-sha "${{ needs.resolve-subject.outputs.subject_sha }}" \
+            --output-reference artifacts/claude-reference/reference.json \
+            --output-trace artifacts/claude-reference/execution-path.json \
+            --output-manifest artifacts/claude-reference/manifest.json \
+            --output-summary artifacts/claude-reference/execution-summary.md
 
       - name: Upload Claude reference evidence
         uses: actions/upload-artifact@v4
@@ -285,7 +279,7 @@ jobs:
           retention-days: 90
 
   compare:
-    name: Compare localization accuracy
+    name: Compare localization records
     needs:
       - resolve-subject
       - system-one
@@ -319,6 +313,10 @@ jobs:
           mkdir -p artifacts/comparison
           python3 research/code-locator/src/compare_claude_reference.py             --system-one artifacts/system-one/result.json             --claude artifacts/claude-reference/reference.json             --output-json artifacts/comparison/comparison.json             --output-markdown artifacts/comparison/summary.md
           cat artifacts/comparison/summary.md >> "$GITHUB_STEP_SUMMARY"
+          if test -f artifacts/claude-reference/execution-summary.md; then
+            printf '\n' >> "$GITHUB_STEP_SUMMARY"
+            cat artifacts/claude-reference/execution-summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
 
           python3 - <<'PY'
           import json
