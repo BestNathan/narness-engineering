@@ -33,12 +33,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: system-one-k8s-\${{ github.workflow }}-\${{ github.ref }}
+  group: system-one-k8s-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  EXPERIMENT_GOAL: \${{ inputs.goal || 'Show me the Kubernetes logs for nession in staging.' }}
-  TYPESAFE_MODEL: \${{ inputs.model || 'jev-latest' }}
+  EXPERIMENT_GOAL: ${{ inputs.goal || 'Show me the Kubernetes logs for nession in staging.' }}
+  TYPESAFE_MODEL: ${{ inputs.model || 'jev-latest' }}
   FIXTURE: examples/system-one-k8s/fixtures/cluster.json
 
 jobs:
@@ -91,10 +91,10 @@ jobs:
 
       - name: Save run metadata
         env:
-          RUN_ID: \${{ github.run_id }}
-          RUN_ATTEMPT: \${{ github.run_attempt }}
-          COMMIT_SHA: \${{ github.sha }}
-          REF_NAME: \${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          COMMIT_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           python3 - <<'PY'
           import json
@@ -127,14 +127,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: system-one-k8s-offline-\${{ github.run_id }}-\${{ github.run_attempt }}
+          name: system-one-k8s-offline-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/system-one-k8s/offline/
           if-no-files-found: error
           retention-days: 30
 
   typesafe:
     name: Real TypeSafe System One experiment
-    if: \${{ github.event_name == 'workflow_dispatch' && inputs.run_typesafe }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_typesafe }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -147,7 +147,7 @@ jobs:
 
       - name: Require TypeSafe API secret
         env:
-          TYPESAFE_API_KEY: \${{ secrets.TYPESAFE_API_KEY }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: |
           if test -z "$TYPESAFE_API_KEY"; then
             echo "Repository secret TYPESAFE_API_KEY is required for run_typesafe=true." >&2
@@ -159,7 +159,7 @@ jobs:
 
       - name: Run real System One experiment
         env:
-          TYPESAFE_API_KEY: \${{ secrets.TYPESAFE_API_KEY }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         shell: bash
         run: |
           set -o pipefail
@@ -184,10 +184,10 @@ jobs:
 
       - name: Save run metadata
         env:
-          RUN_ID: \${{ github.run_id }}
-          RUN_ATTEMPT: \${{ github.run_attempt }}
-          COMMIT_SHA: \${{ github.sha }}
-          REF_NAME: \${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          COMMIT_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           python3 - <<'PY'
           import json
@@ -220,7 +220,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: system-one-k8s-typesafe-\${{ github.run_id }}-\${{ github.run_attempt }}
+          name: system-one-k8s-typesafe-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/system-one-k8s/typesafe/
           if-no-files-found: warn
           retention-days: 30
