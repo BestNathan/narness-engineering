@@ -295,22 +295,35 @@ class SystemOneFileDecider(SystemOneDecider):
                         "goal": goal,
                         "file": file_state["path"],
                         "question": (
-                            "Score confidence that exploration of THIS FILE "
-                            "should stop now. Increase the score when current "
-                            "observations are sufficient for judging this "
-                            "file's relevance to the goal and further reads "
-                            "are unlikely to materially improve that judgment. "
-                            "If useful unexplored ranges may remain, keep the "
-                            "score low."
+                            "Score confidence that the localization result for "
+                            "THIS FILE is already stable enough to finalize. "
+                            "StopFile does NOT mean the whole file has been "
+                            "read, and full-file coverage is NOT required. "
+                            "Raise StopFile when the current observations are "
+                            "already sufficient to decide whether this file "
+                            "matters to the goal and which observed ranges are "
+                            "worth returning, and additional unread ranges are "
+                            "unlikely to materially change that final judgment. "
+                            "If the observed content is clearly irrelevant, "
+                            "that is also a reason to stop early. Do not keep "
+                            "reading merely for exhaustiveness or confirmation. "
+                            "Keep StopFile low only when a plausible unread "
+                            "range could still materially change the result."
                         ),
                     },
                     "criteria": {
                         "true": (
-                            "No further exploration of this file is necessary."
+                            "The file-level localization result is stable: "
+                            "current evidence is enough to decide relevance "
+                            "and useful observed ranges, or enough to conclude "
+                            "the file is not useful. Further coverage is "
+                            "unlikely to change the final result."
                         ),
                         "false": (
-                            "More ranges in this file may still materially "
-                            "improve localization for the goal."
+                            "The file-level result is still materially "
+                            "uncertain. Additional unread ranges could plausibly "
+                            "change whether the file is relevant or which "
+                            "ranges should be returned."
                         ),
                     },
                 }
