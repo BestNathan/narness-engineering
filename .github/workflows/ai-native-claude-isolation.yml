@@ -30,7 +30,7 @@ jobs:
       - name: Verify production isolation without credentials or model requests
         run: |
           set -euo pipefail
-          python3 scripts/narness-selftest-claude-isolation.py | tee isolation-check.log
+          python3 scripts/narness-selftest-claude-isolation.py 2>&1 | tee isolation-check.log
       - name: Preserve isolation evidence
         if: always()
         uses: actions/upload-artifact@v4

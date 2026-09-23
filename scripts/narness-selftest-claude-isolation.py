@@ -107,26 +107,26 @@ print('filesystem, PID view, symlink, environment and private state: PASS')
             pass
 
     gateway_probe = r'''
-+import http.client, json, os
-+assert os.environ['ANTHROPIC_API_KEY'] == 'sandbox-placeholder'
-+assert os.environ['ANTHROPIC_BASE_URL'] == 'http://127.0.0.1:18080'
-+def request(method, path, model, expected):
-+    conn = http.client.HTTPConnection('127.0.0.1', 18080, timeout=10)
-+    conn.request(method, path, json.dumps({'model': model}),
-+                 {'Host': 'github.com', 'Authorization': 'Bearer attacker'})
-+    res = conn.getresponse()
-+    assert res.status == expected, (path, res.status)
-+    data = res.read()
-+    conn.close()
-+    return data
-+assert b'"ok":true' in request('POST', '/v1/messages?beta=true', 'frozen-model', 200)
-+request('POST', '/v1/messages', 'other-model', 403)
-+request('POST', '/../../gold.json', 'frozen-model', 403)
-+request('POST', 'https://github.com/gold.json', 'frozen-model', 403)
-+request('GET', '/v1/messages', 'frozen-model', 501)
-+request('CONNECT', 'github.com:443', 'frozen-model', 501)
-+print('fixed-provider gateway, model filter, streaming and credential isolation: PASS')
-+'''.replace('\n+', '\n')
+import http.client, json, os
+assert os.environ['ANTHROPIC_API_KEY'] == 'sandbox-placeholder'
+assert os.environ['ANTHROPIC_BASE_URL'] == 'http://127.0.0.1:18080'
+def request(method, path, model, expected):
+    conn = http.client.HTTPConnection('127.0.0.1', 18080, timeout=10)
+    conn.request(method, path, json.dumps({'model': model}),
+                 {'Host': 'github.com', 'Authorization': 'Bearer attacker'})
+    res = conn.getresponse()
+    assert res.status == expected, (path, res.status)
+    data = res.read()
+    conn.close()
+    return data
+assert b'"ok":true' in request('POST', '/v1/messages?beta=true', 'frozen-model', 200)
+request('POST', '/v1/messages', 'other-model', 403)
+request('POST', '/../../gold.json', 'frozen-model', 403)
+request('POST', 'https://github.com/gold.json', 'frozen-model', 403)
+request('GET', '/v1/messages', 'frozen-model', 501)
+request('CONNECT', 'github.com:443', 'frozen-model', 501)
+print('fixed-provider gateway, model filter, streaming and credential isolation: PASS')
+'''
     with patch.object(adapter.http.client, 'HTTPSConnection', Connection):
         with adapter.model_gateway('https://provider.example/anthropic', 'real-secret-canary', 'frozen-model') as gateway:
             p = adapter.sandbox_launch(subject, ['/usr/bin/python3', '-c', gateway_probe], {},

@@ -316,7 +316,7 @@ def main() -> int:
             "harness_environment_scrubbed",
             "codex_version",
             "claude_version",
-        "bubblewrap_version",
+            "bubblewrap_version",
             "container_image_id",
             "proxy_image_id",
             "upstream_base_url",

@@ -66,7 +66,7 @@ def sandbox_command(subject, command, environment, gateway_socket=None):
         raise RuntimeError('Sandbox requires a standalone Git checkout')
     if (subject / '.git/objects/info/alternates').exists():
         raise RuntimeError('Shared Git object databases are forbidden')
-    argv = [bwrap, '--unshare-all', '--die-with-parent',
+    argv = [bwrap, '--unshare-all', '--unshare-user', '--die-with-parent',
             '--new-session', '--cap-drop', 'ALL', '--disable-userns']
     # Do not mount /, /home, /tmp, /run, /opt or the controller checkout.
     for path in ('/usr', '/bin', '/sbin', '/lib', '/lib64'):
