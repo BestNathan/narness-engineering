@@ -823,6 +823,20 @@ def run_file_runtime(
             actions=actions,
         )
 
+        read_actions = [
+            item for item in actions
+            if item["kind"] == "read_range"
+        ]
+        if not read_actions:
+            state["termination"] = "action_space_exhausted"
+            trace.emit(
+                "file_runtime_stopped",
+                path=state["path"],
+                epoch=epoch,
+                reason="action_space_exhausted",
+            )
+            break
+
         stop_decision, scored, current = (
             decider.decide_file_actions(
                 goal,
