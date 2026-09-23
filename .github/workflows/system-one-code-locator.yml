@@ -59,10 +59,15 @@ on:
         required: true
         default: "140"
         type: string
-      reader_max_rounds:
-        description: Maximum dynamic read rounds per file batch
+      reader_soft_rounds:
+        description: Soft read-round budget; high-relevance evidence can extend beyond it
         required: true
         default: "4"
+        type: string
+      reader_hard_rounds:
+        description: Absolute maximum read rounds per file batch
+        required: true
+        default: "8"
         type: string
       reader_action_threshold:
         description: Minimum chosen Choice probability required to execute a read
@@ -99,7 +104,8 @@ env:
   PHASE1_MAX_FILES: ${{ inputs.phase1_max_files || '16' }}
   READER_FILE_BATCH_SIZE: ${{ inputs.reader_file_batch_size || '4' }}
   READER_WINDOW_LINES: ${{ inputs.reader_window_lines || '140' }}
-  READER_MAX_ROUNDS: ${{ inputs.reader_max_rounds || '4' }}
+  READER_SOFT_ROUNDS: ${{ inputs.reader_soft_rounds || '4' }}
+  READER_HARD_ROUNDS: ${{ inputs.reader_hard_rounds || '8' }}
   READER_ACTION_THRESHOLD: ${{ inputs.reader_action_threshold || '0.40' }}
   OBSERVATION_THRESHOLD: ${{ inputs.observation_threshold || '0.65' }}
   TYPESAFE_MODEL: ${{ inputs.model || vars.TYPESAFE_MODEL || 'jev-latest' }}
@@ -139,7 +145,8 @@ jobs:
             --phase1-max-files "$PHASE1_MAX_FILES" \
             --reader-file-batch-size "$READER_FILE_BATCH_SIZE" \
             --reader-window-lines "$READER_WINDOW_LINES" \
-            --reader-max-rounds "$READER_MAX_ROUNDS" \
+            --reader-soft-rounds "$READER_SOFT_ROUNDS" \
+            --reader-hard-rounds "$READER_HARD_ROUNDS" \
             --reader-action-threshold "$READER_ACTION_THRESHOLD" \
             --observation-threshold "$OBSERVATION_THRESHOLD" \
             --trace-file artifacts/system-one-code-locator/offline/trace.jsonl \
@@ -172,7 +179,8 @@ jobs:
                   "phase1_max_files": result.get("metrics", {}).get("phase1_max_files"),
                   "file_batch_size": result.get("metrics", {}).get("reader_file_batch_size"),
                   "window_lines": result.get("metrics", {}).get("reader_window_lines"),
-                  "max_rounds": result.get("metrics", {}).get("reader_max_rounds"),
+                  "soft_rounds": result.get("metrics", {}).get("reader_soft_rounds"),
+                  "hard_rounds": result.get("metrics", {}).get("reader_hard_rounds"),
               },
               "github_run_id": os.environ["RUN_ID"],
               "github_run_attempt": os.environ["RUN_ATTEMPT"],
@@ -288,7 +296,8 @@ jobs:
                   "phase1_max_files": int(os.environ["PHASE1_MAX_FILES"]),
                   "file_batch_size": int(os.environ["READER_FILE_BATCH_SIZE"]),
                   "window_lines": int(os.environ["READER_WINDOW_LINES"]),
-                  "max_rounds": int(os.environ["READER_MAX_ROUNDS"]),
+                  "soft_rounds": int(os.environ["READER_SOFT_ROUNDS"]),
+                  "hard_rounds": int(os.environ["READER_HARD_ROUNDS"]),
               },
               "harness": {
                   "repository": os.environ.get("GITHUB_REPOSITORY"),
@@ -324,7 +333,8 @@ jobs:
             --phase1-max-files "$PHASE1_MAX_FILES" \
             --reader-file-batch-size "$READER_FILE_BATCH_SIZE" \
             --reader-window-lines "$READER_WINDOW_LINES" \
-            --reader-max-rounds "$READER_MAX_ROUNDS" \
+            --reader-soft-rounds "$READER_SOFT_ROUNDS" \
+            --reader-hard-rounds "$READER_HARD_ROUNDS" \
             --reader-action-threshold "$READER_ACTION_THRESHOLD" \
             --observation-threshold "$OBSERVATION_THRESHOLD" \
             --model "$TYPESAFE_MODEL" \
