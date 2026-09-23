@@ -94,7 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y bubblewrap socat ripgrep libseccomp-dev
+          sudo apt-get install -y bubblewrap socat ripgrep libseccomp-dev debianutils
           sudo apparmor_parser -r execution/research/claude-runtime/bwrap.apparmor
           npm install --global --no-fund --no-audit \
             @anthropic-ai/claude-code@2.1.278 \
