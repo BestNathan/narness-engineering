@@ -108,7 +108,7 @@ class EvidenceGuidedDecider(SystemOneFileDecider):
                         "observations already present? Material evidence is new "
                         "information that could materially change, complete, or "
                         "ground the answer. Merely topical code, wrappers, logging, "
-                        "debug/status plumbing, or another example of a fact "
+                        "debug/status plumbing, or REDUNDANT repetition of a fact "
                         "already established should score low. Prefer evidence "
                         f"about {EVIDENCE_TAXONOMY}."
                     ),
