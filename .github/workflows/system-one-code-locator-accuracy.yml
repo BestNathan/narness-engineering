@@ -83,17 +83,16 @@ jobs:
           set -euo pipefail
           test -n "$TYPESAFE_API_KEY"
           mkdir -p artifacts/system-one
-          python3 narness/research/code-locator/src/system_one_code_locator.py \
+          python3 narness/research/code-locator/src/system_one_range_runtime.py \
             subject \
             "$QUERY" \
             --directory-threshold 0.50 \
             --file-threshold 0.65 \
-            --reader-file-activation-threshold 0.65 \
-            --reader-window-lines 140 \
-            --reader-soft-reads 4 \
-            --reader-hard-reads 8 \
-            --reader-action-threshold 0.40 \
-            --observation-threshold 0.65 \
+            --window-lines 140 \
+            --parallel-threshold 0.65 \
+            --evidence-threshold 0.65 \
+            --max-jumps 2 \
+            --max-file-epochs 32 \
             --model "$TYPESAFE_MODEL" \
             --trace-file artifacts/system-one/trace.jsonl \
             --output-json artifacts/system-one/result.json \
