@@ -376,6 +376,132 @@ class SystemOneFileDecider(SystemOneDecider):
         scored.sort(key=lambda item: (-item["score"], item["id"]))
         return scored, usage
 
+    def decide_file_actions(self, goal, file_state, actions):
+        """One request: Stop/Continue Choice + ReadRange Noul scores."""
+        stop_action = next(
+            item for item in actions
+            if item["kind"] == "stop_file"
+        )
+        reads = [
+            item for item in actions
+            if item["kind"] == "read_range"
+        ]
+
+        questions = {
+            "control": {
+                "type": "choice",
+                "instructions": {
+                    "goal": goal,
+                    "file": file_state["path"],
+                    "question": (
+                        "Choose whether to FINALIZE THIS FILE NOW or CONTINUE "
+                        "EXPLORING IT. Stop does not require full-file coverage. "
+                        "Choose stop when current observations already provide "
+                        "enough evidence for a useful file-level localization "
+                        "result, including enough evidence to conclude the "
+                        "file is not useful, and more reading would mainly add "
+                        "redundant detail or confirmation. Choose continue only "
+                        "when another range has meaningful expected information "
+                        "gain that could materially improve the final result."
+                    ),
+                },
+                "criteria": {
+                    "stop": {
+                        "action": "StopFile",
+                        "meaning": (
+                            "Finalize this file now from current observations; "
+                            "full coverage is not required."
+                        ),
+                    },
+                    "continue": {
+                        "action": "ContinueFile",
+                        "meaning": (
+                            "Keep exploring because another range can "
+                            "materially improve the localization result."
+                        ),
+                    },
+                },
+            },
+        }
+
+        for index, action in enumerate(reads):
+            questions[f"read_{index}"] = {
+                "type": "noul",
+                "instructions": {
+                    "goal": goal,
+                    "action": {
+                        "path": action["path"],
+                        "start_line": action["start_line"],
+                        "end_line": action["end_line"],
+                        "navigation": action["navigation"],
+                        "reason": action["reason"],
+                        "source": action.get("source"),
+                    },
+                    "question": (
+                        "Score how useful executing this exact ReadRange "
+                        "would be as the next exploration action for "
+                        "localizing content in this file relevant to the goal."
+                    ),
+                },
+                "criteria": {
+                    "true": (
+                        "This read is likely to add material information."
+                    ),
+                    "false": (
+                        "This read is likely redundant or low-value."
+                    ),
+                },
+            }
+
+        response, usage = self.send(
+            "file_range_control_and_actions",
+            decision_view(goal, file_state),
+            questions,
+        )
+        answers = response.get("answers", {})
+        control = answers.get("control", {})
+        if control.get("type") != "choice":
+            raise RuntimeError(
+                f"unexpected file-control answer: {control!r}"
+            )
+        choice = control.get("choice")
+        if choice not in {"stop", "continue"}:
+            raise RuntimeError(
+                f"unexpected file-control choice: {choice!r}"
+            )
+        probabilities = control.get("probabilities", {})
+
+        scored = []
+        for index, action in enumerate(reads):
+            answer = answers.get(f"read_{index}", {})
+            if answer.get("type") != "noul":
+                raise RuntimeError(
+                    f"unexpected file-read answer: {answer!r}"
+                )
+            scored.append({
+                **action,
+                "score": float(answer["noul"]),
+            })
+        scored.sort(key=lambda item: (-item["score"], item["id"]))
+
+        stop_decision = {
+            **stop_action,
+            "choice": choice,
+            "probability": float(
+                probabilities.get(choice, 0.0) or 0.0
+            ),
+            "stop_probability": float(
+                probabilities.get("stop", 0.0) or 0.0
+            ),
+            "continue_probability": float(
+                probabilities.get("continue", 0.0) or 0.0
+            ),
+            "confidence": float(
+                control.get("confidence", 0.0) or 0.0
+            ),
+        }
+        return stop_decision, scored, usage
+
     def score_file_evidence(
         self,
         goal,
@@ -491,11 +617,73 @@ class OfflineFileDecider:
         scored.sort(key=lambda item: (-item["score"], item["id"]))
         return scored, empty_usage()
 
+    def decide_file_actions(self, goal, file_state, actions):
+        stop = next(
+            item for item in actions
+            if item["kind"] == "stop_file"
+        )
+        reads = [
+            item for item in actions
+            if item["kind"] == "read_range"
+        ]
+        should_stop = file_state["read_count"] >= 2
+        decision = {
+            **stop,
+            "choice": "stop" if should_stop else "continue",
+            "probability": 0.9,
+            "stop_probability": 0.9 if should_stop else 0.1,
+            "continue_probability": 0.1 if should_stop else 0.9,
+            "confidence": 0.9,
+        }
+        scored = []
+        for action in reads:
+            score = (
+                0.8
+                if action["navigation"] in {
+                    "seed_head",
+                    "expand_after",
+                }
+                else 0.4
+            )
+            scored.append({**action, "score": score})
+        scored.sort(key=lambda item: (-item["score"], item["id"]))
+        return decision, scored, empty_usage()
+
     def score_file_evidence(self, goal, file_state):
         return [
             {**item, "relevance": 0.8}
             for item in file_state["observations"]
         ], empty_usage()
+
+
+def select_file_actions_with_control(
+    stop_decision,
+    scored_reads,
+    threshold,
+):
+    if (
+        stop_decision["choice"] == "stop"
+        and stop_decision["stop_probability"] >= threshold
+    ):
+        return [stop_decision], "model_stop"
+
+    if not scored_reads:
+        return [stop_decision], "action_space_exhausted"
+
+    eligible = [
+        item for item in scored_reads
+        if item["score"] >= threshold
+    ]
+    if eligible:
+        selected = []
+        for item in eligible:
+            if any(ranges_overlap(item, chosen) for chosen in selected):
+                continue
+            selected.append(item)
+        if selected:
+            return selected, "parallel_above_threshold"
+
+    return [scored_reads[0]], "fallback_top1"
 
 
 def ranges_overlap(left, right):
@@ -638,19 +826,23 @@ def run_file_runtime(
             actions=actions,
         )
 
-        scored, current = decider.score_file_actions(
-            goal,
-            state,
-            actions,
+        stop_decision, scored, current = (
+            decider.decide_file_actions(
+                goal,
+                state,
+                actions,
+            )
         )
         merge_usage(usage, current)
-        selected, mode = select_file_actions(
+        selected, mode = select_file_actions_with_control(
+            stop_decision,
             scored,
             parallel_threshold,
         )
 
         state["action_history"].append({
             "epoch": epoch,
+            "stop_decision": stop_decision,
             "scores": scored,
             "selected_ids": [item["id"] for item in selected],
             "selection_mode": mode,
@@ -660,6 +852,7 @@ def run_file_runtime(
             path=state["path"],
             epoch=epoch,
             threshold=parallel_threshold,
+            stop_decision=stop_decision,
             scores=scored,
             selected_ids=[item["id"] for item in selected],
             selection_mode=mode,
@@ -672,7 +865,9 @@ def run_file_runtime(
                 path=state["path"],
                 epoch=epoch,
                 reason=mode,
-                stop_score=selected[0]["score"],
+                stop_probability=selected[0].get(
+                    "stop_probability"
+                ),
             )
             break
 
