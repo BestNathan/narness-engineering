@@ -196,3 +196,38 @@ missed regions in both directions
 Neither side is treated as ground truth.
 
 Absolute accuracy requires an independently reviewed gold set.
+
+
+## Real artifact validation
+
+Run `35844251415` validated the contract end to end on the same Nession websocket task and revision.
+
+System One canonical result:
+
+~~~text
+producer       system_one / jev-latest
+valuable files 3
+evidence       8 regions
+~~~
+
+Claude Code canonical result:
+
+~~~text
+producer       claude_code / deepseek-flash
+valuable files 18
+evidence       61 regions
+overall confidence 0.79 (model self-assessment)
+~~~
+
+The generic comparator consumed only these two canonical files and produced a symmetric comparison:
+
+~~~text
+shared files  3
+union files   18
+Jaccard       0.1667
+
+System One evidence regions overlapped by Claude evidence: 5/8
+Claude evidence regions overlapped by System One evidence: 7/61
+~~~
+
+These numbers describe two different localization outputs. They are not accuracy scores because neither producer is designated as truth.
