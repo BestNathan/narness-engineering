@@ -48,13 +48,25 @@ repository
   -> merge adjacent relevant lines into snippets
 ```
 
-The model never chooses filesystem tools, constructs paths, or controls traversal. The harness owns state expansion, thresholds, IO, provenance, batching, and result assembly.
+The model never chooses filesystem tools, constructs paths, or controls traversal. The harness owns state expansion, thresholds, IO, provenance, stage-level fan-out, and result assembly.
 
 ## Why Noul instead of Choice
 
 Directory, file, and line relevance are independent judgments: several candidates may all be relevant. The TypeSafe System One API's `noul` primitive returns a yes-probability for each question, so the runtime can retain every candidate whose score crosses the stage threshold.
 
 `choice` would instead normalize probability across candidates and force one winner, which is appropriate for the Kubernetes action-frontier demo but not for multi-hit code localization.
+
+## Request topology
+
+The three semantic stages are also the three System One round trips:
+
+```text
+1. directory candidates -> one System One request
+2. file candidates      -> one System One request
+3. line candidates      -> one System One request
+```
+
+A stage can contain many independent Noul questions, but the harness does not split them into network batches. TypeSafe evaluates those questions together and returns one answer per candidate. This keeps model-call count tied to semantic depth rather than repository size. Retries after transient transport/API failures are the only reason a successful stage may perform more than one HTTP attempt.
 
 ## State progression
 
@@ -175,7 +187,7 @@ python3 -m unittest discover \
   -v
 ```
 
-The tests verify that the deterministic fixture finds the websocket client and that real API requests use independent Noul questions.
+The tests verify that the deterministic fixture finds the websocket client, that each stage fans out independent Noul questions in one request, and that a normal run makes exactly three model calls: directory, file, and line.
 
 ## Dedicated research workflow
 
