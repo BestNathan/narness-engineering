@@ -190,35 +190,37 @@ jobs:
           {query}
 
           Perform an independent System 2 code-localization run for this task.
-          Your result will be recorded alongside another system's result; do not try to match an external answer.
+          Your only job in this session is to decide the final relevant files
+          and the exact source ranges that matter.
 
           Investigate this repository using Read, Glob, Grep, and read-only Bash commands.
           Do not modify any file. Do not use git history, GitHub issues, the network, or external context.
           Search and read enough source code to identify the files and exact code regions that materially matter to the task.
 
-          Your final answer MUST be only valid JSON, with no Markdown fences, in this canonical schema:
+          IMPORTANT:
+          - Do NOT calculate, estimate, label, or output confidence in this session.
+          - Do NOT include any JSON key named "confidence".
+          - This session decides localization only. Confidence will be analyzed later by a completely fresh session.
+
+          Your final answer MUST be only valid JSON, with no Markdown fences, in this schema:
           {{
             "schema_version": 1,
-            "kind": "code-localization-result",
+            "kind": "code-localization-draft",
             "task": {query!r},
             "producer": {{
               "system": "claude_code",
-              "model": "{os.environ['CLAUDE_MODEL']}",
-              "confidence_semantics": "model_self_assessment"
+              "model": "{os.environ['CLAUDE_MODEL']}"
             }},
             "summary": "short description of the implementation areas that matter",
-            "confidence": 0.0,
             "files": [
               {{
                 "path": "repository-relative/path",
                 "role": "primary|supporting|context",
-                "confidence": 0.0,
                 "reason": "why this file is valuable to the task",
                 "evidence": [
                   {{
                     "start_line": 1,
                     "end_line": 20,
-                    "confidence": 0.0,
                     "reason": "what valuable implementation is in this range"
                   }}
                 ]
@@ -226,11 +228,9 @@ jobs:
             ]
           }}
 
-          Confidence values must be numbers between 0 and 1. They are your own self-assessment, not calibrated probabilities.
-
           Definitions:
-          - primary: directly implements websocket connection lifecycle, connection establishment, reconnect/backoff, websocket server/client behavior, or the core transport path relevant to the task.
-          - supporting: a direct dependency/caller/state component needed to understand or optimize that primary behavior.
+          - primary: directly implements the requested behavior or its core lifecycle.
+          - supporting: a direct dependency/caller/state component needed to understand the primary behavior.
           - context: useful surrounding wiring, but not core implementation.
 
           Requirements:
@@ -238,13 +238,13 @@ jobs:
           - Include only repository-relative file paths.
           - Include files only after inspecting their contents.
           - Ground each primary/supporting file with at least one concrete line range.
-          - Prefer precision over listing every file whose name mentions websocket.
+          - Prefer precision over listing every file whose name contains related words.
           - Do not propose edits; this run is localization only.
           """
-          Path("artifacts/claude-reference/prompt.txt").write_text(prompt)
+          Path("artifacts/claude-reference/localization-prompt.txt").write_text(prompt)
           PY
 
-      - name: Run Claude Code reference locator with raw execution trace
+      - name: Run Claude localization session with raw execution trace
         working-directory: subject
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -266,22 +266,127 @@ jobs:
             --allowedTools 'Bash(*)' 'Read' 'Glob' 'Grep' \
             --disallowedTools 'Edit' 'Write' 'Agent' 'Task' 'WebFetch' 'WebSearch' 'EndConversation' 'mcp__*' \
             --settings '{"disableAllHooks":true}' \
-            < ../artifacts/claude-reference/prompt.txt \
-            > ../artifacts/claude-reference/claude.raw.jsonl
+            < ../artifacts/claude-reference/localization-prompt.txt \
+            > ../artifacts/claude-reference/localization.raw.jsonl
 
-      - name: Normalize Claude execution path and final record
+      - name: Normalize localization-only draft and execution path
         run: |
           set -euo pipefail
           python3 narness/research/code-locator/src/claude_reference_trace.py \
-            --raw-jsonl artifacts/claude-reference/claude.raw.jsonl \
+            --raw-jsonl artifacts/claude-reference/localization.raw.jsonl \
             --subject-root subject \
             --query "$QUERY" \
             --model "$CLAUDE_MODEL" \
             --subject-sha "${{ needs.resolve-subject.outputs.subject_sha }}" \
-            --output-reference artifacts/claude-reference/localization-result.json \
+            --output-draft artifacts/claude-reference/localization-draft.json \
             --output-trace artifacts/claude-reference/execution-path.json \
-            --output-manifest artifacts/claude-reference/manifest.json \
+            --output-manifest artifacts/claude-reference/localization-manifest.json \
             --output-summary artifacts/claude-reference/execution-summary.md
+
+      - name: Build fresh-session confidence prompt
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          draft=json.loads(
+              Path("artifacts/claude-reference/localization-draft.json").read_text()
+          )
+          query=os.environ["QUERY"]
+          immutable=json.dumps(draft, ensure_ascii=False, indent=2)
+
+          prompt=f"""User task (verbatim):
+          {query}
+
+          You are a NEW, independent confidence-assessment session.
+
+          The previous session has already completed code localization.
+          You must NOT search the repository and must NOT change its localization result.
+          The immutable draft below already contains the final files, roles, reasons,
+          evidence ranges, and exact source text.
+
+          Your only job is to assess confidence in that fixed result.
+
+          You MUST preserve:
+          - exact file count, order, and paths;
+          - exact evidence count, order, start_line, and end_line;
+          - the previous session's localization decisions.
+
+          Return only valid JSON, with no Markdown fences:
+          {{
+            "schema_version": 1,
+            "kind": "code-localization-confidence-assessment",
+            "task": {query!r},
+            "overall": {{
+              "score": 0.0,
+              "reason": "why this overall confidence is appropriate"
+            }},
+            "files": [
+              {{
+                "path": "must exactly match the corresponding draft file",
+                "score": 0.0,
+                "reason": "confidence rationale for this file",
+                "evidence": [
+                  {{
+                    "start_line": 1,
+                    "end_line": 20,
+                    "score": 0.0,
+                    "reason": "confidence rationale for this evidence range"
+                  }}
+                ]
+              }}
+            ]
+          }}
+
+          Scores are self-assessments from 0 to 1, not calibrated probabilities.
+          Do not add or remove files. Do not add or remove evidence ranges.
+          Do not change paths or line numbers. Do not perform localization again.
+
+          IMMUTABLE LOCALIZATION DRAFT:
+          {immutable}
+          """
+          Path("artifacts/claude-reference/confidence-prompt.txt").write_text(prompt)
+          PY
+
+      - name: Run fresh Claude confidence session without tools
+        working-directory: subject
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          claude -p \
+            --output-format stream-json \
+            --verbose \
+            --model "$CLAUDE_MODEL" \
+            --effort high \
+            --max-turns 20 \
+            --permission-mode dontAsk \
+            --no-session-persistence \
+            --setting-sources '' \
+            --strict-mcp-config \
+            --mcp-config '{"mcpServers":{}}' \
+            --disable-slash-commands \
+            --tools '' \
+            --disallowedTools 'Bash' 'Read' 'Glob' 'Grep' 'Edit' 'Write' 'Agent' 'Task' 'WebFetch' 'WebSearch' 'EndConversation' 'mcp__*' \
+            --settings '{"disableAllHooks":true}' \
+            < ../artifacts/claude-reference/confidence-prompt.txt \
+            > ../artifacts/claude-reference/confidence.raw.jsonl
+
+      - name: Merge immutable localization with confidence assessment
+        run: |
+          set -euo pipefail
+          python3 narness/research/code-locator/src/claude_confidence_finalize.py \
+            --draft artifacts/claude-reference/localization-draft.json \
+            --confidence-raw-jsonl artifacts/claude-reference/confidence.raw.jsonl \
+            --localization-manifest artifacts/claude-reference/localization-manifest.json \
+            --model "$CLAUDE_MODEL" \
+            --subject-sha "${{ needs.resolve-subject.outputs.subject_sha }}" \
+            --output-result artifacts/claude-reference/localization-result.json \
+            --output-confidence-manifest artifacts/claude-reference/confidence-manifest.json \
+            --output-manifest artifacts/claude-reference/manifest.json \
+            --output-summary artifacts/claude-reference/confidence-summary.md
 
       - name: Upload Claude reference evidence
         uses: actions/upload-artifact@v4
@@ -333,6 +438,10 @@ jobs:
           if test -f artifacts/claude-reference/execution-summary.md; then
             printf '\n' >> "$GITHUB_STEP_SUMMARY"
             cat artifacts/claude-reference/execution-summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if test -f artifacts/claude-reference/confidence-summary.md; then
+            printf '\n' >> "$GITHUB_STEP_SUMMARY"
+            cat artifacts/claude-reference/confidence-summary.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
           python3 - <<'PY'
