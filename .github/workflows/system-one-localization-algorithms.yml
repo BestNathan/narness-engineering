@@ -1,0 +1,181 @@
+name: System One Localization Algorithms
+
+on:
+  workflow_dispatch:
+    inputs:
+      subject_repository:
+        description: Subject repository
+        required: true
+        default: BestNathan/nession
+        type: string
+      subject_ref:
+        description: Subject ref
+        required: true
+        default: staging
+        type: string
+      query:
+        description: Localization task
+        required: true
+        default: Help me optimize the websocket connection implementation
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  SUBJECT_REPOSITORY: ${{ inputs.subject_repository }}
+  SUBJECT_REF: ${{ inputs.subject_ref }}
+  QUERY: ${{ inputs.query }}
+
+jobs:
+  experiment:
+    strategy:
+      fail-fast: false
+      matrix:
+        algorithm:
+          - evidence-guided
+          - adaptive-zoom
+    runs-on: ubuntu-24.04
+    environment: typesafe
+    timeout-minutes: 120
+    env:
+      TYPESAFE_MODEL: ${{ vars.TYPESAFE_MODEL || 'jev-latest' }}
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          path: narness
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout subject
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SUBJECT_REPOSITORY }}
+          ref: ${{ env.SUBJECT_REF }}
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Record revision
+        run: |
+          set -euo pipefail
+          mkdir -p "artifacts/${{ matrix.algorithm }}"
+          git -C subject rev-parse HEAD > "artifacts/${{ matrix.algorithm }}/subject-sha.txt"
+
+      - name: Run System One algorithm
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
+          TYPESAFE_API_URL: ${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
+        run: |
+          set -euo pipefail
+          test -n "$TYPESAFE_API_KEY"
+
+          case "${{ matrix.algorithm }}" in
+            evidence-guided)
+              python3 narness/research/code-locator/src/system_one_evidence_guided_runtime.py \
+                subject \
+                "$QUERY" \
+                --directory-threshold 0.50 \
+                --file-threshold 0.65 \
+                --window-lines 140 \
+                --parallel-threshold 0.65 \
+                --evidence-threshold 0.65 \
+                --max-jumps 2 \
+                --max-file-epochs 32 \
+                --model "$TYPESAFE_MODEL" \
+                --trace-file artifacts/evidence-guided/trace.jsonl \
+                --output-json artifacts/evidence-guided/result.json
+              ;;
+            adaptive-zoom)
+              python3 narness/research/code-locator/src/system_one_adaptive_zoom.py \
+                subject \
+                "$QUERY" \
+                --directory-threshold 0.50 \
+                --file-threshold 0.65 \
+                --evidence-threshold 0.65 \
+                --coarse-regions 16 \
+                --probe-lines 32 \
+                --beam-width 3 \
+                --beam-mass 0.80 \
+                --exploration-slots 1 \
+                --target-region-lines 40 \
+                --exploration-floor 0.05 \
+                --max-rounds 8 \
+                --stable-rounds 2 \
+                --model "$TYPESAFE_MODEL" \
+                --trace-file artifacts/adaptive-zoom/trace.jsonl \
+                --output-json artifacts/adaptive-zoom/result.json
+              ;;
+          esac
+
+      - name: Build summary
+        if: success()
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          algorithm = os.environ["ALGORITHM"]
+          root = Path("artifacts") / algorithm
+          result = json.loads((root / "result.json").read_text())
+          metrics = result["metrics"]
+
+          lines = [
+              f"# {algorithm}",
+              "",
+              f"- Architecture: {result['architecture']}",
+              f"- Phase-1 files: {metrics['files_selected']}",
+              f"- Valuable files: {metrics['valuable_files']}",
+              f"- Evidence regions: {metrics['evidence_regions']}",
+              f"- Model calls: {metrics['model_calls']}",
+              f"- Input tokens: {metrics['input_tokens']}",
+              f"- Output tokens: {metrics['output_tokens']}",
+              f"- Elapsed ms: {metrics['elapsed_ms']}",
+          ]
+
+          if algorithm == "evidence-guided":
+              lines += [
+                  f"- Reads: {metrics['reads_executed']}",
+                  f"- Model stops: {metrics['file_model_stops']}",
+                  f"- Space exhausted: {metrics['file_space_exhausted']}",
+                  f"- Budget exhausted: {metrics['file_budget_exhausted']}",
+              ]
+          else:
+              lines += [
+                  f"- Probe observations: {metrics['observations']}",
+                  f"- Frontier converged: {metrics['probability_frontier_converged']}",
+                  f"- Round budget exhausted: {metrics['round_budget_exhausted']}",
+              ]
+
+          lines += ["", "## Result files", ""]
+          for item in result["result_files"]:
+              lines.append(
+                  f"- `{item['path']}`: "
+                  f"score={item['score']:.3f} "
+                  f"evidence={len(item['evidence'])}"
+              )
+
+          (root / "summary.md").write_text(
+              "\n".join(lines) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          cat "artifacts/${{ matrix.algorithm }}/summary.md" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          ALGORITHM: ${{ matrix.algorithm }}
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-one-${{ matrix.algorithm }}-${{ github.run_id }}
+          path: artifacts/${{ matrix.algorithm }}/
+          if-no-files-found: error
+          retention-days: 90
