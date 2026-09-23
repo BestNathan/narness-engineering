@@ -26,6 +26,23 @@ def result(system, files):
         },
         "summary": "",
         "confidence": None,
+        "cost": {
+            "elapsed_ms": 1000 if system == "system_one" else 2000,
+            "api_elapsed_ms": None,
+            "elapsed_semantics": "test",
+            "model_calls": 4 if system == "system_one" else None,
+            "turns": None if system == "system_one" else 10,
+            "tool_calls": 0 if system == "system_one" else 6,
+            "tokens": {
+                "input": 100 if system == "system_one" else 200,
+                "output": 20 if system == "system_one" else 40,
+                "cache_read_input": 0,
+                "cache_creation_input": 0,
+                "thinking": 0,
+            },
+            "provider_cost_usd": None if system == "system_one" else 0.5,
+            "stages": [],
+        },
         "files": files,
     }
 
@@ -113,6 +130,11 @@ class CompareLocalizationResultsTest(unittest.TestCase):
             0.5,
             report["evidence"]["right_covered_by_left"]["region_overlap_rate"],
         )
+        self.assertEqual(1000, report["left"]["cost"]["elapsed_ms"])
+        self.assertEqual(2000, report["right"]["cost"]["elapsed_ms"])
+        self.assertEqual(100, report["left"]["cost"]["input_tokens"])
+        self.assertEqual(0.5, report["right"]["cost"]["provider_cost_usd"])
+
         pair = report["files"]["confidence_pairs"][0]
         self.assertEqual(0.9, pair["left_score"])
         self.assertEqual(0.8, pair["right_score"])
