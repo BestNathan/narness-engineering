@@ -26,7 +26,8 @@ DEFAULT_PHASE1_MAX_FILES = 16
 
 DEFAULT_READER_FILE_BATCH_SIZE = 4
 DEFAULT_READER_WINDOW_LINES = 140
-DEFAULT_READER_MAX_ROUNDS = 4
+DEFAULT_READER_SOFT_ROUNDS = 4
+DEFAULT_READER_HARD_ROUNDS = 8
 DEFAULT_READER_ACTION_THRESHOLD = 0.40
 DEFAULT_OBSERVATION_THRESHOLD = 0.65
 MAX_RELEVANT_REGIONS = 3
@@ -76,6 +77,7 @@ def reader_model_state(state):
         "batch_index": state["batch_index"],
         "round": state["round"],
         "thresholds": state.get("thresholds", {}),
+        "budget": state.get("budget", {}),
         "files": [
             {
                 "path": item["path"],
@@ -622,6 +624,8 @@ def new_reader_state(
     root,
     action_threshold,
     observation_threshold,
+    soft_rounds,
+    hard_rounds,
 ):
     state_files = []
     for file in files_in_batch:
@@ -644,6 +648,10 @@ def new_reader_state(
         "thresholds": {
             "reader_action": action_threshold,
             "observation": observation_threshold,
+        },
+        "budget": {
+            "soft_rounds": soft_rounds,
+            "hard_rounds": hard_rounds,
         },
         "files": state_files,
         "observations": [],
@@ -701,7 +709,8 @@ def progressive_read(
     *,
     file_batch_size,
     window_lines,
-    max_rounds,
+    soft_rounds,
+    hard_rounds,
     action_threshold,
     observation_threshold,
 ):
@@ -709,6 +718,9 @@ def progressive_read(
     reader_states = []
     decisions_made = 0
     reads_executed = 0
+    soft_budget_extensions = 0
+    batches_extended = 0
+    hard_budget_hits = 0
 
     for offset in range(0, len(files_to_read), file_batch_size):
         batch_index = offset // file_batch_size
@@ -720,6 +732,8 @@ def progressive_read(
             root,
             action_threshold,
             observation_threshold,
+            soft_rounds,
+            hard_rounds,
         )
         reader_states.append(state)
 
@@ -732,7 +746,8 @@ def progressive_read(
             ],
         )
 
-        for round_index in range(max_rounds):
+        batch_extended = False
+        for round_index in range(hard_rounds):
             state["round"] = round_index + 1
             action_sets = []
             for file_state in state["files"]:
@@ -830,6 +845,56 @@ def progressive_read(
                     threshold=observation_threshold,
                 )
 
+            high_signal = [
+                item
+                for item in new_observations
+                if item["relevance"] >= observation_threshold
+            ]
+
+            if state["round"] >= soft_rounds:
+                if high_signal and state["round"] < hard_rounds:
+                    soft_budget_extensions += 1
+                    if not batch_extended:
+                        batches_extended += 1
+                        batch_extended = True
+                    trace.emit(
+                        "reader_budget_extended",
+                        batch_index=batch_index,
+                        round=state["round"],
+                        soft_rounds=soft_rounds,
+                        hard_rounds=hard_rounds,
+                        high_signal_observations=[
+                            {
+                                "id": item["id"],
+                                "path": item["path"],
+                                "start_line": item["start_line"],
+                                "end_line": item["end_line"],
+                                "relevance": item["relevance"],
+                            }
+                            for item in high_signal
+                        ],
+                    )
+                elif not high_signal:
+                    trace.emit(
+                        "reader_soft_budget_stop",
+                        batch_index=batch_index,
+                        round=state["round"],
+                        soft_rounds=soft_rounds,
+                        hard_rounds=hard_rounds,
+                        reason="no_new_high_relevance_observation",
+                    )
+                    break
+                else:
+                    hard_budget_hits += 1
+                    trace.emit(
+                        "reader_hard_budget_reached",
+                        batch_index=batch_index,
+                        round=state["round"],
+                        soft_rounds=soft_rounds,
+                        hard_rounds=hard_rounds,
+                        high_signal_count=len(high_signal),
+                    )
+
         trace.emit(
             "reader_batch_completed",
             batch_index=batch_index,
@@ -847,6 +912,9 @@ def progressive_read(
         "reader_batches": len(reader_states),
         "reader_decisions": decisions_made,
         "reads_executed": reads_executed,
+        "soft_budget_extensions": soft_budget_extensions,
+        "batches_extended": batches_extended,
+        "hard_budget_hits": hard_budget_hits,
     }
 
 
@@ -860,7 +928,8 @@ def run(
     phase1_max_files=DEFAULT_PHASE1_MAX_FILES,
     reader_file_batch_size=DEFAULT_READER_FILE_BATCH_SIZE,
     reader_window_lines=DEFAULT_READER_WINDOW_LINES,
-    reader_max_rounds=DEFAULT_READER_MAX_ROUNDS,
+    reader_soft_rounds=DEFAULT_READER_SOFT_ROUNDS,
+    reader_hard_rounds=DEFAULT_READER_HARD_ROUNDS,
     reader_action_threshold=DEFAULT_READER_ACTION_THRESHOLD,
     observation_threshold=DEFAULT_OBSERVATION_THRESHOLD,
 ):
@@ -882,7 +951,8 @@ def run(
         reader={
             "file_batch_size": reader_file_batch_size,
             "window_lines": reader_window_lines,
-            "max_rounds": reader_max_rounds,
+            "soft_rounds": reader_soft_rounds,
+            "hard_rounds": reader_hard_rounds,
             "phase1_max_files": phase1_max_files,
         },
     )
@@ -928,7 +998,8 @@ def run(
         trace,
         file_batch_size=reader_file_batch_size,
         window_lines=reader_window_lines,
-        max_rounds=reader_max_rounds,
+        soft_rounds=reader_soft_rounds,
+        hard_rounds=reader_hard_rounds,
         action_threshold=reader_action_threshold,
         observation_threshold=observation_threshold,
     )
@@ -958,10 +1029,14 @@ def run(
             "phase1_max_files": phase1_max_files,
             "reader_file_batch_size": reader_file_batch_size,
             "reader_window_lines": reader_window_lines,
-            "reader_max_rounds": reader_max_rounds,
+            "reader_soft_rounds": reader_soft_rounds,
+            "reader_hard_rounds": reader_hard_rounds,
             "reader_batches": reader_metrics["reader_batches"],
             "reader_decisions": reader_metrics["reader_decisions"],
             "reads_executed": reader_metrics["reads_executed"],
+            "soft_budget_extensions": reader_metrics["soft_budget_extensions"],
+            "batches_extended": reader_metrics["batches_extended"],
+            "hard_budget_hits": reader_metrics["hard_budget_hits"],
             "observations": sum(len(state["observations"]) for state in reader_states),
             "evidence_observations": len(snippets),
             "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
@@ -980,7 +1055,14 @@ def main(argv=None):
     parser.add_argument("--phase1-max-files", type=int, default=DEFAULT_PHASE1_MAX_FILES)
     parser.add_argument("--reader-file-batch-size", type=int, default=DEFAULT_READER_FILE_BATCH_SIZE)
     parser.add_argument("--reader-window-lines", type=int, default=DEFAULT_READER_WINDOW_LINES)
-    parser.add_argument("--reader-max-rounds", type=int, default=DEFAULT_READER_MAX_ROUNDS)
+    parser.add_argument("--reader-soft-rounds", type=int, default=DEFAULT_READER_SOFT_ROUNDS)
+    parser.add_argument("--reader-hard-rounds", type=int, default=DEFAULT_READER_HARD_ROUNDS)
+    parser.add_argument(
+        "--reader-max-rounds",
+        dest="reader_soft_rounds",
+        type=int,
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument("--reader-action-threshold", type=float, default=DEFAULT_READER_ACTION_THRESHOLD)
     parser.add_argument("--observation-threshold", type=float, default=DEFAULT_OBSERVATION_THRESHOLD)
     parser.add_argument("--offline-decider", action="store_true")
@@ -991,9 +1073,17 @@ def main(argv=None):
     parser.add_argument("--model", default=os.getenv("TYPESAFE_MODEL", MODEL))
     args = parser.parse_args(argv)
 
-    for name in ("phase1_max_files", "reader_file_batch_size", "reader_window_lines", "reader_max_rounds"):
+    for name in (
+        "phase1_max_files",
+        "reader_file_batch_size",
+        "reader_window_lines",
+        "reader_soft_rounds",
+        "reader_hard_rounds",
+    ):
         if getattr(args, name) < 1:
             parser.error(f"--{name.replace('_', '-')} must be >= 1")
+    if args.reader_hard_rounds < args.reader_soft_rounds:
+        parser.error("--reader-hard-rounds must be >= --reader-soft-rounds")
 
     trace = Trace(args.trace_file)
     if args.offline_decider:
@@ -1015,7 +1105,8 @@ def main(argv=None):
         phase1_max_files=args.phase1_max_files,
         reader_file_batch_size=args.reader_file_batch_size,
         reader_window_lines=args.reader_window_lines,
-        reader_max_rounds=args.reader_max_rounds,
+        reader_soft_rounds=args.reader_soft_rounds,
+        reader_hard_rounds=args.reader_hard_rounds,
         reader_action_threshold=args.reader_action_threshold,
         observation_threshold=args.observation_threshold,
     )
