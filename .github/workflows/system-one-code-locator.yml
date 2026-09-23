@@ -167,7 +167,7 @@ jobs:
 
   typesafe:
     name: Real TypeSafe code-locator experiment
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_typesafe }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_typesafe) || (github.event_name == 'push' && github.ref_name == 'fix/code-locator-three-stage-requests') }}
     runs-on: ubuntu-24.04
     environment: typesafe
     timeout-minutes: 120
@@ -183,8 +183,8 @@ jobs:
       - name: Checkout subject repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.subject_repository }}
-          ref: ${{ inputs.subject_ref }}
+          repository: ${{ inputs.subject_repository || 'BestNathan/nession' }}
+          ref: ${{ inputs.subject_ref || 'staging' }}
           path: subject
           fetch-depth: 1
           persist-credentials: false
@@ -207,8 +207,8 @@ jobs:
 
       - name: Save run manifest
         env:
-          SUBJECT_REPOSITORY: ${{ inputs.subject_repository }}
-          SUBJECT_REF: ${{ inputs.subject_ref }}
+          SUBJECT_REPOSITORY: ${{ inputs.subject_repository || 'BestNathan/nession' }}
+          SUBJECT_REF: ${{ inputs.subject_ref || 'staging' }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           HARNESS_SHA: ${{ github.sha }}
@@ -355,7 +355,7 @@ jobs:
           path: .experiment-record/offline
 
       - name: Download TypeSafe evidence
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_typesafe }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_typesafe) || (github.event_name == 'push' && github.ref_name == 'fix/code-locator-three-stage-requests') }}
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
