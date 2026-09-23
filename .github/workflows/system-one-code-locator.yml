@@ -35,29 +35,44 @@ on:
         default: Help me optimize the websocket connection implementation
         type: string
       directory_threshold:
-        description: Directory Noul threshold
+        description: Phase-1 directory Noul threshold
         required: true
-        default: "0.35"
+        default: "0.50"
         type: string
       file_threshold:
-        description: File Noul threshold
+        description: Phase-1 file Noul threshold
         required: true
-        default: "0.50"
+        default: "0.65"
         type: string
-      file_outline_threshold:
-        description: "File outline Noul threshold"
+      phase1_max_files:
+        description: Maximum files handed from locator to progressive reader
         required: true
-        default: "0.50"
+        default: "16"
         type: string
-      scope_threshold:
-        description: "Semantic scope Noul threshold"
+      reader_file_batch_size:
+        description: Files decided together in each reader batch
         required: true
-        default: "0.50"
+        default: "4"
         type: string
-      symbol_threshold:
-        description: "Symbol Noul threshold"
+      reader_window_lines:
+        description: Lines read by one ReadRange action
         required: true
-        default: "0.70"
+        default: "140"
+        type: string
+      reader_max_rounds:
+        description: Maximum dynamic read rounds per file batch
+        required: true
+        default: "4"
+        type: string
+      reader_action_threshold:
+        description: Minimum chosen Choice probability required to execute a read
+        required: true
+        default: "0.40"
+        type: string
+      observation_threshold:
+        description: Noul threshold for retaining an observation as evidence
+        required: true
+        default: "0.65"
         type: string
       model:
         description: TypeSafe model alias
@@ -79,11 +94,14 @@ concurrency:
 
 env:
   QUERY: ${{ inputs.query || 'Help me optimize the websocket connection implementation' }}
-  DIRECTORY_THRESHOLD: ${{ inputs.directory_threshold || '0.35' }}
-  FILE_THRESHOLD: ${{ inputs.file_threshold || '0.50' }}
-  FILE_OUTLINE_THRESHOLD: ${{ inputs.file_outline_threshold || '0.50' }}
-  SCOPE_THRESHOLD: ${{ inputs.scope_threshold || '0.50' }}
-  SYMBOL_THRESHOLD: ${{ inputs.symbol_threshold || '0.70' }}
+  DIRECTORY_THRESHOLD: ${{ inputs.directory_threshold || '0.50' }}
+  FILE_THRESHOLD: ${{ inputs.file_threshold || '0.65' }}
+  PHASE1_MAX_FILES: ${{ inputs.phase1_max_files || '16' }}
+  READER_FILE_BATCH_SIZE: ${{ inputs.reader_file_batch_size || '4' }}
+  READER_WINDOW_LINES: ${{ inputs.reader_window_lines || '140' }}
+  READER_MAX_ROUNDS: ${{ inputs.reader_max_rounds || '4' }}
+  READER_ACTION_THRESHOLD: ${{ inputs.reader_action_threshold || '0.40' }}
+  OBSERVATION_THRESHOLD: ${{ inputs.observation_threshold || '0.65' }}
   TYPESAFE_MODEL: ${{ inputs.model || vars.TYPESAFE_MODEL || 'jev-latest' }}
 
 jobs:
@@ -112,7 +130,21 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python3 research/code-locator/src/system_one_code_locator.py             research/code-locator/fixtures/repository             "$QUERY"             --offline-decider             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --file-outline-threshold "$FILE_OUTLINE_THRESHOLD"             --scope-threshold "$SCOPE_THRESHOLD"             --symbol-threshold 0.60             --trace-file artifacts/system-one-code-locator/offline/trace.jsonl             --output-json artifacts/system-one-code-locator/offline/result.json             2>&1 | tee artifacts/system-one-code-locator/offline/run.log
+          python3 research/code-locator/src/system_one_code_locator.py \
+            research/code-locator/fixtures/repository \
+            "$QUERY" \
+            --offline-decider \
+            --directory-threshold "$DIRECTORY_THRESHOLD" \
+            --file-threshold "$FILE_THRESHOLD" \
+            --phase1-max-files "$PHASE1_MAX_FILES" \
+            --reader-file-batch-size "$READER_FILE_BATCH_SIZE" \
+            --reader-window-lines "$READER_WINDOW_LINES" \
+            --reader-max-rounds "$READER_MAX_ROUNDS" \
+            --reader-action-threshold "$READER_ACTION_THRESHOLD" \
+            --observation-threshold "$OBSERVATION_THRESHOLD" \
+            --trace-file artifacts/system-one-code-locator/offline/trace.jsonl \
+            --output-json artifacts/system-one-code-locator/offline/result.json \
+            2>&1 | tee artifacts/system-one-code-locator/offline/run.log
 
       - name: Save run metadata and summary
         env:
@@ -134,12 +166,13 @@ jobs:
               "mode": "offline",
               "query": os.environ["QUERY"],
               "model": "offline-lexical-fixture",
-              "thresholds": {
-                  "directory": float(os.environ["DIRECTORY_THRESHOLD"]),
-                  "file": float(os.environ["FILE_THRESHOLD"]),
-                  "file_outline": float(os.environ["FILE_OUTLINE_THRESHOLD"]),
-                  "scope": float(os.environ["SCOPE_THRESHOLD"]),
-                  "symbol": 0.60,
+              "architecture": result.get("architecture"),
+              "thresholds": result.get("thresholds", {}),
+              "reader": {
+                  "phase1_max_files": result.get("metrics", {}).get("phase1_max_files"),
+                  "file_batch_size": result.get("metrics", {}).get("reader_file_batch_size"),
+                  "window_lines": result.get("metrics", {}).get("reader_window_lines"),
+                  "max_rounds": result.get("metrics", {}).get("reader_max_rounds"),
               },
               "github_run_id": os.environ["RUN_ID"],
               "github_run_attempt": os.environ["RUN_ATTEMPT"],
@@ -181,7 +214,7 @@ jobs:
 
   typesafe:
     name: Real TypeSafe code-locator experiment
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_typesafe) || (github.event_name == 'push' && github.ref_name == 'fix/code-locator-three-stage-requests') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_typesafe }}
     runs-on: ubuntu-24.04
     environment: typesafe
     timeout-minutes: 120
@@ -197,8 +230,8 @@ jobs:
       - name: Checkout subject repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.subject_repository || 'BestNathan/nession' }}
-          ref: ${{ inputs.subject_ref || 'staging' }}
+          repository: ${{ inputs.subject_repository }}
+          ref: ${{ inputs.subject_ref }}
           path: subject
           fetch-depth: 1
           persist-credentials: false
@@ -221,8 +254,8 @@ jobs:
 
       - name: Save run manifest
         env:
-          SUBJECT_REPOSITORY: ${{ inputs.subject_repository || 'BestNathan/nession' }}
-          SUBJECT_REF: ${{ inputs.subject_ref || 'staging' }}
+          SUBJECT_REPOSITORY: ${{ inputs.subject_repository }}
+          SUBJECT_REF: ${{ inputs.subject_ref }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           HARNESS_SHA: ${{ github.sha }}
@@ -244,12 +277,18 @@ jobs:
               "mode": "typesafe",
               "query": os.environ["QUERY"],
               "model": os.environ["TYPESAFE_MODEL"],
+              "architecture": "two_phase_file_locator_plus_progressive_reader",
               "thresholds": {
                   "directory": float(os.environ["DIRECTORY_THRESHOLD"]),
                   "file": float(os.environ["FILE_THRESHOLD"]),
-                  "file_outline": float(os.environ["FILE_OUTLINE_THRESHOLD"]),
-                  "scope": float(os.environ["SCOPE_THRESHOLD"]),
-                  "symbol": float(os.environ["SYMBOL_THRESHOLD"]),
+                  "reader_action": float(os.environ["READER_ACTION_THRESHOLD"]),
+                  "observation": float(os.environ["OBSERVATION_THRESHOLD"]),
+              },
+              "reader": {
+                  "phase1_max_files": int(os.environ["PHASE1_MAX_FILES"]),
+                  "file_batch_size": int(os.environ["READER_FILE_BATCH_SIZE"]),
+                  "window_lines": int(os.environ["READER_WINDOW_LINES"]),
+                  "max_rounds": int(os.environ["READER_MAX_ROUNDS"]),
               },
               "harness": {
                   "repository": os.environ.get("GITHUB_REPOSITORY"),
@@ -277,7 +316,21 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python3 narness/research/code-locator/src/system_one_code_locator.py             subject             "$QUERY"             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --file-outline-threshold "$FILE_OUTLINE_THRESHOLD"             --scope-threshold "$SCOPE_THRESHOLD"             --symbol-threshold "$SYMBOL_THRESHOLD"             --model "$TYPESAFE_MODEL"             --trace-file artifacts/system-one-code-locator/typesafe/trace.jsonl             --output-json artifacts/system-one-code-locator/typesafe/result.json             2>&1 | tee artifacts/system-one-code-locator/typesafe/run.log
+          python3 narness/research/code-locator/src/system_one_code_locator.py \
+            subject \
+            "$QUERY" \
+            --directory-threshold "$DIRECTORY_THRESHOLD" \
+            --file-threshold "$FILE_THRESHOLD" \
+            --phase1-max-files "$PHASE1_MAX_FILES" \
+            --reader-file-batch-size "$READER_FILE_BATCH_SIZE" \
+            --reader-window-lines "$READER_WINDOW_LINES" \
+            --reader-max-rounds "$READER_MAX_ROUNDS" \
+            --reader-action-threshold "$READER_ACTION_THRESHOLD" \
+            --observation-threshold "$OBSERVATION_THRESHOLD" \
+            --model "$TYPESAFE_MODEL" \
+            --trace-file artifacts/system-one-code-locator/typesafe/trace.jsonl \
+            --output-json artifacts/system-one-code-locator/typesafe/result.json \
+            2>&1 | tee artifacts/system-one-code-locator/typesafe/run.log
 
       - name: Build research summary
         if: always()
@@ -371,7 +424,7 @@ jobs:
           path: .experiment-record/offline
 
       - name: Download TypeSafe evidence
-        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_typesafe) || (github.event_name == 'push' && github.ref_name == 'fix/code-locator-three-stage-requests') }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_typesafe }}
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
