@@ -132,6 +132,35 @@ class SelectorTest(unittest.TestCase):
         self.assertEqual(["read"], [item["id"] for item in selected])
         self.assertEqual("parallel_above_threshold", mode)
 
+    def test_parallel_selection_drops_overlapping_ranges(self):
+        scored = [
+            {
+                "id": "a",
+                "kind": "read_range",
+                "start_line": 100,
+                "end_line": 239,
+                "score": 0.90,
+            },
+            {
+                "id": "b",
+                "kind": "read_range",
+                "start_line": 180,
+                "end_line": 319,
+                "score": 0.85,
+            },
+            {
+                "id": "c",
+                "kind": "read_range",
+                "start_line": 400,
+                "end_line": 539,
+                "score": 0.80,
+            },
+            {"id": "stop", "kind": "stop_file", "score": 0.20},
+        ]
+        selected, mode = MODULE.select_file_actions(scored, 0.65)
+        self.assertEqual(["a", "c"], [item["id"] for item in selected])
+        self.assertEqual("parallel_above_threshold", mode)
+
     def test_low_stop_never_terminates_when_read_exists(self):
         scored = [
             {"id": "read", "kind": "read_range", "score": 0.31},
