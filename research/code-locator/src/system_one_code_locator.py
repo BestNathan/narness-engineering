@@ -1061,6 +1061,7 @@ def main(argv=None):
         "--reader-max-rounds",
         dest="reader_soft_rounds",
         type=int,
+        default=argparse.SUPPRESS,
         help=argparse.SUPPRESS,
     )
     parser.add_argument("--reader-action-threshold", type=float, default=DEFAULT_READER_ACTION_THRESHOLD)
