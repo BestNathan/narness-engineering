@@ -261,6 +261,34 @@ class DemoTest(unittest.TestCase):
                 3,
             )
 
+    def test_file_level_symbols_share_one_module_scope(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)/'repo'
+            source=root/'src'
+            source.mkdir(parents=True)
+            (source/'module.py').write_text(
+                'def first():\n    return 1\n\n'
+                'def second():\n    return 2\n\n'
+                'def third():\n    return 3\n',
+                encoding='utf-8',
+            )
+            files=[{
+                'id':'src/module.py',
+                'payload':{
+                    'path':'src/module.py',
+                    'filename':'module.py',
+                    'extension':'.py',
+                },
+            }]
+
+            candidates,symbols_by_outline=MODULE.outlines(root,files)
+
+            self.assertEqual(1,len(candidates))
+            outline=candidates[0]
+            self.assertEqual('module',outline['payload']['scope_kind'])
+            self.assertEqual(3,outline['payload']['member_count'])
+            self.assertEqual(3,len(symbols_by_outline[outline['id']]))
+
     def test_outline_selection_gates_symbol_expansion(self):
         class GateScorer:
             model='gate-test'
