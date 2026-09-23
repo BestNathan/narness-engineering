@@ -719,6 +719,8 @@ def progressive_read(
     decisions_made = 0
     reads_executed = 0
     soft_budget_extensions = 0
+    file_soft_budget_extensions = 0
+    files_stopped_by_soft_budget = 0
     batches_extended = 0
     hard_budget_hits = 0
 
@@ -852,7 +854,59 @@ def progressive_read(
             ]
 
             if state["round"] >= soft_rounds:
-                if high_signal and state["round"] < hard_rounds:
+                high_signal_by_path = {}
+                for item in high_signal:
+                    high_signal_by_path.setdefault(item["path"], []).append(item)
+
+                eligible_paths = []
+                for file_state in state["files"]:
+                    if file_state["stopped"]:
+                        continue
+
+                    file_high_signal = high_signal_by_path.get(
+                        file_state["path"],
+                        [],
+                    )
+                    if file_high_signal and state["round"] < hard_rounds:
+                        eligible_paths.append(file_state["path"])
+                        file_soft_budget_extensions += 1
+                        trace.emit(
+                            "reader_file_budget_extended",
+                            batch_index=batch_index,
+                            round=state["round"],
+                            path=file_state["path"],
+                            soft_rounds=soft_rounds,
+                            hard_rounds=hard_rounds,
+                            high_signal_observations=[
+                                {
+                                    "id": item["id"],
+                                    "start_line": item["start_line"],
+                                    "end_line": item["end_line"],
+                                    "relevance": item["relevance"],
+                                }
+                                for item in file_high_signal
+                            ],
+                        )
+                    elif not file_high_signal:
+                        file_state["stopped"] = True
+                        file_state["stop_reason"] = (
+                            "soft_budget_no_high_signal"
+                        )
+                        files_stopped_by_soft_budget += 1
+                        trace.emit(
+                            "reader_file_soft_budget_stop",
+                            batch_index=batch_index,
+                            round=state["round"],
+                            path=file_state["path"],
+                            soft_rounds=soft_rounds,
+                            hard_rounds=hard_rounds,
+                            reason="no_new_high_relevance_observation",
+                        )
+                    else:
+                        file_state["stopped"] = True
+                        file_state["stop_reason"] = "hard_budget_reached"
+
+                if eligible_paths:
                     soft_budget_extensions += 1
                     if not batch_extended:
                         batches_extended += 1
@@ -863,28 +917,19 @@ def progressive_read(
                         round=state["round"],
                         soft_rounds=soft_rounds,
                         hard_rounds=hard_rounds,
-                        high_signal_observations=[
-                            {
-                                "id": item["id"],
-                                "path": item["path"],
-                                "start_line": item["start_line"],
-                                "end_line": item["end_line"],
-                                "relevance": item["relevance"],
-                            }
-                            for item in high_signal
-                        ],
+                        eligible_paths=eligible_paths,
                     )
-                elif not high_signal:
+                elif state["round"] < hard_rounds:
                     trace.emit(
                         "reader_soft_budget_stop",
                         batch_index=batch_index,
                         round=state["round"],
                         soft_rounds=soft_rounds,
                         hard_rounds=hard_rounds,
-                        reason="no_new_high_relevance_observation",
+                        reason="no_file_earned_extension",
                     )
                     break
-                else:
+                elif high_signal:
                     hard_budget_hits += 1
                     trace.emit(
                         "reader_hard_budget_reached",
@@ -913,6 +958,8 @@ def progressive_read(
         "reader_decisions": decisions_made,
         "reads_executed": reads_executed,
         "soft_budget_extensions": soft_budget_extensions,
+        "file_soft_budget_extensions": file_soft_budget_extensions,
+        "files_stopped_by_soft_budget": files_stopped_by_soft_budget,
         "batches_extended": batches_extended,
         "hard_budget_hits": hard_budget_hits,
     }
@@ -1035,6 +1082,8 @@ def run(
             "reader_decisions": reader_metrics["reader_decisions"],
             "reads_executed": reader_metrics["reads_executed"],
             "soft_budget_extensions": reader_metrics["soft_budget_extensions"],
+            "file_soft_budget_extensions": reader_metrics["file_soft_budget_extensions"],
+            "files_stopped_by_soft_budget": reader_metrics["files_stopped_by_soft_budget"],
             "batches_extended": reader_metrics["batches_extended"],
             "hard_budget_hits": reader_metrics["hard_budget_hits"],
             "observations": sum(len(state["observations"]) for state in reader_states),
