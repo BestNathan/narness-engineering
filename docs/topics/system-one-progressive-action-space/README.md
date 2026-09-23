@@ -587,7 +587,56 @@ The result should distinguish between tasks that are naturally frontier-driven a
 - Can the same runtime interface serve Kubernetes, coding, and browser environments?
 - How much state should be sent to System One at each branch?
 
-## 18. Relationship to Narness
+## 18. Code localization experiment
+
+The second reference experiment applies the same progressive-disclosure idea to source-code localization.
+
+```text
+repository
+  -> directory candidates
+  -> relevant directories
+  -> file candidates
+  -> relevant files
+  -> source-line candidates
+  -> grounded code snippets
+```
+
+Unlike Kubernetes action selection, this stage is not a single-winner decision. Multiple directories, files, and source ranges can all be relevant, so the prototype uses independent Noul judgments rather than Choice.
+
+The harness owns traversal, filesystem IO, batching, thresholds, provenance, and range merging. System One only estimates candidate relevance.
+
+This broadens the working runtime abstraction:
+
+```text
+StateSpaceGenerator
+  -> CandidateSet
+  -> DecisionPrimitive
+  -> TransitionPolicy
+  -> EvidenceRecorder
+```
+
+The decision primitive can therefore vary by state:
+
+- `Choice` for selecting one grounded action from a local frontier;
+- `Noul` for independently retaining multiple relevant candidates;
+- deterministic short-circuiting where model judgment is unnecessary.
+
+See [Hierarchical Code Localization with System One](research/code-localization.md) for the hypotheses, threshold/recall analysis, evidence contract, and experiment plan.
+
+## 19. Research evidence workflow
+
+The repository includes a dedicated workflow for these prototypes: [System One Research Demos](../../../.github/workflows/system-one-research.yml).
+
+It has two layers:
+
+1. deterministic fixture runs on relevant pushes and pull requests, requiring no external model service;
+2. manually dispatched real-System-One collection against the Kubernetes fixture and a configurable subject repository.
+
+Each run preserves machine-readable artifacts instead of treating console output as the research record. The code-localization trace records exposed candidates, model requests without credentials, relevance scores, thresholds, latency, token usage, and final grounded snippets.
+
+This makes repeated runs comparable by repository revision, subject revision, query, thresholds, batch size, model, and workflow identity.
+
+## 20. Relationship to Narness
 
 Narness currently defines itself as AI Workspace Engineering and explicitly does not aim to become a general Agent Runtime.
 
@@ -599,9 +648,12 @@ It is still relevant because it explores a neighboring harness-engineering quest
 
 If the conclusions stabilize, some of them may graduate into Narness concepts around progressive disclosure, capability representation, deterministic execution, policy, evidence, and agent observability without requiring Narness itself to own a runtime.
 
-## Reference implementation
+## Reference implementations
 
-See [System One Kubernetes Command Generator](../../../examples/system-one-k8s/README.md).
+- [System One Kubernetes Command Generator](../../../examples/system-one-k8s/README.md)
+- [System One Code Locator](../../../examples/system-one-code-locator/README.md)
+- [Code localization research note](research/code-localization.md)
+- [System One research workflow](../../../.github/workflows/system-one-research.yml)
 
 ## Related Narness topics
 
