@@ -516,7 +516,7 @@ class DemoTest(unittest.TestCase):
                 observation_threshold=0.65,
             )
 
-            self.assertEqual(3, states[0]["round"])
+            self.assertEqual(4, states[0]["round"])
             self.assertEqual(3, metrics["reads_executed"])
             self.assertEqual(1, metrics["soft_budget_extensions"])
             self.assertEqual(0, metrics["hard_budget_hits"])
