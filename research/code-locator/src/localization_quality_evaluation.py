@@ -350,7 +350,7 @@ def markdown(assessment):
     return "\n".join(lines)
 
 
-def combined_report(left, right):
+def combined_report(left, right, left_label, right_label):
     left_dims = left["dimensions"]
     right_dims = right["dimensions"]
     lines = [
@@ -361,17 +361,22 @@ def combined_report(left, right):
         "plus the same repository revision. Scores are evaluator judgments, not "
         "ground-truth accuracy measurements.",
         "",
+        "## Candidate mapping",
+        "",
+        f"- {left['candidate_id']} = {left_label}",
+        f"- {right['candidate_id']} = {right_label}",
+        "",
         "## Overall",
         "",
-        "| Candidate | Weighted score | Can proceed |",
-        "| --- | ---: | --- |",
+        "| Candidate | System | Weighted score | Can proceed |",
+        "| --- | --- | ---: | --- |",
         (
-            f"| {left['candidate_id']} | "
+            f"| {left['candidate_id']} | {left_label} | "
             f"{left['overall_score']:.2f}/100 | "
             f"{left['downstream_assessment']['can_proceed']} |"
         ),
         (
-            f"| {right['candidate_id']} | "
+            f"| {right['candidate_id']} | {right_label} | "
             f"{right['overall_score']:.2f}/100 | "
             f"{right['downstream_assessment']['can_proceed']} |"
         ),
@@ -440,6 +445,8 @@ def main(argv=None):
     report.add_argument("--candidate-b", required=True)
     report.add_argument("--output-json", required=True)
     report.add_argument("--output-markdown", required=True)
+    report.add_argument("--candidate-a-label", default="System One")
+    report.add_argument("--candidate-b-label", default="Claude Code")
 
     args = parser.parse_args(argv)
 
@@ -478,6 +485,10 @@ def main(argv=None):
     payload = {
         "schema_version": 1,
         "kind": "code-localization-quality-evaluation-report",
+        "candidate_mapping": {
+            "candidate-a": args.candidate_a_label,
+            "candidate-b": args.candidate_b_label,
+        },
         "candidate_a": left,
         "candidate_b": right,
     }
@@ -486,7 +497,12 @@ def main(argv=None):
         encoding="utf-8",
     )
     Path(args.output_markdown).write_text(
-        combined_report(left, right),
+        combined_report(
+            left,
+            right,
+            args.candidate_a_label,
+            args.candidate_b_label,
+        ),
         encoding="utf-8",
     )
     return 0
