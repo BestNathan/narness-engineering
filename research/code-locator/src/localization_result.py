@@ -234,6 +234,14 @@ def normalize_claude_result(raw, subject_root, model=None):
             "files": files,
         }
 
+    top_conf = result.get("confidence")
+    if isinstance(top_conf, (int, float)):
+        result["confidence"] = confidence(
+            top_conf,
+            "model_self_assessment",
+            "Claude overall localization confidence",
+        )
+
     producer = result.setdefault("producer", {})
     producer["system"] = "claude_code"
     if model:
