@@ -132,3 +132,15 @@ Important controls:
 8. System One progressive reading versus System Two ReAct under the same read budget.
 
 See docs/design.md for the detailed research model.
+
+## Accuracy reference workflow
+
+The progressive-reader behavior is also evaluated against a Claude Code System 2 reference on the same exact subject revision and verbatim task.
+
+~~~text
+.github/workflows/system-one-code-locator-accuracy.yml
+~~~
+
+The comparison reports Phase-1 reference recall, final evidence-file agreement, primary/supporting recall, and evidence-region / line coverage. Claude is treated as a reference baseline rather than ground truth.
+
+The first Nession websocket comparison found 80% primary-file recall and 85.8% primary evidence-line coverage. Its most important finding was that `MessageRouter.ts` was visible to Phase 1 but missed at score 0.64 / rank 21, while `WebSocketService.ts:1-140` already exposed the import needed to discover it dynamically.
