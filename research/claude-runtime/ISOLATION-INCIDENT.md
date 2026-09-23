@@ -22,7 +22,11 @@ Provider credentials remain in the parent gateway, never in the agent environmen
 The hosted isolation workflow uses the same launcher to test forbidden reads,
 symlink traversal, runtime writes, task writes, environment filtering, repeated
 invocation state isolation, and the pinned Claude binary. It makes no model calls.
-Ubuntu 24.04 requires an AppArmor user-namespace exception for /usr/bin/bwrap.\nThe hosted workflow loads the reviewed bwrap.apparmor profile for that executable\nonly. It does not disable AppArmor or global user-namespace restrictions. Nested\nuser namespaces remain disabled inside the sandbox. Future pilot/collection\nsetup must install bubblewrap/socat and load this same profile.
+Ubuntu 24.04 requires an AppArmor user-namespace exception for /usr/bin/bwrap.
+The hosted workflow loads the reviewed bwrap.apparmor profile for that executable
+only. It does not disable AppArmor or global user-namespace restrictions. Nested
+user namespaces remain disabled inside the sandbox. Future pilot/collection
+setup must install bubblewrap/socat and load this same profile.
 
 ## Registration remains suspended
 
@@ -46,3 +50,9 @@ formal plan, then collect a fresh cohort. The old benchmark/analysis and R9/R2
 registration bytes remain unchanged in this repair PR; the successor registration
 must bind the reviewed repair commit. Automatic synthetic checks alone do not
 constitute real pilot evidence or authorize formal collection.
+
+## Hosted verification
+
+Isolation run 35833804315 passed on Ubuntu 24.04, including Claude Code 2.1.278
+startup and the fixed-provider gateway tests. No provider requests or real
+credentials were used. Benchmark Integrity and repository CI also passed.
