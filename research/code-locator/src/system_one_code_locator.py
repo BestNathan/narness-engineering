@@ -29,7 +29,8 @@ DEFAULT_READER_WINDOW_LINES = 140
 DEFAULT_READER_MAX_ROUNDS = 4
 DEFAULT_READER_ACTION_THRESHOLD = 0.40
 DEFAULT_OBSERVATION_THRESHOLD = 0.65
-MAX_ACTIONS_PER_FILE = 4
+MAX_RELEVANT_REGIONS = 3
+MAX_ACTIONS_PER_FILE = 8
 
 
 class Trace:
@@ -470,6 +471,53 @@ def unread_gaps(line_count, coverage):
     return gaps
 
 
+def relevant_regions(file_state, observation_threshold):
+    """Merge adjacent high-relevance observations into bounded semantic hotspots."""
+    relevant = [
+        (index, item)
+        for index, item in enumerate(file_state["observations"])
+        if (
+            item.get("relevance") is not None
+            and item["relevance"] >= observation_threshold
+        )
+    ]
+    relevant.sort(key=lambda pair: (pair[1]["start_line"], pair[1]["end_line"]))
+
+    regions = []
+    for index, item in relevant:
+        start = item["start_line"]
+        end = item["end_line"]
+        score = item["relevance"]
+        if regions and start <= regions[-1]["end_line"] + 1:
+            region = regions[-1]
+            region["end_line"] = max(region["end_line"], end)
+            region["max_relevance"] = max(region["max_relevance"], score)
+            region["observation_count"] += 1
+            region["latest_observation_index"] = max(
+                region["latest_observation_index"],
+                index,
+            )
+            region["observation_ids"].append(item["id"])
+        else:
+            regions.append({
+                "start_line": start,
+                "end_line": end,
+                "max_relevance": score,
+                "observation_count": 1,
+                "latest_observation_index": index,
+                "observation_ids": [item["id"]],
+            })
+
+    regions.sort(
+        key=lambda region: (
+            -region["max_relevance"],
+            -region["latest_observation_index"],
+            region["start_line"],
+        )
+    )
+    return regions[:MAX_RELEVANT_REGIONS]
+
+
 def make_read_action(path, start, end, reason):
     return {
         "kind": "read_range",
@@ -514,40 +562,26 @@ def generate_read_actions(
         if line_count > window_lines * 2:
             append(max(1, line_count - window_lines + 1), line_count, "initial tail probe")
     else:
-        relevant = [
-            item for item in file_state["observations"]
-            if (
-                item.get("relevance") is not None
-                and item["relevance"] >= observation_threshold
-            )
-        ]
+        regions = relevant_regions(
+            file_state,
+            observation_threshold,
+        )
 
-        if relevant:
-            strongest = max(
-                relevant,
-                key=lambda item: (
-                    item["relevance"],
-                    item["end_line"] - item["start_line"],
-                ),
-            )
-            relevant_ranges = merge_ranges(
-                (item["start_line"], item["end_line"])
-                for item in relevant
-            )
-            anchor_start, anchor_end = next(
-                (start, end)
-                for start, end in relevant_ranges
-                if start <= strongest["start_line"] <= end
+        for region_index, region in enumerate(regions):
+            label = (
+                f"relevant region {region_index + 1} "
+                f"{region['start_line']}-{region['end_line']} "
+                f"(score={region['max_relevance']:.3f})"
             )
             append(
-                anchor_end + 1,
-                anchor_end + window_lines,
-                "continue after high-relevance evidence",
+                region["end_line"] + 1,
+                region["end_line"] + window_lines,
+                f"continue after {label}",
             )
             append(
-                anchor_start - window_lines,
-                anchor_start - 1,
-                "expand before high-relevance evidence",
+                region["start_line"] - window_lines,
+                region["start_line"] - 1,
+                f"expand before {label}",
             )
 
         gaps = unread_gaps(line_count, coverage)
@@ -704,8 +738,13 @@ def progressive_read(
             for file_state in state["files"]:
                 if file_state["stopped"]:
                     continue
+                regions = relevant_regions(
+                    file_state,
+                    observation_threshold,
+                )
                 action_sets.append({
                     "path": file_state["path"],
+                    "relevant_regions": regions,
                     "actions": generate_read_actions(
                         file_state,
                         window_lines,
