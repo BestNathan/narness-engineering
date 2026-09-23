@@ -104,20 +104,29 @@ Current ReadRange threshold:
 parallel action threshold = 0.65
 ~~~
 
-The threshold controls ReadRange concurrency only:
+The threshold controls ReadRange concurrency, but control-flow and concrete
+read utility are now reconciled when they disagree:
 
 ~~~text
-if Choice == StopFile:
+if Choice == StopFile and best ReadRange >= threshold:
+  ask System One to resolve StopFile vs that concrete ReadRange
+
+if Choice == ContinueFile and every ReadRange < threshold:
+  ask System One to resolve StopFile vs the best concrete ReadRange
+
+if resolved choice == StopFile:
   model_stop
 
-if Choice == ContinueFile:
-  execute all non-overlapping ReadRanges >= threshold
+if resolved choice == ReadRange:
+  execute that explicitly authorized read
 
-if no ReadRange reaches threshold:
-  execute top-1 ReadRange
+otherwise:
+  execute all non-overlapping ReadRanges >= threshold
 ~~~
 
-Low read scores never cause Harness termination.
+There is no unconditional low-score top-1 fallback. Low read scores still do
+not cause Harness-defined termination; they trigger a second explicit model
+control decision.
 
 ### Stop semantics
 
@@ -140,7 +149,12 @@ Each FileRuntime keeps complete durable observations, but the request
 DecisionView is mechanically bounded. It includes recent complete raw
 observations up to a character budget plus full coverage metadata.
 
-This is context management, not semantic summarization.
+The DecisionView also exposes a bounded exploration-yield history: recent
+control choices, maximum ReadRange utility, selection mode, and the current
+consecutive low-utility streak. This lets StopFile reason about diminishing
+returns without the Harness interpreting source semantics.
+
+This is context management and runtime telemetry, not semantic summarization.
 
 ### Result evidence
 
@@ -212,7 +226,10 @@ The repository also contains a manual cross-trace workflow:
 
 Despite the historical filename, the workflow is now an observational comparison, not an accuracy oracle.
 
-Both systems receive the same task and exact subject revision. Claude Code runs through the existing `ds` environment with read-only repository tools.
+The System One side now runs the current independent per-file range runtime,
+not the historical global progressive reader. Both systems receive the same
+task and exact subject revision. Claude Code runs through the existing `ds`
+environment with read-only repository tools.
 
 Claude uses two fresh sessions with different responsibilities:
 
@@ -301,7 +318,7 @@ Both System One and Claude Code emit the same final-result contract:
 localization-result.json
 ~~~
 
-It records final valuable files, file-level confidence, valuable source ranges, range-level confidence/reason, exact source content, and execution-cost metrics.
+It records the frozen subject repository/revision, final valuable files, file-level confidence, valuable source ranges, range-level confidence/reason, exact source content, and execution-cost metrics. The generic comparator rejects results whose canonical subject identities differ.
 
 Cost fields include elapsed time, token usage, model calls / turns / tool calls when available, provider USD cost when reported, and per-stage breakdowns.
 
