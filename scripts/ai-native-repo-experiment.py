@@ -304,16 +304,17 @@ def validation_sandbox_command(
         elif path.exists():
             argv += ["--ro-bind", runtime, runtime]
 
+    node_root: Path | None = None
     node = shutil.which("node")
-    if node is None:
-        raise RuntimeError("Node runtime is required for validation")
-    node_root = Path(node).resolve().parent.parent
-    if node_root != Path("/usr"):
-        if not str(node_root).startswith("/opt/hostedtoolcache/node/"):
-            raise RuntimeError(
-                "Validation requires /usr Node or the GitHub setup-node runtime"
-            )
-        argv += ["--ro-bind", str(node_root), str(node_root)]
+    if node is not None:
+        candidate = Path(node).resolve().parent.parent
+        if candidate == Path("/usr"):
+            node_root = candidate
+        elif str(candidate).startswith("/opt/hostedtoolcache/node/"):
+            node_root = candidate
+            argv += ["--ro-bind", str(node_root), str(node_root)]
+        # An arbitrary host Node installation is deliberately not mounted.
+        # Commands that actually require Node then fail inside the sandbox.
 
     argv += [
         "--proc", "/proc",
@@ -340,7 +341,10 @@ def validation_sandbox_command(
         "TMPDIR": "/tmp",
         "TMP": "/tmp",
         "TEMP": "/tmp",
-        "PATH": str(node_root / "bin") + ":/usr/bin:/bin",
+        "PATH": (
+            (str(node_root / "bin") + ":") if node_root not in (None, Path("/usr"))
+            else ""
+        ) + "/usr/bin:/bin",
         "LANG": "C.UTF-8",
         "SHELL": "/bin/bash",
         "USER": "validator",
