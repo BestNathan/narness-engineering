@@ -126,6 +126,39 @@ class DemoTest(unittest.TestCase):
             self.assertEqual(125,len(scored))
             self.assertEqual(1,usage['model_calls'])
 
+    def test_region_frontier_compacts_source_lines(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)/'repo'
+            source=root/'src'
+            source.mkdir(parents=True)
+            path=source/'large.py'
+            path.write_text(
+                '\n'.join(
+                    f'def handler_{i}(): return websocket_connection_{i}'
+                    for i in range(125)
+                )+'\n',
+                encoding='utf-8',
+            )
+            file={
+                'id':'src/large.py',
+                'payload':{'path':'src/large.py'},
+            }
+
+            candidates=MODULE.regions(root,file,span=60)
+
+            self.assertEqual(3,len(candidates))
+            self.assertEqual((1,60),(
+                candidates[0]['payload']['start_line'],
+                candidates[0]['payload']['end_line'],
+            ))
+            self.assertEqual((121,125),(
+                candidates[-1]['payload']['start_line'],
+                candidates[-1]['payload']['end_line'],
+            ))
+            self.assertNotIn('content',candidates[0]['payload'])
+            self.assertLessEqual(len(candidates[0]['payload']['declarations']),5)
+            self.assertLessEqual(len(candidates[0]['payload']['identifiers']),20)
+
     def test_run_uses_exactly_one_model_call_per_stage(self):
         class CountingScorer:
             model='counting-test'
@@ -167,7 +200,7 @@ class DemoTest(unittest.TestCase):
                 .1,.1,.1,
             )
 
-            self.assertEqual(['directory','file','line'],scorer.stages)
+            self.assertEqual(['directory','file','region'],scorer.stages)
             self.assertEqual(3,result['metrics']['model_calls'])
             self.assertEqual('one_request_per_stage',result['metrics']['request_strategy'])
             self.assertEqual(2,result['metrics']['files_selected'])
