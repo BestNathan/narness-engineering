@@ -50,7 +50,8 @@ Default reader controls:
 ~~~text
 file batch size          = 4
 read window              = 140 lines
-max rounds per batch     = 4
+soft rounds per batch    = 4
+hard rounds per batch    = 8
 read action threshold    = 0.40
 observation threshold    = 0.65
 ~~~
@@ -80,7 +81,9 @@ After read_file returns, the content is appended to ReaderState before System On
 
 ## Dynamic actions
 
-An unread file starts with a coarse action frontier such as head, middle, tail, and stop. After observations exist, the harness generates actions around the strongest observation and the largest unread gap. Relevant content therefore increases local reading resolution without requiring the whole file to be expanded up front.
+An unread file starts with a coarse action frontier such as head, middle, tail, and stop. After observations exist, the harness generates actions around bounded high-relevance regions plus an exploration gap. Relevant content therefore increases local reading resolution without requiring the whole file to be expanded up front.
+
+The reader now uses a soft/hard round budget. Four rounds is the normal budget. If the current soft-limit round produces at least one new observation above the observation threshold, the batch receives another round. Extra rounds continue only while they keep producing new high-relevance observations, and the batch can never exceed eight rounds.
 
 ## Decision primitives
 
@@ -111,7 +114,8 @@ Important controls:
 --phase1-max-files
 --reader-file-batch-size
 --reader-window-lines
---reader-max-rounds
+--reader-soft-rounds
+--reader-hard-rounds
 --reader-action-threshold
 --observation-threshold
 ~~~
