@@ -239,49 +239,49 @@ def _detect_symbol(line, suffix):
     patterns = []
     if suffix == ".py":
         patterns = [
-            ("class", r"^(?:@[^ ]+\\s+)?class\\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("function", r"^(?:async\\s+)?def\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\("),
+            ("class", r"^(?:@[^ ]+\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("function", r"^(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("),
         ]
     elif suffix == ".rs":
         patterns = [
-            ("function", r"^(?:(?:pub(?:\\([^)]*\\))?|unsafe|async|const|extern(?:\\s+\\\"[^\\\"]+\\\")?)\\s+)*fn\\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("struct", r"^(?:(?:pub(?:\\([^)]*\\))?)\\s+)?struct\\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("enum", r"^(?:(?:pub(?:\\([^)]*\\))?)\\s+)?enum\\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("trait", r"^(?:(?:pub(?:\\([^)]*\\))?)\\s+)?trait\\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("impl", r"^impl(?:<[^>]+>)?\\s+(.+?)(?:\\s+where\\b|\\s*\\{)"),
+            ("function", r"^(?:(?:pub(?:\([^)]*\))?|unsafe|async|const|extern(?:\s+\"[^\"]+\")?)\s+)*fn\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("struct", r"^(?:(?:pub(?:\([^)]*\))?)\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("enum", r"^(?:(?:pub(?:\([^)]*\))?)\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("trait", r"^(?:(?:pub(?:\([^)]*\))?)\s+)?trait\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("impl", r"^impl(?:<[^>]+>)?\s+(.+?)(?:\s+where\b|\s*\{)"),
         ]
     elif suffix == ".go":
         patterns = [
-            ("function", r"^func\\s+(?:\\([^)]*\\)\\s*)?([A-Za-z_][A-Za-z0-9_]*)\\s*\\("),
-            ("type", r"^type\\s+([A-Za-z_][A-Za-z0-9_]*)\\s+(?:struct|interface)\\b"),
+            ("function", r"^func\s+(?:\([^)]*\)\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\("),
+            ("type", r"^type\s+([A-Za-z_][A-Za-z0-9_]*)\s+(?:struct|interface)\b"),
         ]
     elif suffix in {".ts", ".tsx", ".js", ".jsx", ".vue"}:
         patterns = [
-            ("class", r"^(?:(?:export|default|declare|abstract)\\s+)*class\\s+([A-Za-z_$][A-Za-z0-9_$]*)"),
-            ("interface", r"^(?:(?:export|default|declare)\\s+)*interface\\s+([A-Za-z_$][A-Za-z0-9_$]*)"),
-            ("type", r"^(?:(?:export|declare)\\s+)*type\\s+([A-Za-z_$][A-Za-z0-9_$]*)\\b"),
-            ("function", r"^(?:(?:export|default)\\s+)*(?:async\\s+)?function\\s+([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\("),
-            ("function", r"^(?:(?:export|declare)\\s+)*(?:const|let|var)\\s+([A-Za-z_$][A-Za-z0-9_$]*)\\s*=.*=>"),
-            ("method", r"^(?:(?:public|private|protected|static|async|readonly|override|abstract|get|set)\\s+)*([A-Za-z_$][A-Za-z0-9_$]*)\\s*(?:<[^>{}]+>)?\\s*\\([^;{}]*\\)"),
+            ("class", r"^(?:(?:export|default|declare|abstract)\s+)*class\s+([A-Za-z_$][A-Za-z0-9_$]*)"),
+            ("interface", r"^(?:(?:export|default|declare)\s+)*interface\s+([A-Za-z_$][A-Za-z0-9_$]*)"),
+            ("type", r"^(?:(?:export|declare)\s+)*type\s+([A-Za-z_$][A-Za-z0-9_$]*)\b"),
+            ("function", r"^(?:(?:export|default)\s+)*(?:async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\("),
+            ("function", r"^(?:(?:export|declare)\s+)*(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=.*=>"),
+            ("method", r"^(?:(?:public|private|protected|static|async|readonly|override|abstract|get|set)\s+)*([A-Za-z_$][A-Za-z0-9_$]*)\s*(?:<[^>{}]+>)?\s*\([^;{}]*\)"),
         ]
     elif suffix == ".java":
         patterns = [
-            ("class", r"^(?:(?:public|private|protected|abstract|final|static)\\s+)*(?:class|interface|enum|record)\\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("method", r"^(?:(?:public|private|protected|static|final|abstract|synchronized|native|default)\\s+)*(?:<[^>]+>\\s*)?(?:[A-Za-z_$][A-Za-z0-9_$.<>?, \\[\\]]+\\s+)?([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\([^;{}]*\\)"),
+            ("class", r"^(?:(?:public|private|protected|abstract|final|static)\s+)*(?:class|interface|enum|record)\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("method", r"^(?:(?:public|private|protected|static|final|abstract|synchronized|native|default)\s+)*(?:<[^>]+>\s*)?(?:[A-Za-z_$][A-Za-z0-9_$.<>?, \[\]]+\s+)?([A-Za-z_$][A-Za-z0-9_$]*)\s*\([^;{}]*\)"),
         ]
     elif suffix == ".proto":
         patterns = [
-            ("service", r"^service\\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("message", r"^message\\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("enum", r"^enum\\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("rpc", r"^rpc\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\("),
+            ("service", r"^service\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("message", r"^message\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("enum", r"^enum\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("rpc", r"^rpc\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("),
         ]
     elif suffix == ".sh":
         patterns = [
-            ("function", r"^(?:function\\s+)?([A-Za-z_][A-Za-z0-9_]*)\\s*\\(\\)\\s*\\{?"),
+            ("function", r"^(?:function\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(\)\s*\{?"),
         ]
     elif suffix == ".md":
-        match = re.match(r"^(#{1,6})\\s+(.+?)\\s*#*$", stripped)
+        match = re.match(r"^(#{1,6})\s+(.+?)\s*#*$", stripped)
         if match:
             return {
                 "kind": "section",
