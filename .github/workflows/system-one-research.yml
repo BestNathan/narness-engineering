@@ -125,7 +125,7 @@ jobs:
     name: Real System One evidence
     if: ${{ (github.event_name == 'workflow_dispatch' && inputs.collect_system_one) || (github.event_name == 'push' && github.ref == 'refs/heads/research/system-one-code-localization' && contains(github.event.head_commit.message, '[system-one-e2e]')) }}
     runs-on: ubuntu-24.04
-    environment: typesave
+    environment: typesafe
     timeout-minutes: 120
     steps:
       - name: Checkout Narness harness
