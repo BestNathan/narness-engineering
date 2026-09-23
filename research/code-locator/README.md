@@ -235,3 +235,16 @@ docs/pilots/nession-websocket-global-scheduler-cross-trace-2026-09-23.md
 6. Multi-task cross-traces and later human-reviewed gold sets when absolute accuracy is needed.
 
 See `docs/design.md` for the detailed model.
+
+
+## Canonical localization result
+
+Both System One and Claude Code emit the same final-result contract:
+
+~~~text
+localization-result.json
+~~~
+
+It records final valuable files, file-level confidence, valuable source ranges, range-level confidence/reason, and the exact source content. Execution traces remain separate.
+
+Confidence values preserve their source semantics rather than pretending to be calibrated across models. See `docs/localization-result.md`.
