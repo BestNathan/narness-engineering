@@ -1,0 +1,15 @@
+relevant directories:
+  0.840 web/src
+  0.840 web/src/ws
+  0.620 server
+  0.620 server/src
+  0.620 web
+  0.620 web/src/api
+relevant files:
+  0.840 web/src/ws/client.ts
+  0.620 server/src/http.ts
+  0.620 web/src/api/user.ts
+relevant snippets:
+  0.960 web/src/ws/client.ts:1-19
+1: export class WebSocketClient {\n2:   private socket?: WebSocket;\n3:   private reconnectTimer?: ReturnType<typeof setTimeout>;\n4: \n5:   connect(url: string) {\n6:     this.socket = new WebSocket(url);\n7:     this.socket.onopen = () => this.clearReconnect();\n8:     this.socket.onclose = () => this.scheduleReconnect(url);\n9:     this.socket.onerror = () => this.socket?.close();\n10:   }\n11: \n12:   private scheduleReconnect(url: string) {\n13:     this.reconnectTimer = setTimeout(() => this.connect(url), 1000);\n14:   }\n15: \n16:   private clearReconnect() {\n17:     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);\n18:   }\n19: }
+metrics: {"model_calls": 0, "input_tokens": 0, "output_tokens": 0, "request_strategy": "one_request_per_stage", "directories_exposed": 6, "directories_selected": 6, "files_exposed": 3, "files_selected": 3, "regions_exposed": 3, "regions_selected": 1, "region_span": 120, "physical_lines_considered": 26, "snippets": 1, "elapsed_ms": 2.469}
