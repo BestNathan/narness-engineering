@@ -126,38 +126,82 @@ class DemoTest(unittest.TestCase):
             self.assertEqual(125,len(scored))
             self.assertEqual(1,usage['model_calls'])
 
-    def test_region_frontier_compacts_source_lines(self):
+    def test_symbol_frontier_preserves_multiline_semantics(self):
         with tempfile.TemporaryDirectory() as temp:
             root=pathlib.Path(temp)/'repo'
             source=root/'src'
             source.mkdir(parents=True)
-            path=source/'large.py'
+            path=source/'client.ts'
             path.write_text(
-                '\n'.join(
-                    f'def handler_{i}(): return websocket_connection_{i}'
-                    for i in range(125)
-                )+'\n',
+                'export class Client {\n'
+                '  connect(url: string) {\n'
+                '    const socket = new WebSocket(url);\n'
+                '    socket.onclose = () => this.reconnect(url);\n'
+                '  }\n'
+                '\n'
+                '  reconnect(url: string) {\n'
+                '    return this.connect(url);\n'
+                '  }\n'
+                '}\n',
                 encoding='utf-8',
             )
             file={
-                'id':'src/large.py',
-                'payload':{'path':'src/large.py'},
+                'id':'src/client.ts',
+                'payload':{
+                    'path':'src/client.ts',
+                    'filename':'client.ts',
+                    'extension':'.ts',
+                },
             }
 
-            candidates=MODULE.regions(root,file,span=60)
+            candidates=MODULE.symbols(root,file)
+            by_name={x['payload']['name']:x for x in candidates}
 
-            self.assertEqual(3,len(candidates))
-            self.assertEqual((1,60),(
-                candidates[0]['payload']['start_line'],
-                candidates[0]['payload']['end_line'],
+            self.assertIn('Client',by_name)
+            self.assertIn('connect',by_name)
+            self.assertIn('reconnect',by_name)
+            self.assertEqual((2,5),(
+                by_name['connect']['payload']['start_line'],
+                by_name['connect']['payload']['end_line'],
             ))
-            self.assertEqual((121,125),(
-                candidates[-1]['payload']['start_line'],
-                candidates[-1]['payload']['end_line'],
-            ))
-            self.assertNotIn('content',candidates[0]['payload'])
-            self.assertLessEqual(len(candidates[0]['payload']['declarations']),5)
-            self.assertLessEqual(len(candidates[0]['payload']['identifiers']),20)
+            self.assertNotIn('content',by_name['connect']['payload'])
+            self.assertIn(
+                'connect(url: string)',
+                by_name['connect']['payload']['signature'],
+            )
+
+    def test_python_multiline_function_is_one_symbol(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)/'repo'
+            source=root/'src'
+            source.mkdir(parents=True)
+            path=source/'client.py'
+            path.write_text(
+                'def websocket_connect(url):\n'
+                '    socket = open_socket(url)\n'
+                '    if socket:\n'
+                '        return socket\n'
+                '\n'
+                'def unrelated():\n'
+                '    return None\n',
+                encoding='utf-8',
+            )
+            file={
+                'id':'src/client.py',
+                'payload':{
+                    'path':'src/client.py',
+                    'filename':'client.py',
+                    'extension':'.py',
+                },
+            }
+
+            candidates=MODULE.symbols(root,file)
+            names=[x['payload']['name'] for x in candidates]
+
+            self.assertEqual(['websocket_connect','unrelated'],names)
+            first=candidates[0]['payload']
+            self.assertEqual(1,first['start_line'])
+            self.assertEqual(5,first['end_line'])
 
     def test_run_uses_exactly_one_model_call_per_stage(self):
         class CountingScorer:
@@ -200,7 +244,7 @@ class DemoTest(unittest.TestCase):
                 .1,.1,.1,
             )
 
-            self.assertEqual(['directory','file','region'],scorer.stages)
+            self.assertEqual(['directory','file','symbol'],scorer.stages)
             self.assertEqual(3,result['metrics']['model_calls'])
             self.assertEqual('one_request_per_stage',result['metrics']['request_strategy'])
             self.assertEqual(2,result['metrics']['files_selected'])
