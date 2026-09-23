@@ -1,496 +1,427 @@
-import importlib.util, pathlib, sys, tempfile, unittest
+import importlib.util
+import json
+import pathlib
+import sys
+import tempfile
+import unittest
 
-PROJECT_ROOT=pathlib.Path(__file__).resolve().parents[1]
-MODULE_PATH=PROJECT_ROOT/'src'/'system_one_code_locator.py'
-SPEC=importlib.util.spec_from_file_location('system_one_code_locator',MODULE_PATH)
-MODULE=importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name]=MODULE
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
+MODULE_PATH = PROJECT_ROOT / "src" / "system_one_code_locator.py"
+SPEC = importlib.util.spec_from_file_location("system_one_code_locator", MODULE_PATH)
+MODULE = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
+
 
 class DemoTest(unittest.TestCase):
     def fixture(self):
-        return PROJECT_ROOT/'fixtures'/'repository'
+        return PROJECT_ROOT / "fixtures" / "repository"
 
-    def test_progressive_localization(self):
+    def test_progressive_localization_produces_evidence(self):
         with tempfile.TemporaryDirectory() as temp:
-            trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
-            scorer=MODULE.OfflineScorer(trace)
-            result=MODULE.run(
+            trace = MODULE.Trace(pathlib.Path(temp) / "trace.jsonl")
+            decider = MODULE.OfflineDecider(trace)
+            result = MODULE.run(
                 self.fixture(),
-                'Help me optimize the websocket connection implementation',
-                scorer,trace,.35,.50,.50,.50,.60,
+                "Help me optimize the websocket connection implementation",
+                decider,
+                trace,
+                directory_threshold=0.50,
+                file_threshold=0.65,
+                phase1_max_files=8,
+                reader_file_batch_size=2,
+                reader_window_lines=40,
+                reader_max_rounds=2,
+                reader_action_threshold=0.40,
+                observation_threshold=0.65,
             )
-            self.assertIn('web/src/ws',[x['id'] for x in result['directories']])
-            self.assertIn('web/src/ws/client.ts',[x['id'] for x in result['files']])
+
+            self.assertIn(
+                "web/src/ws",
+                [item["id"] for item in result["directories"]],
+            )
+            self.assertIn(
+                "web/src/ws/client.ts",
+                [item["id"] for item in result["files"]],
+            )
             self.assertTrue(any(
-                x['path']=='web/src/ws/client.ts' and 'WebSocket' in x['content']
-                for x in result['snippets']
+                item["path"] == "web/src/ws/client.ts"
+                and "WebSocket" in item["content"]
+                for item in result["snippets"]
             ))
-            events=[
-                __import__('json').loads(x)['event']
-                for x in pathlib.Path(trace.path).read_text().splitlines()
-            ]
-            self.assertIn('search_started',events)
-            self.assertIn('threshold_applied',events)
-            self.assertIn('search_completed',events)
+            self.assertEqual(
+                "two_phase_file_locator_plus_progressive_reader",
+                result["architecture"],
+            )
 
     def test_file_frontier_uses_direct_files_only(self):
         with tempfile.TemporaryDirectory() as temp:
-            root=pathlib.Path(temp)/'repo'
-            parent=root/'src'
-            child=parent/'nested'
+            root = pathlib.Path(temp) / "repo"
+            parent = root / "src"
+            child = parent / "nested"
             child.mkdir(parents=True)
 
-            (parent/'direct.py').write_text('DIRECT = True\n',encoding='utf-8')
-            (child/'nested.py').write_text('NESTED = True\n',encoding='utf-8')
+            (parent / "direct.py").write_text("DIRECT = True\n", encoding="utf-8")
+            (child / "nested.py").write_text("NESTED = True\n", encoding="utf-8")
 
-            selected_parent=[{
-                'id':'src',
-                'payload':{'path':'src'},
-                'score':0.9,
+            selected_parent = [{
+                "id": "src",
+                "payload": {"path": "src"},
+                "score": 0.9,
             }]
-            parent_files=MODULE.files(root,selected_parent)
+            parent_files = MODULE.files(root, selected_parent)
+            self.assertEqual(["src/direct.py"], [item["id"] for item in parent_files])
 
-            self.assertEqual(['src/direct.py'],[x['id'] for x in parent_files])
-
-            selected_both=[
+            selected_both = [
                 *selected_parent,
                 {
-                    'id':'src/nested',
-                    'payload':{'path':'src/nested'},
-                    'score':0.9,
+                    "id": "src/nested",
+                    "payload": {"path": "src/nested"},
+                    "score": 0.9,
                 },
             ]
-            both_files=MODULE.files(root,selected_both)
-
+            both_files = MODULE.files(root, selected_both)
             self.assertEqual(
-                ['src/direct.py','src/nested/nested.py'],
-                [x['id'] for x in both_files],
+                ["src/direct.py", "src/nested/nested.py"],
+                [item["id"] for item in both_files],
             )
 
-    def test_request_uses_noul(self):
+    def test_source_stat_does_not_expose_content(self):
         with tempfile.TemporaryDirectory() as temp:
-            trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
-            scorer=MODULE.SystemOneScorer('test',trace)
-            candidates=[
-                {'id':'web/src/ws','payload':{'path':'web/src/ws'}},
-                {'id':'server','payload':{'path':'server'}},
-            ]
-            scorer._request=lambda payload: {
-                'model':'jev-test',
-                'answers':{
-                    f'candidate_{i}':{'type':'noul','noul':0.5}
-                    for i in range(2)
+            root = pathlib.Path(temp) / "repo"
+            source = root / "src"
+            source.mkdir(parents=True)
+            path = source / "client.ts"
+            path.write_text(
+                "const secretMarker = 'websocket';\nconst other = 1;\n",
+                encoding="utf-8",
+            )
+            file = {
+                "id": "src/client.ts",
+                "payload": {
+                    "path": "src/client.ts",
+                    "filename": "client.ts",
+                    "extension": ".ts",
+                    "size_bytes": path.stat().st_size,
                 },
-                'usage':{'input_tokens':1,'output_tokens':1},
+                "score": 0.9,
             }
-            scored,_=scorer.score('optimize websocket','directory',candidates)
-            self.assertEqual(2,len(scored))
-            records=[
-                __import__('json').loads(x)
-                for x in pathlib.Path(trace.path).read_text().splitlines()
-            ]
-            request=next(
-                x for x in records if x['event']=='system_one_request'
-            )['request']
-            self.assertTrue(all(
-                q['type']=='noul' for q in request['questions'].values()
-            ))
-            instructions=request['questions']['candidate_0']['instructions']
-            self.assertEqual(
-                {'path':'web/src/ws'},
-                instructions['candidate'],
-            )
-            self.assertEqual(
-                'optimize websocket',
-                instructions['task'],
-            )
-            self.assertEqual('directory',instructions['stage'])
-            self.assertIn(
-                'Would retaining this candidate materially help',
-                instructions['question'],
-            )
-            self.assertIn(
-                'criteria',
-                request['questions']['candidate_0'],
-            )
 
-    def test_system_one_scores_large_stage_in_one_request(self):
+            stat = MODULE.source_stat(root, file)
+
+            self.assertEqual(2, stat["line_count"])
+            self.assertNotIn("content", stat)
+            self.assertNotIn("websocket", json.dumps(stat).lower())
+
+    def test_initial_action_space_is_stat_driven(self):
+        file_state = {
+            "path": "src/large.ts",
+            "stat": {"line_count": 1000, "size_bytes": 10000, "extension": ".ts"},
+            "coverage": [],
+            "observations": [],
+            "stopped": False,
+        }
+
+        actions = MODULE.generate_read_actions(file_state, 100)
+        reads = [item for item in actions if item["kind"] == "read_range"]
+
+        self.assertEqual(3, len(reads))
+        self.assertEqual((1, 100), (reads[0]["start_line"], reads[0]["end_line"]))
+        self.assertTrue(any(
+            item["start_line"] > 400 and item["end_line"] < 700
+            for item in reads
+        ))
+        self.assertEqual("stop_file", actions[-1]["kind"])
+
+    def test_high_relevance_observation_changes_next_actions(self):
+        file_state = {
+            "path": "src/client.ts",
+            "stat": {"line_count": 800, "size_bytes": 10000, "extension": ".ts"},
+            "coverage": [[281, 420]],
+            "observations": [{
+                "id": "obs-1",
+                "path": "src/client.ts",
+                "start_line": 281,
+                "end_line": 420,
+                "content": "reconnect",
+                "relevance": 0.95,
+            }],
+            "stopped": False,
+        }
+
+        actions = MODULE.generate_read_actions(file_state, 140)
+        reads = [item for item in actions if item["kind"] == "read_range"]
+
+        self.assertTrue(any(
+            item["start_line"] == 421
+            and "after" in item["reason"]
+            for item in reads
+        ))
+        self.assertTrue(any(
+            item["end_line"] == 280
+            and "before" in item["reason"]
+            for item in reads
+        ))
+
+    def test_multiple_files_are_decided_in_one_choice_request(self):
         with tempfile.TemporaryDirectory() as temp:
-            trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
-            scorer=MODULE.SystemOneScorer('test',trace,batch_size=2)
-            candidates=[
-                {'id':f'candidate-{i}','payload':{'path':f'candidate-{i}'}}
-                for i in range(125)
-            ]
-            calls=[]
+            trace = MODULE.Trace(pathlib.Path(temp) / "trace.jsonl")
+            decider = MODULE.SystemOneDecider("test", trace)
+            calls = []
 
             def fake_request(payload):
                 calls.append(payload)
+                answers = {}
+                for question_id, question in payload["questions"].items():
+                    self.assertEqual("choice", question["type"])
+                    options = list(question["criteria"])
+                    chosen = next(option for option in options if option != "stop")
+                    answers[question_id] = {
+                        "type": "choice",
+                        "choice": chosen,
+                        "probabilities": {
+                            option: (0.8 if option == chosen else 0.2 / (len(options) - 1))
+                            for option in options
+                        },
+                        "confidence": 0.75,
+                    }
                 return {
-                    'model':'jev-test',
-                    'answers':{
-                        key:{'type':'noul','noul':0.5}
-                        for key in payload['questions']
-                    },
-                    'usage':{'input_tokens':125,'output_tokens':125},
+                    "model": "jev-test",
+                    "answers": answers,
+                    "usage": {"input_tokens": 10, "output_tokens": 10},
                 }
 
-            scorer._request=fake_request
-            scored,usage=scorer.score('locate websocket','file',candidates)
-
-            self.assertEqual(1,len(calls))
-            self.assertEqual(125,len(calls[0]['questions']))
-            self.assertEqual(125,len(scored))
-            self.assertEqual(1,usage['model_calls'])
-
-    def test_symbol_frontier_preserves_multiline_semantics(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root=pathlib.Path(temp)/'repo'
-            source=root/'src'
-            source.mkdir(parents=True)
-            path=source/'client.ts'
-            path.write_text(
-                'export class Client {\n'
-                '  connect(url: string) {\n'
-                '    const socket = new WebSocket(url);\n'
-                '    socket.onclose = () => this.reconnect(url);\n'
-                '  }\n'
-                '\n'
-                '  reconnect(url: string) {\n'
-                '    return this.connect(url);\n'
-                '  }\n'
-                '}\n',
-                encoding='utf-8',
-            )
-            file={
-                'id':'src/client.ts',
-                'payload':{
-                    'path':'src/client.ts',
-                    'filename':'client.ts',
-                    'extension':'.ts',
-                },
-            }
-
-            candidates=MODULE.symbols(root,file)
-            by_name={x['payload']['name']:x for x in candidates}
-
-            self.assertIn('Client',by_name)
-            self.assertIn('connect',by_name)
-            self.assertIn('reconnect',by_name)
-            self.assertEqual((2,5),(
-                by_name['connect']['payload']['start_line'],
-                by_name['connect']['payload']['end_line'],
-            ))
-            self.assertNotIn('content',by_name['connect']['payload'])
-            self.assertIn(
-                'connect(url: string)',
-                by_name['connect']['payload']['signature'],
-            )
-
-    def test_python_multiline_function_is_one_symbol(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root=pathlib.Path(temp)/'repo'
-            source=root/'src'
-            source.mkdir(parents=True)
-            path=source/'client.py'
-            path.write_text(
-                'def websocket_connect(url):\n'
-                '    socket = open_socket(url)\n'
-                '    if socket:\n'
-                '        return socket\n'
-                '\n'
-                'def unrelated():\n'
-                '    return None\n',
-                encoding='utf-8',
-            )
-            file={
-                'id':'src/client.py',
-                'payload':{
-                    'path':'src/client.py',
-                    'filename':'client.py',
-                    'extension':'.py',
-                },
-            }
-
-            candidates=MODULE.symbols(root,file)
-            names=[x['payload']['name'] for x in candidates]
-
-            self.assertEqual(['websocket_connect','unrelated'],names)
-            first=candidates[0]['payload']
-            self.assertEqual(1,first['start_line'])
-            self.assertEqual(5,first['end_line'])
-
-    def test_file_outline_is_one_candidate_per_file(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root=pathlib.Path(temp)/'repo'
-            source=root/'src'
-            source.mkdir(parents=True)
-            (source/'client.ts').write_text(
-                'export class Client {\n'
-                '  connect() { return 1; }\n'
-                '  close() { return 2; }\n'
-                '}\n',
-                encoding='utf-8',
-            )
-            files=[{
-                'id':'src/client.ts',
-                'payload':{
-                    'path':'src/client.ts',
-                    'filename':'client.ts',
-                    'extension':'.ts',
-                },
-            }]
-
-            candidates,symbols_by_path=MODULE.file_outlines(root,files)
-
-            self.assertEqual(1,len(candidates))
-            outline=candidates[0]['payload']
-            self.assertEqual('src/client.ts',outline['path'])
-            self.assertGreaterEqual(outline['symbol_count'],3)
-            self.assertNotIn('content',outline)
-            self.assertTrue(any(
-                item['name']=='connect'
-                for item in outline['symbols']
-            ))
-            self.assertIn('src/client.ts',symbols_by_path)
-
-    def test_outline_frontier_groups_symbols_by_scope(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root=pathlib.Path(temp)/'repo'
-            source=root/'src'
-            source.mkdir(parents=True)
-            (source/'one.ts').write_text(
-                'export class One {\n'
-                '  connect() { return 1; }\n'
-                '  close() { return 2; }\n'
-                '}\n',
-                encoding='utf-8',
-            )
-            (source/'two.ts').write_text(
-                'export class Two {\n'
-                '  unrelated() { return 3; }\n'
-                '}\n',
-                encoding='utf-8',
-            )
-            files=[
-                {
-                    'id':'src/one.ts',
-                    'payload':{
-                        'path':'src/one.ts',
-                        'filename':'one.ts',
-                        'extension':'.ts',
+            decider.request = fake_request
+            state = {
+                "goal": "locate websocket",
+                "batch_index": 0,
+                "round": 1,
+                "files": [
+                    {
+                        "path": "a.ts",
+                        "phase1_score": 0.9,
+                        "stat": {"line_count": 400, "size_bytes": 1000, "extension": ".ts"},
+                        "coverage": [],
+                        "observations": [],
+                        "stopped": False,
+                        "stop_reason": None,
                     },
-                },
-                {
-                    'id':'src/two.ts',
-                    'payload':{
-                        'path':'src/two.ts',
-                        'filename':'two.ts',
-                        'extension':'.ts',
+                    {
+                        "path": "b.ts",
+                        "phase1_score": 0.8,
+                        "stat": {"line_count": 300, "size_bytes": 800, "extension": ".ts"},
+                        "coverage": [],
+                        "observations": [],
+                        "stopped": False,
+                        "stop_reason": None,
                     },
-                },
+                ],
+                "observations": [],
+            }
+            action_sets = [
+                {
+                    "path": item["path"],
+                    "actions": MODULE.generate_read_actions(item, 100),
+                }
+                for item in state["files"]
             ]
 
-            candidates,symbols_by_outline=MODULE.outlines(root,files)
-
-            self.assertEqual(2,len(candidates))
-            one=next(
-                item for item in candidates
-                if item['payload']['path']=='src/one.ts'
-            )
-            payload=one['payload']
-            self.assertEqual('class',payload['scope_kind'])
-            self.assertEqual('One',payload['scope_name'])
-            self.assertGreaterEqual(payload['member_count'],3)
-            self.assertNotIn('content',payload)
-            self.assertTrue(any(
-                item['name']=='connect'
-                for item in payload['members']
-            ))
-            self.assertGreaterEqual(
-                len(symbols_by_outline[one['id']]),
-                3,
+            decisions, usage = decider.choose_read_actions(
+                "locate websocket",
+                state,
+                action_sets,
             )
 
-    def test_file_level_symbols_share_one_module_scope(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root=pathlib.Path(temp)/'repo'
-            source=root/'src'
-            source.mkdir(parents=True)
-            (source/'module.py').write_text(
-                'def first():\n    return 1\n\n'
-                'def second():\n    return 2\n\n'
-                'def third():\n    return 3\n',
-                encoding='utf-8',
-            )
-            files=[{
-                'id':'src/module.py',
-                'payload':{
-                    'path':'src/module.py',
-                    'filename':'module.py',
-                    'extension':'.py',
-                },
-            }]
+            self.assertEqual(1, len(calls))
+            self.assertEqual(2, len(calls[0]["questions"]))
+            self.assertEqual(2, len(decisions))
+            self.assertEqual(1, usage["model_calls"])
 
-            candidates,symbols_by_outline=MODULE.outlines(root,files)
+    def test_observation_enters_state_before_scoring(self):
+        class InspectingDecider:
+            model = "inspect-test"
 
-            self.assertEqual(1,len(candidates))
-            outline=candidates[0]
-            self.assertEqual('module',outline['payload']['scope_kind'])
-            self.assertEqual(3,outline['payload']['member_count'])
-            self.assertEqual(3,len(symbols_by_outline[outline['id']]))
-
-    def test_outline_selection_gates_symbol_expansion(self):
-        class GateScorer:
-            model='gate-test'
-
-            def __init__(self):
-                self.stages=[]
-                self.symbol_ids=[]
-
-            def score(self,query,stage,candidates):
-                self.stages.append(stage)
-                if stage == 'file_outline':
-                    scored=[]
-                    for candidate in candidates:
-                        score=0.99 if candidate['payload']['path'].endswith('one.py') else 0.01
-                        scored.append({**candidate,'score':score})
-                else:
-                    scored=[{**candidate,'score':0.99} for candidate in candidates]
-                if stage == 'symbol':
-                    self.symbol_ids=[x['id'] for x in candidates]
-                return scored,{
-                    'model_calls':1 if candidates else 0,
-                    'input_tokens':0,
-                    'output_tokens':0,
-                }
-
-        with tempfile.TemporaryDirectory() as temp:
-            root=pathlib.Path(temp)/'repo'
-            source=root/'src'
-            source.mkdir(parents=True)
-            (source/'one.py').write_text(
-                'def wanted():\n    return "websocket"\n',
-                encoding='utf-8',
-            )
-            (source/'two.py').write_text(
-                'def unwanted():\n    return "other"\n',
-                encoding='utf-8',
-            )
-
-            trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
-            scorer=GateScorer()
-            MODULE.run(
-                root,
-                'locate websocket',
-                scorer,
-                trace,
-                .1,.1,.5,.5,.1,
-            )
-
-            self.assertEqual(
-                ['directory','file','file_outline','scope','symbol'],
-                scorer.stages,
-            )
-            self.assertTrue(scorer.symbol_ids)
-            self.assertTrue(all(
-                item.startswith('src/one.py::')
-                for item in scorer.symbol_ids
-            ))
-
-    def test_run_uses_exactly_one_model_call_per_stage(self):
-        class CountingScorer:
-            model='counting-test'
-
-            def __init__(self):
-                self.stages=[]
-
-            def score(self,query,stage,candidates):
-                self.stages.append(stage)
+            def score_candidates(self, query, stage, candidates):
                 return (
-                    [{**candidate,'score':0.99} for candidate in candidates],
-                    {
-                        'model_calls':1 if candidates else 0,
-                        'input_tokens':0,
-                        'output_tokens':0,
-                    },
+                    [{**item, "score": 0.99} for item in candidates],
+                    MODULE.empty_usage(),
+                )
+
+            def choose_read_actions(self, query, state, action_sets):
+                decisions = []
+                for item in action_sets:
+                    action = next(
+                        action
+                        for action in item["actions"]
+                        if action["kind"] == "read_range"
+                    )
+                    decisions.append({
+                        "path": item["path"],
+                        "action": action,
+                        "choice": "read_0",
+                        "probability": 0.9,
+                        "confidence": 0.9,
+                        "probabilities": {"read_0": 0.9, "stop": 0.1},
+                    })
+                return decisions, MODULE.empty_usage()
+
+            def score_observations(self, query, state, observation_ids):
+                self_observations = {
+                    item["id"]: item
+                    for item in state["observations"]
+                }
+                for observation_id in observation_ids:
+                    self.assert_in_state = observation_id in self_observations
+                    self.assert_has_content = bool(
+                        self_observations[observation_id]["content"]
+                    )
+                return (
+                    {observation_id: 0.99 for observation_id in observation_ids},
+                    MODULE.empty_usage(),
                 )
 
         with tempfile.TemporaryDirectory() as temp:
-            root=pathlib.Path(temp)/'repo'
-            source=root/'src'
-            source.mkdir(parents=True)
-            (source/'one.py').write_text(
-                'def connect_one():\n    return "websocket"\n',
-                encoding='utf-8',
+            root = pathlib.Path(temp) / "repo"
+            src = root / "src"
+            src.mkdir(parents=True)
+            (src / "client.py").write_text(
+                "def connect():\n    return 'websocket'\n",
+                encoding="utf-8",
             )
-            (source/'two.py').write_text(
-                'def connect_two():\n    return "websocket"\n',
-                encoding='utf-8',
-            )
+            file = {
+                "id": "src/client.py",
+                "payload": {
+                    "path": "src/client.py",
+                    "filename": "client.py",
+                    "extension": ".py",
+                    "size_bytes": 40,
+                },
+                "score": 0.99,
+            }
+            trace = MODULE.Trace(pathlib.Path(temp) / "trace.jsonl")
+            decider = InspectingDecider()
 
-            trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
-            scorer=CountingScorer()
-            result=MODULE.run(
+            states, snippets, metrics = MODULE.progressive_read(
                 root,
-                'locate websocket connection',
-                scorer,
+                "locate websocket",
+                decider,
+                [file],
                 trace,
-                .1,.1,.1,.1,.1,
+                file_batch_size=1,
+                window_lines=20,
+                max_rounds=1,
+                action_threshold=0.4,
+                observation_threshold=0.65,
             )
 
-            self.assertEqual(
-                ['directory','file','file_outline','scope','symbol'],
-                scorer.stages,
+            self.assertTrue(decider.assert_in_state)
+            self.assertTrue(decider.assert_has_content)
+            self.assertEqual(1, len(states[0]["observations"]))
+            self.assertEqual(1, len(snippets))
+            self.assertEqual(1, metrics["reads_executed"])
+
+    def test_phase1_caps_files_after_higher_threshold(self):
+        class Phase1Decider:
+            model = "phase1-test"
+
+            def score_candidates(self, query, stage, candidates):
+                scored = []
+                for index, item in enumerate(candidates):
+                    scored.append({
+                        **item,
+                        "score": 0.99 - (index * 0.01),
+                    })
+                scored.sort(key=lambda item: (-item["score"], item["id"]))
+                return scored, MODULE.empty_usage()
+
+            def choose_read_actions(self, query, state, action_sets):
+                return (
+                    [{
+                        "path": item["path"],
+                        "action": next(
+                            action for action in item["actions"]
+                            if action["kind"] == "stop_file"
+                        ),
+                        "choice": "stop",
+                        "probability": 0.99,
+                        "confidence": 0.99,
+                        "probabilities": {"stop": 0.99},
+                    } for item in action_sets],
+                    MODULE.empty_usage(),
+                )
+
+            def score_observations(self, query, state, observation_ids):
+                return {}, MODULE.empty_usage()
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp) / "repo"
+            src = root / "src"
+            src.mkdir(parents=True)
+            for index in range(10):
+                (src / f"file_{index}.py").write_text(
+                    "value = 1\n",
+                    encoding="utf-8",
+                )
+
+            trace = MODULE.Trace(pathlib.Path(temp) / "trace.jsonl")
+            result = MODULE.run(
+                root,
+                "find implementation",
+                Phase1Decider(),
+                trace,
+                directory_threshold=0.5,
+                file_threshold=0.65,
+                phase1_max_files=3,
+                reader_file_batch_size=2,
+                reader_window_lines=20,
+                reader_max_rounds=1,
+                reader_action_threshold=0.4,
+                observation_threshold=0.65,
             )
-            self.assertEqual(5,result['metrics']['model_calls'])
-            self.assertEqual('one_request_per_stage',result['metrics']['request_strategy'])
-            self.assertEqual(2,result['metrics']['files_selected'])
+
+            self.assertEqual(3, len(result["files"]))
+            self.assertEqual(2, result["metrics"]["reader_batches"])
 
     def test_transient_520_is_retried(self):
         with tempfile.TemporaryDirectory() as temp:
-            trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
-            scorer=MODULE.SystemOneScorer('test',trace)
-            calls={'count':0}
-            original_urlopen=MODULE.urllib.request.urlopen
-            original_sleep=MODULE.time.sleep
+            trace = MODULE.Trace(pathlib.Path(temp) / "trace.jsonl")
+            decider = MODULE.SystemOneDecider("test", trace)
+            calls = {"count": 0}
+            original_urlopen = MODULE.urllib.request.urlopen
+            original_sleep = MODULE.time.sleep
 
             class Response:
                 def __enter__(self):
                     return self
-                def __exit__(self,*args):
+
+                def __exit__(self, *args):
                     return False
+
                 def read(self):
                     return b'{"answers":{},"usage":{}}'
 
-            def fake_urlopen(*args,**kwargs):
-                calls['count'] += 1
-                if calls['count'] == 1:
+            def fake_urlopen(*args, **kwargs):
+                calls["count"] += 1
+                if calls["count"] == 1:
                     raise MODULE.urllib.error.HTTPError(
-                        'https://api.typesafe.ai/v1/systemone',
+                        "https://api.typesafe.ai/v1/systemone",
                         520,
-                        'origin error',
+                        "origin error",
                         hdrs=None,
                         fp=None,
                     )
                 return Response()
 
             try:
-                MODULE.urllib.request.urlopen=fake_urlopen
-                MODULE.time.sleep=lambda _: None
-                scorer._request({'model':'jev-latest','questions':{}})
+                MODULE.urllib.request.urlopen = fake_urlopen
+                MODULE.time.sleep = lambda _: None
+                decider.request({"model": "jev-latest", "questions": {}})
             finally:
-                MODULE.urllib.request.urlopen=original_urlopen
-                MODULE.time.sleep=original_sleep
+                MODULE.urllib.request.urlopen = original_urlopen
+                MODULE.time.sleep = original_sleep
 
-            self.assertEqual(2,calls['count'])
-            records=[
-                __import__('json').loads(x)
-                for x in pathlib.Path(trace.path).read_text().splitlines()
-            ]
-            retry=next(x for x in records if x['event']=='system_one_retry')
-            self.assertEqual(520,retry['status'])
+            self.assertEqual(2, calls["count"])
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     unittest.main()
