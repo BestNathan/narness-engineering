@@ -2,74 +2,104 @@
 
 > Experimental research project. This is a localization harness, not a code-changing agent.
 
-Code Locator now uses a two-phase architecture.
+Code Locator uses a two-phase architecture with progressive state-space disclosure.
 
 ## Phase 1 — File Locator
 
-Phase 1 scores repository structure and file metadata without exposing source bodies:
+Phase 1 scores repository structure and direct-file metadata without exposing source bodies:
 
 ~~~text
-repository -> directory Noul -> direct files -> file Noul -> PotentialFile[]
+repository
+  -> directory Noul
+  -> direct-file metadata
+  -> file Noul
+  -> PotentialFile[]
 ~~~
 
-Current baseline controls:
+Current defaults:
 
 ~~~text
 directory threshold = 0.50
 file threshold      = 0.65
-max files           = 16
 ~~~
+
+There is no Phase-1 top-k file cap. Every file that passes the Phase-1 file threshold becomes part of the Phase-2 initial ReaderState.
 
 The directory stage enumerates the repository tree once. The file stage only exposes direct files of retained directories; it never recursively walks selected directories again.
 
-## Phase 2 — Progressive Reader
+## Phase 2 — Global Progressive Reader
 
-Potential files are not pre-expanded into lines, regions, outlines, or symbols. The harness first reads file stat, generates a bounded read-action space, and lets System One decide where to read.
+Potential files are not ordered into harness-defined batches and are not pre-expanded into lines, regions, outlines, or symbols.
+
+All retained files enter one shared ReaderState with file stat metadata:
 
 ~~~text
 PotentialFile[]
-  -> stat
-  -> dynamic ReadRange actions
+  -> stat(file)
+  -> one shared ReaderState
+~~~
+
+Each scheduler epoch begins with a global file frontier:
+
+~~~text
+all eligible files
+  -> one Noul question per file in one System One request
+  -> score: "should this file receive a read action now?"
+  -> activate every file above reader-file-activation threshold
+~~~
+
+Only activated files receive per-file read-action Choice questions:
+
+~~~text
+activated files
+  -> bounded ReadRange / StopFile actions
   -> Choice
   -> read_file
   -> Observation enters ReaderState
   -> Noul observation relevance
-  -> update coverage and scores
-  -> generate next action frontier
-  -> repeat
+  -> update coverage / hotspots / budgets
+  -> rescore the complete global file frontier
 ~~~
 
-A source range is therefore an information-gathering action, not a precomputed semantic candidate.
+An unselected file is deferred, not discarded. It remains in state and can become active in a later scheduler epoch after observations change the state.
 
-## Multi-file reader batches
-
-The reader processes multiple files concurrently. The default batch size is four. In one reader round, the harness creates one Choice question per active file and sends all questions in one System One request. Each file chooses one grounded next action while sharing the batch ReaderState.
-
-Default reader controls:
+This removes two harness decisions from the previous baseline:
 
 ~~~text
-file batch size          = 4
-read window              = 140 lines
-soft rounds per batch    = 4
-hard rounds per batch    = 8
-read action threshold    = 0.40
-observation threshold    = 0.65
+no Phase-1 max-files cap
+no fixed file batch ordering
 ~~~
 
-The action threshold applies to the probability of the selected Choice option. A read below the threshold is not executed. The observation threshold decides whether read content becomes retained final evidence.
+## Reader controls
+
+~~~text
+reader file activation threshold = 0.65
+read window                      = 140 lines
+soft reads per file              = 4
+hard reads per file              = 8
+read-action probability          = 0.40
+observation relevance            = 0.65
+~~~
+
+File activation, read-action confidence, and observation relevance are different decisions and have independent thresholds.
 
 ## ReaderState
 
 ~~~text
 ReaderState
   goal
-  batch_index / round
+  scheduler round
+
   files[]
     path
     Phase-1 score
     stat { line_count, size_bytes, extension }
     coverage[]
+    read_count
+    activation_count
+    last_activation_score
     stopped / stop_reason
+
   observations[]
     path / line range
     content
@@ -77,23 +107,41 @@ ReaderState
     relevance score
 ~~~
 
-After read_file returns, the content is appended to ReaderState before System One is asked to score the observation. The next action decision sees the updated observations and coverage.
+After read_file returns, content is appended to ReaderState before observation relevance is evaluated. The next global file scheduling request sees the updated state.
 
-## Dynamic actions
+## Dynamic read actions
 
-An unread file starts with a coarse action frontier such as head, middle, tail, and stop. After observations exist, the harness generates actions around bounded high-relevance regions plus an exploration gap. Relevant content therefore increases local reading resolution without requiring the whole file to be expanded up front.
+For an unread activated file, stat creates a coarse local action frontier:
 
-The reader now uses a file-scoped soft/hard round budget. Four rounds is the normal budget. At or beyond the soft limit, each active file must produce a new observation above the observation threshold to earn its own next round. Files that do not earn continuation stop independently, while other files in the same batch may continue. No batch can exceed eight rounds.
+~~~text
+ReadRange(head)
+ReadRange(middle)
+ReadRange(tail)
+StopFile
+~~~
+
+After observations exist, high-relevance observations are merged into bounded disconnected RelevantRegion hotspots. The file can expose before/after actions around several hotspots plus one exploration-gap action.
+
+Source ranges are information-gathering actions, not precomputed semantic answer candidates.
+
+## File-owned read budget
+
+Read budgets belong to files rather than scheduler epochs.
+
+A file gets four normal reads. At or beyond the soft limit, a new high-relevance observation earns another read. A low-relevance observation stops that file. Eight reads is the unconditional per-file hard cap.
+
+This is independent of global scheduling: a file can be deferred for several scheduler epochs without consuming its read budget.
 
 ## Decision primitives
 
 ~~~text
-Phase-1 candidate relevance -> Noul
-Next read action           -> Choice
-Observed-content relevance -> Noul
+Phase-1 candidate relevance     -> Noul
+Phase-2 file activation         -> Noul
+Next read action for a file     -> Choice
+Observed-content relevance      -> Noul
 ~~~
 
-The primitive is selected by decision semantics rather than globally choosing Noul or Choice for the whole locator.
+The primitive is selected by decision semantics.
 
 ## Run
 
@@ -111,36 +159,79 @@ Important controls:
 ~~~text
 --directory-threshold
 --file-threshold
---phase1-max-files
---reader-file-batch-size
+--reader-file-activation-threshold
 --reader-window-lines
---reader-soft-rounds
---reader-hard-rounds
+--reader-soft-reads
+--reader-hard-reads
 --reader-action-threshold
 --observation-threshold
 ~~~
 
-## Research directions
+Legacy batch/top-k CLI flags are accepted only for compatibility and are ignored.
 
-1. Phase-1 threshold versus relevant-file recall, precision, and downstream reader cost.
-2. Reader-action threshold versus exploratory IO and discovery failure.
-3. Observation threshold versus evidence precision and recall.
-4. File batch sizes 1, 2, 4, and 8.
-5. Noul versus Choice only where the semantic decision can reasonably use either primitive.
-6. Richer dynamic action generators based on clues discovered in observations.
-7. Reader stopping / sufficiency policies.
-8. System One progressive reading versus System Two ReAct under the same read budget.
+## Claude Code cross-trace
 
-See docs/design.md for the detailed research model.
-
-## Accuracy reference workflow
-
-The progressive-reader behavior is also evaluated against a Claude Code System 2 reference on the same exact subject revision and verbatim task.
+The repository also contains a manual cross-trace workflow:
 
 ~~~text
 .github/workflows/system-one-code-locator-accuracy.yml
 ~~~
 
-The comparison reports Phase-1 reference recall, final evidence-file agreement, primary/supporting recall, and evidence-region / line coverage. Claude is treated as a reference baseline rather than ground truth.
+Despite the historical filename, the workflow is now an observational comparison, not an accuracy oracle.
 
-The first Nession websocket comparison found 80% primary-file recall and 85.8% primary evidence-line coverage. Its most important finding was that `MessageRouter.ts` was visible to Phase 1 but missed at score 0.64 / rank 21, while `WebSocketService.ts:1-140` already exposed the import needed to discover it dynamically.
+Both systems receive the same task and exact subject revision. Claude Code runs through the existing `ds` environment with read-only repository tools.
+
+The Claude artifact preserves:
+
+~~~text
+claude.raw.jsonl
+execution-path.json
+execution-summary.md
+reference.json
+manifest.json
+~~~
+
+This records what Claude Code actually did — ordered Read / Grep / Glob / Bash actions, their arguments and result metadata — in addition to its final localization output.
+
+Claude Code is not treated as ground truth or as an optimization target for System One. File/range agreement is retained only as descriptive research data.
+
+## Current global-scheduler baseline
+
+Real run `35839323377` on the Nession websocket task retained 18 Phase-1 files and allowed System One to schedule them globally.
+
+The first scheduler epoch activated only three files:
+
+~~~text
+0.86 server websocket
+0.81 WebSocketService.ts
+0.78 agent websocket
+~~~
+
+The run used:
+
+~~~text
+12 model calls
+8 reads
+3 unique files read
+4 scheduler epochs
+3.78s elapsed
+~~~
+
+Claude Code independently used 42 tool calls over 43 turns. The difference in search trajectories is recorded rather than treated as a winner/loser result.
+
+See:
+
+~~~text
+docs/pilots/nession-websocket-global-scheduler-cross-trace-2026-09-23.md
+~~~
+
+## Research directions
+
+1. Separate file activation from an explicit task-sufficiency / stop decision.
+2. Observation-driven cross-file actions such as InspectDependency / FindReferences / InspectDefinition.
+3. Phase-1 and Phase-2 threshold studies using score snapshots rather than rerun drift.
+4. ReaderState compaction as observations accumulate.
+5. Noul versus Choice where the semantic decision can reasonably use either primitive.
+6. Multi-task cross-traces and later human-reviewed gold sets when absolute accuracy is needed.
+
+See `docs/design.md` for the detailed model.
