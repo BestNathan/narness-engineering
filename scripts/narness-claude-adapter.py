@@ -148,6 +148,12 @@ def sandbox_command(subject, command, environment, gateway_socket=None):
             argv += ['--symlink', os.readlink(path), path]
         elif Path(path).exists():
             argv += ['--ro-bind', path, path]
+    # Ubuntu's /usr/bin/which may resolve through /etc/alternatives. SRT uses
+    # the external "which" binary for dependency discovery, so expose only
+    # that system indirection rather than the host /etc tree.
+    argv += ['--dir', '/etc']
+    if Path('/etc/alternatives').is_dir():
+        argv += ['--ro-bind', '/etc/alternatives', '/etc/alternatives']
     node = shutil.which('node')
     if node is None:
         raise RuntimeError('Node runtime is required')
