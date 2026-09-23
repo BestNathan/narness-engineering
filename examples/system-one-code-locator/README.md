@@ -152,6 +152,30 @@ python3 -m unittest discover \
 
 The tests verify that the deterministic fixture finds the websocket client and that real API requests use independent Noul questions.
 
+## Dedicated research workflow
+
+Code Locator has its own GitHub Actions workflow:
+
+```text
+.github/workflows/system-one-code-locator.yml
+```
+
+It does not run the Kubernetes experiment.
+
+On relevant pushes and pull requests it runs only the deterministic Code Locator fixture and uploads:
+
+```text
+system-one-code-locator-offline-<run>-<attempt>/
+  run-manifest.json
+  tests.log
+  run.log
+  result.json
+  trace.jsonl
+  summary.md
+```
+
+A manual `workflow_dispatch` can additionally run the real TypeSafe experiment against a configurable subject repository. That job uses the `typesafe` environment and uploads a separate `system-one-code-locator-typesafe-*` artifact.
+
 ## Research limitations
 
 The current prototype intentionally leaves several questions open:
