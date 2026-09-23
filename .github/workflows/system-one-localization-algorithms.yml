@@ -23,9 +23,9 @@ permissions:
   contents: read
 
 env:
-  SUBJECT_REPOSITORY: ${{ inputs.subject_repository }}
-  SUBJECT_REF: ${{ inputs.subject_ref }}
-  QUERY: ${{ inputs.query }}
+  SUBJECT_REPOSITORY: ${{ inputs.subject_repository || 'BestNathan/nession' }}
+  SUBJECT_REF: ${{ inputs.subject_ref || 'staging' }}
+  QUERY: ${{ inputs.query || 'Help me optimize the websocket connection implementation' }}
 
 jobs:
   experiment:
