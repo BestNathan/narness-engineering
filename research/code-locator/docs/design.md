@@ -77,6 +77,10 @@ System One
 
 This keeps deterministic operations outside the model and makes each semantic stage independently inspectable. Repository size increases the number of questions and request payload size, but not the number of System One round trips.
 
+## Frontier preservation invariant
+
+Each stage may only expand the candidates explicitly retained by the previous stage. Because the directory stage already enumerates the complete repository tree, the file stage exposes only direct files of retained directories. It must not recursively walk those directories; doing so would re-introduce descendants whose directories were rejected and would invalidate threshold experiments by changing the effective state space after selection.
+
 ## One request per semantic stage
 
 The request topology is deliberately fixed:
@@ -250,13 +254,16 @@ That enables:
 
 ## Next experiments
 
-1. Build a small gold dataset from real Nession changes and issue/PR history.
-2. Compare threshold-only pruning with threshold + minimum beam retention.
-3. Compare whole-tree directory scoring with recursively expanded directory frontiers.
-4. Replace line candidates with syntax-aware symbols or blocks while retaining line provenance.
-5. Add cache keys based on repository revision, goal, stage, and candidate content hash.
-6. Compare System One localization against a System Two coding agent under the same gold tasks and evidence contract.
-7. Test a System One -> System Two handoff where the fast locator supplies grounded code context to the reasoning model.
+The current Noul pipeline with fixed thresholds is the baseline. Before changing the decision primitive, preserve a stable end-to-end run so later experiments differ by one controlled variable at a time.
+
+1. **Threshold / state-space accuracy study.** Sweep directory, file, and region thresholds independently and measure frontier size, relevant-file recall/precision, false-prune stage, token cost, and stability. The central question is how aggressively each threshold can compress state without pruning evidence required by the final answer.
+2. **Noul versus Choice study.** Run the same gold localization tasks with independent Noul relevance judgments and with Choice-based frontier selection under comparable state budgets. Measure multi-hit recall, concentration on dominant candidates, stability, cost, and whether Choice prematurely suppresses supporting files that are jointly relevant.
+3. Build a small gold dataset from real Nession changes and issue/PR history.
+4. Compare threshold-only pruning with threshold + minimum beam retention.
+5. Replace line candidates with syntax-aware symbols or blocks while retaining line provenance.
+6. Add cache keys based on repository revision, goal, stage, and candidate content hash.
+7. Compare System One localization against a System Two coding agent under the same gold tasks and evidence contract.
+8. Test a System One -> System Two handoff where the fast locator supplies grounded code context to the reasoning model.
 
 ## Pilot evidence
 
