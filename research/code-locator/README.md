@@ -83,7 +83,7 @@ After read_file returns, the content is appended to ReaderState before System On
 
 An unread file starts with a coarse action frontier such as head, middle, tail, and stop. After observations exist, the harness generates actions around bounded high-relevance regions plus an exploration gap. Relevant content therefore increases local reading resolution without requiring the whole file to be expanded up front.
 
-The reader now uses a soft/hard round budget. Four rounds is the normal budget. If the current soft-limit round produces at least one new observation above the observation threshold, the batch receives another round. Extra rounds continue only while they keep producing new high-relevance observations, and the batch can never exceed eight rounds.
+The reader now uses a file-scoped soft/hard round budget. Four rounds is the normal budget. At or beyond the soft limit, each active file must produce a new observation above the observation threshold to earn its own next round. Files that do not earn continuation stop independently, while other files in the same batch may continue. No batch can exceed eight rounds.
 
 ## Decision primitives
 
