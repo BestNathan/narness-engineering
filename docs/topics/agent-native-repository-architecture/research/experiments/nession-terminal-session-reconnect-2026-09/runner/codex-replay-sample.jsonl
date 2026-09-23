@@ -1,8 +1,0 @@
-{"type":"thread.started","thread_id":"pilot-replay"}
-{"type":"turn.started"}
-{"type":"item.completed","item":{"id":"cmd0","type":"command_execution","command":"bash -lc \"node .ai-native/resolve.mjs 'terminal reconnect'\"","exit_code":0,"status":"completed"}}
-{"type":"item.completed","item":{"id":"cmd1","type":"command_execution","command":"bash -lc \"cd web && rg -n 'reconnect' src/platform\"","aggregated_output":"src/platform/socket/WebSocketService.ts:12:reconnect\nsrc/platform/session-runtime/SessionRuntime.ts:44:reconnect\n","exit_code":0,"status":"completed"}}
-{"type":"item.completed","item":{"id":"cmd2","type":"command_execution","command":"bash -lc \"cd web && sed -n '1,120p' src/platform/socket/WebSocketService.ts\"","aggregated_output":"export class WebSocketService {}\n","exit_code":0,"status":"completed"}}
-{"type":"item.completed","item":{"id":"edit1","type":"file_change","changes":[{"path":"web/src/platform/socket/WebSocketService.ts","kind":"update"}],"status":"completed"}}
-{"type":"item.completed","item":{"id":"cmd3","type":"command_execution","command":"bash -lc \"cd web && npm test -- src/platform/socket/__tests__/unit/WebSocketService.test.ts\"","exit_code":1,"status":"failed"}}
-{"type":"turn.completed","usage":{"input_tokens":24763,"cached_input_tokens":12000,"output_tokens":1220,"reasoning_output_tokens":700}}

@@ -1,6 +1,0 @@
-{
-  "enabledPlugins": {
-    "narness-rust@narness": true,
-    "narness-git@narness": true
-  }
-}

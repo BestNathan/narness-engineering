@@ -1,268 +1,150 @@
-# Narness
+# System One Code Explorer
 
-Narness is an **AI Workspace Engineering** framework for making AI coding agents work inside repositories that are understandable, progressively discoverable, deterministic, and provable.
+A research runtime for using **System One models as fast policies over progressively disclosed code-exploration state and action spaces**.
 
-The project started from a simple harness-engineering principle:
+This repository continues the code-localization research originally developed in `BestNathan/narness-engineering`. The project is intentionally broader than a locator: the goal is to evolve from adaptive line-range search into a reusable **System One code exploration runtime**.
 
-> If a rule can be enforced by code, hooks, scripts, a compiler, Git, or CI, do not leave that rule only in a prompt.
+## Core idea
 
-That principle remains the Enforcement Plane of Narness. The broader goal is to design the entire repository as an execution environment for agents.
-
-## The AI Workspace model
+System One is not treated as a small ReAct agent. The harness owns state, action-space construction, effects, budgets, traces, and lifecycle. The model performs fast local decisions:
 
 ```text
-AI Workspace
-=
-Context Architecture
-+ Capability Architecture
-+ Constraint Architecture
-+ Evidence Architecture
-+ Lifecycle Orchestration
+State
+  ↓
+Harness builds a bounded ActionSpace
+  ↓
+System One policy / utility decisions
+  ↓
+Effect
+  ↓
+Observation
+  ↓
+State transition
+  ↺
 ```
 
-A good workspace does not depend on an agent remembering everything. It provides the right context at the right time, exposes procedures as discoverable capabilities, turns important rules into deterministic checks, derives the proof required for a change, and blocks unproven states from authoritative history.
+The current implementation uses two phases:
+
+1. **Repository filtering** — score directories and files to select candidate files.
+2. **Independent FileRuntime exploration** — generate geometric `ReadRange` and `StopFile` actions, let System One choose stop/continue and score concrete reads, then update coverage and observations.
+
+Navigation and final evidence scoring are intentionally separated.
+
+## Current algorithm
+
+For an unread file, the harness exposes head / middle / tail probes. After observations exist, it exposes:
+
+- `expand_before` and `expand_after` around ranges selected in the previous epoch;
+- midpoint probes over the largest unread gaps;
+- `StopFile`.
+
+System One answers:
+
+- a **Choice**: `StopFile` or `ContinueFile`;
+- **Noul utility scores** for concrete `ReadRange` actions.
+
+When the control decision contradicts the best concrete read, a second explicit reconciliation Choice resolves:
+
+- stop + high-utility read;
+- continue + no high-utility read.
+
+This removed the previous unconditional low-score `fallback_top1` tail that tended to scan large files almost exhaustively.
+
+## Latest end-to-end benchmark
+
+Task:
+
+`Help me optimize the websocket connection implementation`
+
+Frozen subject:
+
+`BestNathan/nession@7ac9b6e0c2bb43c52f83e7dd706c0c0dc0d7a1df`
+
+Successful cross-trace run: `35890516881`.
+
+| Metric | System One | Claude Code-style System 2 |
+| --- | ---: | ---: |
+| Runtime | 22.743s | 96.347s |
+| Model calls / turns | 96 calls | 40 turns |
+| Reads / tool calls | 96 reads | 38 tool calls |
+| Input tokens | 724,127 | 75,469 |
+| Cache-read input | — | 624,384 |
+| Output tokens | 17,427 | 21,045 |
+| Blind quality | 71/100 | 83/100 |
+| Evaluator can proceed | yes | yes |
+
+The System 2 side used Claude Code as the harness with `deepseek-flash` as the configured model in that run.
+
+Overlap on the same frozen source revision:
+
+- shared files: 8;
+- union files: 17;
+- file Jaccard: 47.1%;
+- Claude evidence covered by System One: **66.7% of regions / 69.9% of lines**.
+
+Three repeated System One runs on the same frozen task/revision after Stop reconciliation used 94, 86, and 96 reads respectively, showing stable convergence rather than one lucky stop.
+
+## What the benchmark says
+
+The current runtime is already useful: the blind evaluator marked the System One result `can_proceed=true`. The main gap is no longer stopping. It is **state-space expansion and evidence shaping**.
+
+The evaluator specifically exposed missing cross-file dependencies such as `MessageRouter.ts`, `command_broker.rs`, and `client_registry.rs`, even when observations contained clues pointing toward them.
+
+The next architectural step is therefore:
 
 ```text
-                         AI WORKSPACE
-                              |
-        +---------------------+----------------------+
-        |                     |                      |
-  Instructions           Capabilities            Evidence
-        |                     |                      |
- AGENTS / scoped        Skills / tools        Tests / checks
- Rules / approval       Scripts / assets      Snapshots / E2E
-        |                     |                      |
-        +---------------------+----------------------+
-                              |
-                         Orchestration
-                              |
-             Hooks -> Git hooks -> CI -> Review -> Release
-                              |
-                              v
-                     Authoritative Repository
+Observation
+   ↓
+discover new state / dependency
+   ↓
+progressively disclose new actions
+   ↓
+ReadRange(...)
+FollowFile(...)
+FollowSymbol(...)
+InspectCaller(...)
+InspectCallee(...)
 ```
-
-See [docs/architecture.md](docs/architecture.md) for the complete model.
-
-## Three orthogonal axes
-
-Narness treats an AI workspace as three independent design problems.
-
-### Context disclosure
-
-```text
-Root instructions
-  -> scoped instructions
-  -> skill metadata
-  -> SKILL.md
-  -> task-relevant references / scripts / assets
-```
-
-The question is: **what should the agent know now?**
-
-Root `AGENTS.md` / `CLAUDE.md` files are contracts and routers, not encyclopedias. Procedures belong in Skills. Historical design reasoning belongs in ADRs or design notes.
-
-### Constraint sinking
-
-```text
-L0 Prompt
-L1 AGENTS / convention
-L2 Skill
-L3 Agent hook
-L4 Deterministic script
-L5 Language / tool-native rule
-L6 Git lifecycle gate
-L7 Server-side CI / repository ruleset
-```
-
-The question is: **where should this rule be guaranteed?**
-
-### Task lifecycle
-
-```text
-Discover
-  -> Understand
-  -> Change
-  -> Fast feedback
-  -> Pre-push proof
-  -> PR evidence
-  -> Review
-  -> Land
-  -> Release
-```
-
-The question is: **when should the workspace intervene?**
-
-Edit-time hooks should be fast and corrective. Local Git hooks should provide the smallest sufficient proof. CI is the repository authority and owns authoritative proof.
-
-## Core concepts
-
-| Concept | Responsibility |
-|---|---|
-| Workspace Contract | Global invariants, approval boundaries, project structure, and routing |
-| Knowledge Plane | Separates standing rules, procedures, and design decisions |
-| Capability Plane | Packages procedures as discoverable Skills with progressive disclosure |
-| Enforcement Plane | Sinks rules from prompts into hooks, scripts, native rules, Git, and CI |
-| Evidence Architecture | Defines what proves a change correct for its behavioral surface |
-| Lifecycle Orchestration | Runs the right evidence at edit, commit, push, CI, review, and release time |
-
-A checkpoint is not just a command:
-
-```text
-Checkpoint
-=
-Invariant
-+ Scope
-+ Evidence
-+ Executor
-+ Failure Feedback
-```
-
-## Topics
-
-Narness keeps long-lived research and design questions under [`docs/topics/`](docs/topics/README.md).
-
-Topics are intentionally different from canonical architecture documents. They are places to accumulate investigation, reference implementations, competing designs, experiments, and evolving conclusions. When a conclusion becomes stable, it should graduate into the main architecture, adoption guides, Skills, scripts, examples, or CI.
-
-Current topics:
-
-| Topic | Focus |
-|---|---|
-| [AI Workspace](docs/topics/ai-workspace/README.md) | The repository as an agent execution environment: context, capabilities, constraints, evidence, and lifecycle orchestration. |
-| [Harness Engineering](docs/topics/harness-engineering/README.md) | How instructions, Skills, hooks, deterministic checks, Git, CI, and repository rules shape reliable agent behavior. |
-| [Engineering Surfaces](docs/topics/engineering-surfaces/README.md) | How one semantic model can route context before a change and derive constraints and evidence after a change. |
-| [Agent-Native Repository Architecture](docs/topics/agent-native-repository-architecture/README.md) | How repositories can optimize for agent-first consumability while preserving human auditability and one canonical source of truth. |
-| [Change-to-Evidence Planning](docs/topics/change-to-evidence-planning/README.md) | How a repository change becomes an explainable set of affected Surfaces, evidence obligations, evidence records, and proof gates. |
-| [System One Progressive Action Spaces](docs/topics/system-one-progressive-action-space/README.md) | How progressively discovered environment state can be compiled into a small grounded action frontier for fast System One decisions. |
-
-This structure is expected to grow as Narness research expands into areas such as progressive context disclosure, capability architecture, evidence architecture, quality gates, and agent observability.
 
 ## Repository layout
 
-```text
-.
-├── README.md
-├── CLAUDE.md
-├── docs/
-│   ├── architecture.md
-│   ├── adoption.md
-│   └── topics/
-│       ├── README.md
-│       ├── ai-workspace/
-│       ├── harness-engineering/
-│       ├── engineering-surfaces/
-│       ├── agent-native-repository-architecture/
-│       └── change-to-evidence-planning/
-├── examples/
-│   └── rust-workspace/
-├── plugins/
-│   └── narness/
-├── cli/
-├── narness-policy/
-└── scripts/
-    └── narness-repo-english.sh
-```
+- `src/system_one_range_runtime.py` — current per-file adaptive range runtime.
+- `src/system_one_code_locator.py` — shared System One API and earlier locator primitives.
+- `src/localization_result.py` — canonical localization result contract.
+- `src/localization_quality_evaluation.py` — blind downstream-quality evaluator.
+- `src/compare_localization_results.py` — symmetric file/range comparison.
+- `src/claude_*.py` — System 2 reference tracing and confidence normalization.
+- `tests/` — deterministic regression tests.
+- `fixtures/` — offline fixture repository.
+- `docs/` — design notes and historical pilot reports.
+- `ROADMAP.md` — next research milestones.
 
-## What exists today
-
-Narness currently ships:
-
-- a Claude Code plugin with a `narness` Skill and progressive reference material;
-- edit-time `PostToolUse` feedback for Rust compilation;
-- single-responsibility Rust validation scripts;
-- shared Git hook entrypoints for commit, commit-message, and push gates;
-- copyable Rust tool and GitHub Actions configuration;
-- a CLI that validates runtime prerequisites from `.narness.toml`;
-- a policy engine prototype;
-- a runnable Rust workspace example showing the AI Workspace pattern.
-
-The current implementation is Rust-first. The architecture is language-independent.
-
-`narness plan` is the next architectural direction, not a shipped command yet. Its proposed contract is documented in [docs/architecture.md](docs/architecture.md): change set -> affected surfaces -> required evidence -> execution plan.
-
-## Quick start
-
-### Install the Claude Code plugin
+## Running offline tests
 
 ```bash
-claude plugin marketplace add https://github.com/BestNathan/narness-engineering
-claude plugin install narness
+python3 -m unittest discover -s tests -v
 ```
 
-### Check an agent runtime environment
-
-Declare requirements in `.narness.toml`:
-
-```toml
-[[checks]]
-type = "version"
-name = "node"
-min = "22"
-
-[[checks]]
-type = "exists"
-name = "rg"
-```
-
-Then run:
+## Running the System One range runtime
 
 ```bash
-npx narness
-npx narness --json
+export TYPESAFE_API_KEY=...
+export TYPESAFE_API_URL=https://api.typesafe.ai/v1/systemone
+
+python3 src/system_one_range_runtime.py \
+  /path/to/repository \
+  "Help me optimize the websocket connection implementation" \
+  --window-lines 140 \
+  --parallel-threshold 0.65 \
+  --evidence-threshold 0.65 \
+  --max-jumps 2 \
+  --max-file-epochs 32
 ```
 
-### Run the example
+## Research direction
 
-```bash
-cargo test --manifest-path examples/rust-workspace/Cargo.toml
+The long-term question is not whether a System One model can read code. It is:
 
-bash plugins/narness/scripts/narness-rust-fmt.sh examples/rust-workspace
-bash plugins/narness/scripts/narness-rust-check.sh examples/rust-workspace
-bash plugins/narness/scripts/narness-rust-test-unit.sh examples/rust-workspace --scope=full
-bash plugins/narness/scripts/narness-rust-test-integration.sh examples/rust-workspace --scope=full
-```
+> How strong can a harness become when it progressively discloses state and legal actions, while a fast System One model only chooses how to advance the state machine?
 
-The example contains a root workspace contract, a task Skill with progressive disclosure, unit and integration evidence, an environment declaration, and a stable CI required gate.
-
-The repository also contains research prototypes that are intentionally outside the canonical Narness runtime scope, including the [System One Kubernetes command generator](examples/system-one-k8s/README.md) and [System One code locator](research/code-locator/README.md) used by the progressive-action-space topic.
-
-## Adopt Narness
-
-Start with [docs/adoption.md](docs/adoption.md):
-
-1. write a small root Workspace Contract;
-2. move task procedures into Skills;
-3. express checks as single-responsibility executable primitives;
-4. mount fast checks in agent and Git hooks;
-5. map change surfaces to required evidence;
-6. make CI the authoritative full-scope gate;
-7. expose one stable required status to repository rules.
-
-## Design rules
-
-- Prefer deterministic enforcement over prompt-only requirements.
-- Keep root instructions small and route to scoped knowledge.
-- Load Skill metadata broadly, Skill instructions selectively, and supporting detail lazily.
-- Keep executable validation primitives single-responsibility.
-- Put validation logic in scripts or native tools; orchestration layers only decide when and at what scope to run them.
-- Optimize local proof for relevance and speed; optimize CI proof for authority.
-- Fail loud. A failed check must say where, why, and how to fix it.
-- Keep repository-authored content in English.
-
-## Documentation
-
-- [Topics](docs/topics/README.md)
-- [AI Workspace topic](docs/topics/ai-workspace/README.md)
-- [Harness Engineering topic](docs/topics/harness-engineering/README.md)
-- [Engineering Surfaces topic](docs/topics/engineering-surfaces/README.md)
-- [Agent-Native Repository Architecture topic](docs/topics/agent-native-repository-architecture/README.md)
-- [Change-to-Evidence Planning topic](docs/topics/change-to-evidence-planning/README.md)
-- [System One Progressive Action Spaces topic](docs/topics/system-one-progressive-action-space/README.md)
-- [System One Kubernetes command generator](examples/system-one-k8s/README.md)
-- [System One code locator](research/code-locator/README.md)
-- [AI Workspace architecture](docs/architecture.md)
-- [Adoption guide](docs/adoption.md)
-- [Runnable Rust example](examples/rust-workspace/README.md)
-- [Narness Skill](plugins/narness/skills/narness/SKILL.md)
-- [Constraint ladder](plugins/narness/skills/narness/references/constraint-ladder.md)
-- [Harness checkpoints](plugins/narness/skills/narness/references/harness-checkpoints.md)
+See [ROADMAP.md](ROADMAP.md) and [docs/research-summary.md](docs/research-summary.md).
