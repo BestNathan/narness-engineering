@@ -155,6 +155,7 @@ def main() -> int:
         "harness_environment_scrubbed",
         "codex_version",
         "claude_version",
+        "bubblewrap_version",
         "claude_bin",
         "base_url",
         "credential_env",
@@ -291,3 +292,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
