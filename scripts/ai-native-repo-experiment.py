@@ -303,6 +303,9 @@ def validation_sandbox_command(
             argv += ["--symlink", os.readlink(path), runtime]
         elif path.exists():
             argv += ["--ro-bind", runtime, runtime]
+    argv += ["--dir", "/etc"]
+    if Path("/etc/alternatives").is_dir():
+        argv += ["--ro-bind", "/etc/alternatives", "/etc/alternatives"]
 
     node_root: Path | None = None
     node = shutil.which("node")
@@ -333,7 +336,7 @@ def validation_sandbox_command(
             str(source.resolve(strict=True)),
             "/workspace/" + relative.as_posix(),
         ]
-    argv += ["--chdir", "/workspace", "--", "/bin/bash", "-lc", command]
+    argv += ["--chdir", "/workspace", "--", "/bin/bash", "-c", command]
     clean = {
         "HOME": "/home/validator",
         "XDG_CONFIG_HOME": "/home/validator/.config",
