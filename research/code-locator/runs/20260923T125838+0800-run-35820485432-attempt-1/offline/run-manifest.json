@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "mode": "offline",
+  "query": "Help me optimize the websocket connection implementation",
+  "model": "offline-lexical-fixture",
+  "thresholds": {
+    "directory": 0.35,
+    "file": 0.5,
+    "line": 0.6
+  },
+  "batch_size": 48,
+  "github_run_id": "35820485432",
+  "github_run_attempt": "1",
+  "commit_sha": "ea90c352dd376dc0c4cce2020080ca8c4ae5c528",
+  "ref_name": "main"
+}
