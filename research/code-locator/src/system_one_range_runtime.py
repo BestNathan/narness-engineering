@@ -661,10 +661,7 @@ def select_file_actions_with_control(
     scored_reads,
     threshold,
 ):
-    if (
-        stop_decision["choice"] == "stop"
-        and stop_decision["stop_probability"] >= threshold
-    ):
+    if stop_decision["choice"] == "stop":
         return [stop_decision], "model_stop"
 
     if not scored_reads:
