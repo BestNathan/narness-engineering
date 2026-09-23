@@ -1,5 +1,7 @@
 # Nession WebSocket localization accuracy against Claude Code reference — 2026-09-23
 
+> Methodology note: Claude Code is an independent System-2 execution record, not ground truth and not an optimization target for System One. The agreement/recall numbers below are retained as descriptive observations from this historical run only.
+
 ## Purpose
 
 Behavioral traces show that the progressive reader can make coherent state transitions, but that does not establish that the returned files and source ranges are correct. This experiment therefore compares the System One locator with an independent System 2 repository investigation performed by Claude Code using the configured `ds` environment.
@@ -216,4 +218,4 @@ The repository now contains:
 - `research/code-locator/src/compare_claude_reference.py` — file and evidence-region comparison.
 - `research/code-locator/tests/test_compare_claude_reference.py` — comparison metric regression tests.
 
-The next accuracy step should repeat this workflow across multiple real localization tasks before changing the Phase-1 default threshold/cap.
+Future runs should preserve both agents' execution trajectories across multiple real localization tasks. Any absolute accuracy claim requires an independent human-reviewed gold set; Claude agreement alone should not drive System One thresholds or architecture.
