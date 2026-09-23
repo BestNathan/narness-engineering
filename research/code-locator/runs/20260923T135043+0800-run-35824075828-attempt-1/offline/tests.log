@@ -1,0 +1,31 @@
+test_file_frontier_uses_direct_files_only (test_system_one_code_locator.DemoTest.test_file_frontier_uses_direct_files_only) ... ok
+test_progressive_localization (test_system_one_code_locator.DemoTest.test_progressive_localization) ... ok
+test_request_uses_noul (test_system_one_code_locator.DemoTest.test_request_uses_noul) ... ok
+test_run_uses_exactly_one_model_call_per_stage (test_system_one_code_locator.DemoTest.test_run_uses_exactly_one_model_call_per_stage) ... FAIL
+test_system_one_scores_large_stage_in_one_request (test_system_one_code_locator.DemoTest.test_system_one_scores_large_stage_in_one_request) ... ok
+test_transient_520_is_retried (test_system_one_code_locator.DemoTest.test_transient_520_is_retried) ... ok
+
+======================================================================
+FAIL: test_run_uses_exactly_one_model_call_per_stage (test_system_one_code_locator.DemoTest.test_run_uses_exactly_one_model_call_per_stage)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/work/narness-engineering/narness-engineering/research/code-locator/tests/test_system_one_code_locator.py", line 170, in test_run_uses_exactly_one_model_call_per_stage
+    self.assertEqual(['directory','file','line'],scorer.stages)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: ['directory', 'file', 'line'] != ['directory', 'file', 'region']
+
+First differing element 2:
+'line'
+'region'
+
+- ['directory', 'file', 'line']
+?                        ^  -
+
++ ['directory', 'file', 'region']
+?                        ^^^ +
+
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.008s
+
+FAILED (failures=1)
