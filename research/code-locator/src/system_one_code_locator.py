@@ -432,6 +432,45 @@ def symbols(root, file):
         },
     }]
 
+OUTLINE_SYMBOL_LIMIT = 40
+
+def outlines(root, selected_files):
+    """Build one structural outline candidate per retained file.
+
+    This stage is intentionally between file metadata and individual symbols.
+    It lets System One decide which file interiors deserve deeper disclosure
+    without exposing function bodies or flattening every symbol in every
+    retained file into a single oversized frontier.
+    """
+    candidates = []
+    symbols_by_path = {}
+
+    for file in selected_files:
+        path = file["payload"]["path"]
+        file_symbols = symbols(root, file)
+        symbols_by_path[path] = file_symbols
+        preview = [
+            {
+                "kind": item["payload"]["kind"],
+                "name": item["payload"]["name"],
+            }
+            for item in file_symbols[:OUTLINE_SYMBOL_LIMIT]
+        ]
+        candidates.append({
+            "id": f"{file['id']}::outline",
+            "payload": {
+                "path": path,
+                "filename": file["payload"]["filename"],
+                "extension": file["payload"]["extension"],
+                "symbol_count": len(file_symbols),
+                "symbols": preview,
+                "truncated": len(file_symbols) > OUTLINE_SYMBOL_LIMIT,
+            },
+        })
+
+    return candidates, symbols_by_path
+
+
 def symbol_snippets(root, path, scored, threshold):
     relevant = sorted(
         (x for x in scored if x["score"] >= threshold),
@@ -481,7 +520,7 @@ def symbol_snippets(root, path, scored, threshold):
         for item in ranges
     ]
 
-def run(root, query, scorer, trace, dt, ft, lt):
+def run(root, query, scorer, trace, dt, ft, ot, st):
     started = time.perf_counter()
     usage = {"model_calls": 0, "input_tokens": 0, "output_tokens": 0}
 
@@ -506,7 +545,7 @@ def run(root, query, scorer, trace, dt, ft, lt):
         root=str(Path(root).resolve()),
         query=query,
         model=scorer.model,
-        thresholds={"directory": dt, "file": ft, "symbol": lt},
+        thresholds={"directory": dt, "file": ft, "outline": ot, "symbol": st},
         request_strategy="one_request_per_stage",
     )
 
@@ -516,22 +555,31 @@ def run(root, query, scorer, trace, dt, ft, lt):
     file_candidates = files(root, ds)
     fs, _ = stage("file", file_candidates, ft)
 
+    outline_candidates, symbols_by_path = outlines(root, fs)
+    os_, _ = stage("outline", outline_candidates, ot)
+
+    selected_outline_paths = {
+        item["payload"]["path"]
+        for item in os_
+    }
     symbol_candidates = []
     symbol_counts_by_file = {}
-    files_scanned = 0
     for f in fs:
-        current = symbols(root, f)
+        path = f["payload"]["path"]
+        if path not in selected_outline_paths:
+            continue
+        current = symbols_by_path.get(path, [])
         symbol_candidates.extend(current)
-        symbol_counts_by_file[f["id"]] = len(current)
-        files_scanned += 1
+        symbol_counts_by_file[path] = len(current)
+
     trace.emit(
         "symbol_frontier_built",
-        file_count=len(fs),
+        outline_count=len(os_),
         symbol_count=len(symbol_candidates),
         symbols_by_file=symbol_counts_by_file,
     )
 
-    kept_symbols, scored_symbols = stage("symbol", symbol_candidates, lt)
+    kept_symbols, scored_symbols = stage("symbol", symbol_candidates, st)
 
     scored_by_path = {}
     for item in scored_symbols:
@@ -540,14 +588,16 @@ def run(root, query, scorer, trace, dt, ft, lt):
     ss = []
     for f in fs:
         path = f["payload"]["path"]
-        ss += symbol_snippets(root, path, scored_by_path.get(path, []), lt)
+        if path not in selected_outline_paths:
+            continue
+        ss += symbol_snippets(root, path, scored_by_path.get(path, []), st)
 
     ss.sort(key=lambda x: (-x["score"], x["path"], x["start_line"]))
     result = {
         "query": query,
         "root": str(Path(root).resolve()),
         "model": scorer.model,
-        "thresholds": {"directory": dt, "file": ft, "symbol": lt},
+        "thresholds": {"directory": dt, "file": ft, "outline": ot, "symbol": st},
         "directories": ds,
         "files": fs,
         "snippets": ss,
@@ -558,9 +608,12 @@ def run(root, query, scorer, trace, dt, ft, lt):
             "directories_selected": len(ds),
             "files_exposed": len(file_candidates),
             "files_selected": len(fs),
+            "outlines_exposed": len(outline_candidates),
+            "outlines_selected": len(os_),
             "symbols_exposed": len(symbol_candidates),
             "symbols_selected": len(kept_symbols),
-            "files_scanned_for_outline": files_scanned,
+            "files_scanned_for_outline": len(fs),
+            "outline_symbol_limit": OUTLINE_SYMBOL_LIMIT,
             "snippets": len(ss),
             "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
         },
@@ -574,6 +627,7 @@ def main(argv=None):
     p.add_argument("query")
     p.add_argument("--directory-threshold",type=float,default=.35)
     p.add_argument("--file-threshold",type=float,default=.50)
+    p.add_argument("--outline-threshold",type=float,default=.50)
     p.add_argument("--symbol-threshold",type=float,default=.70)
     p.add_argument("--line-threshold",dest="symbol_threshold",type=float,help=argparse.SUPPRESS)
     p.add_argument("--batch-size",type=int,default=None,help=argparse.SUPPRESS)
@@ -595,7 +649,16 @@ def main(argv=None):
             return 2
         scorer=SystemOneScorer(key,trace,a.typesafe_endpoint,a.model,a.batch_size)
 
-    result=run(a.root,a.query,scorer,trace,a.directory_threshold,a.file_threshold,a.symbol_threshold)
+    result=run(
+        a.root,
+        a.query,
+        scorer,
+        trace,
+        a.directory_threshold,
+        a.file_threshold,
+        a.outline_threshold,
+        a.symbol_threshold,
+    )
     payload=json.dumps(result,indent=2,ensure_ascii=False)
     if a.output_json:
         Path(a.output_json).write_text(payload+"\n",encoding="utf-8")
