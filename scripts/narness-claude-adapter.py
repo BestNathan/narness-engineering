@@ -43,6 +43,7 @@ AGENT_KEYS = (
     'credential_env',
     'runtime_mode',
     'sandbox_runtime_version',
+    'provider_policy',
     'max_turns',
     'command_mapper_sha256',
 )
@@ -462,6 +463,7 @@ def main():
            'adapter_repository_sha': common.adapter_repo_head(),
            'network': 'outer-private-net-fixed-provider; bash-strict-no-network', 'subagents_enabled': False, 'web_search': 'disabled',
            'permission_profile': 'claude-bubblewrap-bash-sandbox-provider-gateway-v2',
+           'provider_policy': 'fixed-https-origin-route-model-local-tool-schema-no-server-tools-v2',
            'filesystem_read_scope': 'current subject plus read-only runtime; read-only .git/dependencies; private HOME/tmp',
            'bash_network': 'strict-deny-all-including-loopback-and-unix-sockets',
            'git_metadata': 'read-only',
