@@ -432,43 +432,105 @@ def symbols(root, file):
         },
     }]
 
-OUTLINE_SYMBOL_LIMIT = 40
+OUTLINE_SYMBOL_LIMIT = 30
+SCOPE_KINDS = {"class", "impl", "trait", "interface", "service"}
+
+def _contains_symbol(container, item):
+    c = container["payload"]
+    s = item["payload"]
+    return (
+        c["path"] == s["path"]
+        and c["start_line"] <= s["start_line"]
+        and s["end_line"] <= c["end_line"]
+        and container["id"] != item["id"]
+    )
 
 def outlines(root, selected_files):
-    """Build one structural outline candidate per retained file.
+    """Build semantic scope outlines from retained files.
 
-    This stage is intentionally between file metadata and individual symbols.
-    It lets System One decide which file interiors deserve deeper disclosure
-    without exposing function bodies or flattening every symbol in every
-    retained file into a single oversized frontier.
+    A scope outline is a class/impl/trait/interface/service with its direct
+    members, or a standalone leaf symbol such as a free function. System One
+    judges these scopes before individual member symbols are disclosed.
     """
     candidates = []
-    symbols_by_path = {}
+    symbols_by_outline = {}
 
     for file in selected_files:
         path = file["payload"]["path"]
         file_symbols = symbols(root, file)
-        symbols_by_path[path] = file_symbols
-        preview = [
-            {
-                "kind": item["payload"]["kind"],
-                "name": item["payload"]["name"],
-            }
-            for item in file_symbols[:OUTLINE_SYMBOL_LIMIT]
+        containers = [
+            item for item in file_symbols
+            if item["payload"]["kind"] in SCOPE_KINDS
+            and item["payload"]["end_line"] > item["payload"]["start_line"]
         ]
-        candidates.append({
-            "id": f"{file['id']}::outline",
-            "payload": {
-                "path": path,
-                "filename": file["payload"]["filename"],
-                "extension": file["payload"]["extension"],
-                "symbol_count": len(file_symbols),
-                "symbols": preview,
-                "truncated": len(file_symbols) > OUTLINE_SYMBOL_LIMIT,
-            },
-        })
+        assigned = set()
 
-    return candidates, symbols_by_path
+        for container in containers:
+            nested_containers = [
+                other for other in containers
+                if other["id"] != container["id"]
+                and _contains_symbol(container, other)
+            ]
+            direct_members = []
+            for item in file_symbols:
+                if not _contains_symbol(container, item):
+                    continue
+                if any(_contains_symbol(nested, item) for nested in nested_containers):
+                    continue
+                direct_members.append(item)
+
+            members = [container, *direct_members]
+            outline_id = f"{container['id']}::outline"
+            preview = [
+                {
+                    "kind": item["payload"]["kind"],
+                    "name": item["payload"]["name"],
+                }
+                for item in members[:OUTLINE_SYMBOL_LIMIT]
+            ]
+            candidates.append({
+                "id": outline_id,
+                "payload": {
+                    "path": path,
+                    "filename": file["payload"]["filename"],
+                    "extension": file["payload"]["extension"],
+                    "scope_kind": container["payload"]["kind"],
+                    "scope_name": container["payload"]["name"],
+                    "start_line": container["payload"]["start_line"],
+                    "end_line": container["payload"]["end_line"],
+                    "member_count": len(members),
+                    "members": preview,
+                    "truncated": len(members) > OUTLINE_SYMBOL_LIMIT,
+                },
+            })
+            symbols_by_outline[outline_id] = members
+            assigned.update(item["id"] for item in members)
+
+        for item in file_symbols:
+            if item["id"] in assigned:
+                continue
+            outline_id = f"{item['id']}::outline"
+            candidates.append({
+                "id": outline_id,
+                "payload": {
+                    "path": path,
+                    "filename": file["payload"]["filename"],
+                    "extension": file["payload"]["extension"],
+                    "scope_kind": item["payload"]["kind"],
+                    "scope_name": item["payload"]["name"],
+                    "start_line": item["payload"]["start_line"],
+                    "end_line": item["payload"]["end_line"],
+                    "member_count": 1,
+                    "members": [{
+                        "kind": item["payload"]["kind"],
+                        "name": item["payload"]["name"],
+                    }],
+                    "truncated": False,
+                },
+            })
+            symbols_by_outline[outline_id] = [item]
+
+    return candidates, symbols_by_outline
 
 
 def symbol_snippets(root, path, scored, threshold):
@@ -555,28 +617,26 @@ def run(root, query, scorer, trace, dt, ft, ot, st):
     file_candidates = files(root, ds)
     fs, _ = stage("file", file_candidates, ft)
 
-    outline_candidates, symbols_by_path = outlines(root, fs)
+    outline_candidates, symbols_by_outline = outlines(root, fs)
     os_, _ = stage("outline", outline_candidates, ot)
 
-    selected_outline_paths = {
-        item["payload"]["path"]
-        for item in os_
-    }
     symbol_candidates = []
-    symbol_counts_by_file = {}
-    for f in fs:
-        path = f["payload"]["path"]
-        if path not in selected_outline_paths:
-            continue
-        current = symbols_by_path.get(path, [])
-        symbol_candidates.extend(current)
-        symbol_counts_by_file[path] = len(current)
+    symbol_counts_by_outline = {}
+    seen_symbol_ids = set()
+    for outline in os_:
+        current = symbols_by_outline.get(outline["id"], [])
+        symbol_counts_by_outline[outline["id"]] = len(current)
+        for item in current:
+            if item["id"] in seen_symbol_ids:
+                continue
+            seen_symbol_ids.add(item["id"])
+            symbol_candidates.append(item)
 
     trace.emit(
         "symbol_frontier_built",
         outline_count=len(os_),
         symbol_count=len(symbol_candidates),
-        symbols_by_file=symbol_counts_by_file,
+        symbols_by_outline=symbol_counts_by_outline,
     )
 
     kept_symbols, scored_symbols = stage("symbol", symbol_candidates, st)
@@ -588,8 +648,6 @@ def run(root, query, scorer, trace, dt, ft, ot, st):
     ss = []
     for f in fs:
         path = f["payload"]["path"]
-        if path not in selected_outline_paths:
-            continue
         ss += symbol_snippets(root, path, scored_by_path.get(path, []), st)
 
     ss.sort(key=lambda x: (-x["score"], x["path"], x["start_line"]))
