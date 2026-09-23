@@ -360,6 +360,12 @@ jobs:
                   assert sorted(positions)==[1,2,3]
           PY
 
+      - name: Install runner execution-isolation dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+          sudo apparmor_parser -r research/claude-runtime/bwrap.apparmor
+
       - name: Run isolated runner/scorer selftest
         run: python scripts/selftest-ai-native-runner.py
 
