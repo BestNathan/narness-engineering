@@ -1,292 +1,202 @@
-# Hierarchical Code Localization with System One
+# Two-Phase Code Localization with System One
 
-> Research note for the System One Progressive Action Spaces topic.
+## Research question
 
-## Question
+Can a fast System One model localize code by operating over a bounded, dynamically disclosed read-action space instead of running an open-ended ReAct browsing loop or scoring a pre-expanded representation of the whole file?
 
-Can a fast System One model locate task-relevant source code without running an open-ended ReAct browsing loop?
-
-The concrete example is:
+Running task:
 
 > Help me optimize the websocket connection implementation.
 
-The experiment treats repository exploration as progressive state disclosure. The harness deterministically exposes the next bounded candidate set; System One only estimates semantic relevance inside that set.
+## Why the previous pipeline was insufficient
 
-## Working model
+Earlier prototypes exposed directory -> file -> line, fixed region, outline, and symbol frontiers. They established three important facts:
 
-```text
-Goal
-  +
-Observed repository structure
-  |
-  v
-Harness expands state
-  |
-  v
-Finite candidate set
-  |
-  v
-System One relevance judgment
-  |
-  v
-Harness prunes and expands again
-```
+1. Transport batching is not semantic progress. Splitting one oversized frontier into many HTTP calls only hides a state-space problem.
+2. Directory pruning must be preserved. The file stage may only expose direct files of retained directories.
+3. Pre-expanding file interiors is the wrong abstraction. Even symbols can form a huge flat frontier before the model has chosen to inspect those parts of the file.
 
-For the initial prototype:
+A file body should therefore appear as an observation produced by a chosen read action.
 
-```text
-repository
-  -> directories
-  -> direct files
-  -> compact code regions
-  -> grounded code snippets
-```
+## Phase 1 — File Locator
 
-This is the same underlying shape as the Kubernetes experiment:
+~~~text
+repository metadata
+  -> directory Noul
+  -> direct-file metadata
+  -> file Noul
+  -> bounded PotentialFile[]
+~~~
 
-```text
-Kubernetes:
-cluster -> namespaces -> pods -> containers -> grounded command
+No source body is exposed in Phase 1.
 
-Code localization:
-repository -> directories -> direct files -> regions -> grounded snippets
-```
+Baseline defaults:
 
-The domain adapter changes; the harness pattern does not.
+~~~text
+directory threshold = 0.50
+file threshold      = 0.65
+max files           = 16
+~~~
 
-## System One is a semantic filter, not the navigator
+These values are intentionally tighter than the original 0.35 / 0.50 pilot and are research parameters rather than claimed optima.
 
-A ReAct implementation could repeatedly ask a model to decide which directory to list, which file to open, and which command to run. That gives the model control of both semantic judgment and exploration mechanics.
+## Phase 2 — Progressive Reader
 
-The prototype separates those responsibilities:
+For each batch of PotentialFile values:
 
-```text
-Harness
-  - enumerate candidates
-  - read files
-  - split content
-  - preserve provenance
-  - apply thresholds
-  - fan out each semantic stage as one request
-  - merge final ranges
-  - record evidence
+~~~text
+stat
+  -> ActionSpaceGenerator
+  -> Choice
+  -> read_file
+  -> Observation
+  -> append Observation to ReaderState
+  -> Noul relevance
+  -> update coverage / evidence
+  -> ActionSpaceGenerator
+  -> repeat
+~~~
 
-System One
-  - estimate whether each exposed candidate is relevant to the goal
-```
+A line range is an information-gathering action, not a semantic answer candidate.
 
-This keeps deterministic operations outside the model and makes each semantic stage independently inspectable. Repository size increases the number of questions and request payload size, but not the number of System One round trips.
+## ReaderState
 
-## Frontier preservation invariant
+~~~text
+ReaderState
+  goal
+  batch_index
+  round
 
-Each stage may only expand the candidates explicitly retained by the previous stage. Because the directory stage already enumerates the complete repository tree, the file stage exposes only direct files of retained directories. It must not recursively walk those directories; doing so would re-introduce descendants whose directories were rejected and would invalidate threshold experiments by changing the effective state space after selection.
+  files[]
+    path
+    phase1_score
+    stat
+      line_count
+      size_bytes
+      extension
+    coverage[]
+    stopped
+    stop_reason
 
-## One request per semantic stage
+  observations[]
+    id
+    path
+    start_line
+    end_line
+    content
+    action_probability
+    relevance
+~~~
 
-The request topology is deliberately fixed:
+The read observation is appended before its relevance question is evaluated. The next Choice request sees previous observations and coverage. State therefore changes as a direct consequence of execution.
 
-```text
-directory frontier -> request 1
-file frontier      -> request 2
-region frontier    -> request 3
-```
+## Dynamic action frontier
 
-Every candidate still receives its own Noul question, but all questions for the same stage are submitted together. The previous prototype split candidates into batches of 48 and also invoked the source scorer once per selected file. On the first Nession websocket pilot that turned three semantic stages into 598 model calls (382 directories exposed, 1,040 files exposed, 92 files selected, and 25,006 lines exposed). That behavior measured transport batching rather than the intended System One architecture, so it is now treated as a harness bug rather than an experiment parameter.
+The harness constructs valid actions; the model never invents paths or offsets.
 
-Transient HTTP retries remain independent of this invariant: a stage is one logical model call even if the transport must retry the same request.
+Initial unread file:
 
-## Why independent probabilities matter
+~~~text
+ReadRange(head)
+ReadRange(middle)
+ReadRange(tail)
+StopFile
+~~~
 
-Unlike action selection, localization is not a single-winner problem. A websocket change may involve a connection manager, hook, protocol type, retry policy, and tests at the same time.
+After observations exist:
 
-The experiment therefore uses one Noul question per candidate. Each candidate gets an independent relevance probability and the harness retains all candidates above the current threshold.
+~~~text
+ReadRange(after strongest observation)
+ReadRange(before strongest observation)
+ReadRange(largest unread gap)
+StopFile
+~~~
 
-This also makes threshold behavior explicit and measurable.
+The baseline generator is deliberately simple. Future generators may use identifiers, imports, declarations, or LSP information discovered from observations, but should not pre-expand the entire file.
 
-## Threshold schedule and recall risk
+## Multi-file batches
 
-The initial schedule is deliberately recall-biased at the top and precision-biased near source content:
+Files are active in fixed-size batches, four by default. One reader round sends one Choice question per active file in one System One request. All questions share the same ReaderState for that batch.
 
-```text
-directory >= 0.35
-file      >= 0.50
-region    >= 0.70
-```
+~~~text
+file_0 -> choose one action for A
+file_1 -> choose one action for B
+file_2 -> choose one action for C
+file_3 -> choose one action for D
+~~~
 
-The exact values are experimental.
+This is semantic concurrency, not transport batching: the batch defines the files that are simultaneously active and mutually visible in state.
 
-A false positive at the directory stage only creates more downstream work. A false negative at the directory stage can permanently hide every relevant file below it. Therefore early-stage threshold calibration is a first-class runtime concern, not merely a model-tuning detail.
+## Decision primitives and confidence
 
-A likely next design is:
+Phase-1 directory/file localization uses Noul because multiple candidates may independently be relevant.
 
-```text
-retain(all candidates >= threshold)
-+
-retain(top_k minimum beam)
-```
+Reader navigation uses Choice because each active file needs one next action. The chosen option probability is compared with a reader-action threshold before execution.
 
-That would bound catastrophic early pruning while still reducing the search space.
+Observed content uses Noul because multiple read ranges may independently contain useful evidence.
 
-## Progressive disclosure is also a cost policy
+~~~text
+directory relevance  >= 0.50
+file relevance       >= 0.65
+read action prob.    >= 0.40
+observation relevance>= 0.65
+~~~
 
-The model does not receive source code until a file survives earlier stages:
+These thresholds control different failure modes and should be calibrated independently.
 
-```text
-directory stage
-  path + direct child names
+## Request topology
 
-file stage
-  path + filename + extension + size
+The runtime intentionally has no fixed total call count.
 
-region stage
-  path + bounded line range + compact declarations/identifiers
-```
+Phase 1 currently uses two requests:
 
-This means context volume grows only for candidates that survive previous semantic gates.
+~~~text
+directory Noul
+file Noul
+~~~
 
-The key hypothesis is not merely that System One is fast. It is that the harness can spend semantic judgment only where the current state justifies further disclosure.
+Each active reader batch then uses at most two requests per round:
 
-## Result provenance
+~~~text
+Choice next actions for all active files
+Noul relevance for all newly-read observations
+~~~
 
-The final answer is not a bag of strings. It retains the path from coarse state to source evidence:
+Call count therefore follows semantic interaction depth and active batches, not source-line count.
 
-```text
-RelevantDirectory
-  -> RelevantFile
-      -> RelevantCodeRegion
-          -> CodeSnippet(path, line range, score, content)
-```
+## Research studies
 
-That provenance is required for later evaluation, explainability, cache design, and any System Two handoff.
+### A. Phase-1 threshold calibration
 
-## Stable operational baseline
+Sweep directory and file thresholds while holding reader settings fixed. Measure relevant-file recall/precision, file frontier size, downstream reads, tokens, and false-prune stage.
 
-The current reference implementation uses direct-file expansion and compact 120-line regions. A real TypeSafe run against `BestNathan/nession@67062f3e622b83360aed20fd8c4b3cb052a00404` completed successfully with exactly three model calls:
+### B. Reader confidence calibration
 
-```text
-directory: 380 exposed -> 91 selected
-file:      272 exposed -> 82 selected
-region:    267 exposed -> 89 selected
-model calls: 3
-input tokens: 168,697
-elapsed: 1.822s
-```
+Sweep reader-action threshold independently of observation threshold. Measure discovery failure, wasted reads, evidence precision/recall, and stop reasons.
 
-This baseline exists to separate harness correctness from research variables. Threshold sweeps, Noul-versus-Choice comparisons, symbol-aware region generation, and beam policies should be evaluated as deltas from this fixed topology.
+### C. Multi-file batch size
 
-## Research hypotheses
+Compare 1, 2, 4, and 8 files per batch. Measure cross-file decision quality, state size, model calls, token cost, and latency.
 
-### H6: Progressive semantic pruning can replace agent-driven browsing for localization
+### D. Noul versus Choice
 
-For tasks whose relevant code can be found through repository structure and local semantic evidence, repeated expand -> score -> prune transitions may locate useful source ranges without free-form planning.
+Compare the primitives only in decision points that can reasonably be represented both ways. The baseline intentionally uses Noul for independent relevance and Choice for one-next-action selection.
 
-### H7: Early high recall matters more than uniform precision
+### E. Dynamic action-space quality
 
-A stage-specific threshold schedule should outperform one global threshold because false-negative cost is asymmetric across the search tree.
+Compare the simple range generator against richer observation-driven generators, including identifier-bearing neighbors, import/dependency targets, and syntax/LSP proposals.
 
-### H8: Harness-controlled disclosure reduces unnecessary context
+## Shared System One harness model
 
-Reading source only after structural candidates survive should reduce model input compared with broad repository ingestion while retaining enough semantic signal to localize the implementation.
+The code reader and Kubernetes demo now share the same core abstraction:
 
-### H9: The same runtime abstraction can support action selection and relevance filtering
-
-Kubernetes uses a grounded `Choice` frontier. Code localization uses independent `Noul` judgments. Both can share:
-
-```text
-StateSpaceGenerator
-  -> CandidateSet
+~~~text
+State
+  -> ActionSpaceGenerator
   -> DecisionPrimitive
-  -> TransitionPolicy
-  -> EvidenceRecorder
-```
+  -> Effect
+  -> Observation
+  -> State transition
+~~~
 
-The important abstraction may therefore be broader than a state machine with a single decision type.
-
-## Evidence contract
-
-Every Code Locator run should preserve enough data to replay the localization surface without relying on GitHub Actions console retention.
-
-The dedicated Code Locator artifact contains only this experiment:
-
-```text
-run-manifest.json
-tests.log          # offline job
-run.log
-result.json
-trace.jsonl
-summary.md
-```
-
-The manifest records harness revision, subject repository and revision, workflow run identity, query, thresholds, and model.
-
-The JSONL trace records candidate disclosure, model requests, score responses, threshold decisions, latency, token usage, and final results. Authorization data is never recorded.
-
-Kubernetes evidence is intentionally excluded and is owned by the separate `system-one-k8s-experiment` workflow.
-
-## Workflow experiment design
-
-The dedicated [System One Code Locator workflow](../../../.github/workflows/system-one-code-locator.yml) has two roles.
-
-First, deterministic fixture validation runs only when the Code Locator implementation, its research notes, or its workflow changes.
-
-Second, a manual TypeSafe job runs the real System One model against a checked-out subject repository such as `BestNathan/nession`.
-
-The subject repository, ref, query, thresholds, and model are workflow inputs so repeated runs can vary one parameter while preserving the rest in the manifest. Request batching is intentionally not an experiment parameter because the semantic invariant is one request per stage.
-
-Artifacts are retained for 90 days. Each run should be treated as raw Code Locator research evidence, not as proof that the hypotheses are already true.
-
-## Metrics available immediately
-
-Without gold labels, the workflow can already measure operational behavior:
-
-- candidates exposed and retained at each stage;
-- pruning ratio by stage;
-- total model calls;
-- TypeSafe input/output tokens;
-- end-to-end elapsed time;
-- selected directories/files/source ranges;
-- stability across repeated runs and threshold settings.
-
-## Metrics requiring a benchmark dataset
-
-Claims about localization quality require pre-registered expected evidence, for example:
-
-```text
-query
-expected relevant files
-expected relevant line ranges or symbols
-allowed supporting files
-```
-
-That enables:
-
-- relevant-file recall;
-- relevant-file precision;
-- range recall / overlap;
-- false-prune stage attribution;
-- cost per successfully localized task;
-- comparison with ripgrep, embedding retrieval, LSP/index retrieval, and System Two browsing.
-
-## Next experiments
-
-The current Noul pipeline with fixed thresholds is the baseline. Before changing the decision primitive, preserve a stable end-to-end run so later experiments differ by one controlled variable at a time.
-
-1. **Threshold / state-space accuracy study.** Sweep directory, file, and region thresholds independently and measure frontier size, relevant-file recall/precision, false-prune stage, token cost, and stability. The central question is how aggressively each threshold can compress state without pruning evidence required by the final answer.
-2. **Noul versus Choice study.** Run the same gold localization tasks with independent Noul relevance judgments and with Choice-based frontier selection under comparable state budgets. Measure multi-hit recall, concentration on dominant candidates, stability, cost, and whether Choice prematurely suppresses supporting files that are jointly relevant.
-3. Build a small gold dataset from real Nession changes and issue/PR history.
-4. Compare threshold-only pruning with threshold + minimum beam retention.
-5. Compare the fixed 120-line region baseline with syntax-aware symbols or blocks while retaining exact line provenance.
-6. Add cache keys based on repository revision, goal, stage, and candidate content hash.
-7. Compare System One localization against a System Two coding agent under the same gold tasks and evidence contract.
-8. Test a System One -> System Two handoff where the fast locator supplies grounded code context to the reasoning model.
-
-## Pilot evidence
-
-- [Nession WebSocket localization pilot — 2026-09-23](pilots/nession-websocket-2026-09-23.md)
-- [Nession WebSocket stable three-stage baseline — 2026-09-23](pilots/nession-websocket-three-stage-baseline-2026-09-23.md)
-
-The original real run exposed transport batching and recursive frontier bugs. The stable reference baseline is now the three-stage direct-file / bounded-region run below; subsequent experiments should change one variable at a time.
-
-## Reference implementation
-
-See the [Code Locator research root](../README.md).
+The action space is progressively disclosed by real observations rather than enumerated in full at the start.
