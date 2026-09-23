@@ -376,7 +376,7 @@ jobs:
           set -euo pipefail
 
           stamp="$(TZ=Asia/Shanghai date +'%Y%m%dT%H%M%S%z')"
-          record="docs/topics/system-one-progressive-action-space/research/runs/code-locator/${stamp}-run-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}"
+          record="research/code-locator/${stamp}-run-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}"
           mkdir -p "$record"
 
           if test -d .experiment-record/offline; then
