@@ -98,27 +98,37 @@ class SystemOneScorer:
         if not candidates:
             return [], usage
 
-        questions = {}
-        for i, candidate in enumerate(candidates):
-            questions[f"candidate_{i}"] = {
+        state_candidates = [
+            model_projection(stage, candidate["payload"])
+            for candidate in candidates
+        ]
+        questions = {
+            f"candidate_{i}": {
                 "type": "noul",
-                "instructions": {
-                    "task": query,
-                    "stage": stage,
-                    "candidate": model_projection(stage, candidate["payload"]),
-                    "question": "Would retaining this candidate materially help locate or understand source code relevant to the task?",
-                },
-                "criteria": {
-                    "true": "Plausibly relevant; keep it, including indirect supporting code.",
-                    "false": "Unlikely to help locate or understand the requested implementation.",
-                },
+                "instructions": (
+                    f"Should `candidates[{i}]` be retained for `goal` "
+                    "under `policy`?"
+                ),
             }
+            for i in range(len(candidates))
+        }
 
         payload = {
             "state": {
                 "goal": query,
                 "stage": stage,
-                "candidate_count": len(candidates),
+                "policy": {
+                    "retain": (
+                        "Plausibly relevant to locating or understanding "
+                        "the requested implementation, including indirect "
+                        "supporting code."
+                    ),
+                    "reject": (
+                        "Unlikely to help locate or understand the requested "
+                        "implementation."
+                    ),
+                },
+                "candidates": state_candidates,
             },
             "model": self.model,
             "questions": questions,
