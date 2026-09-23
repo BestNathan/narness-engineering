@@ -247,3 +247,13 @@ The first experiment should hold thresholds, window size, file batch size, and m
 The first soft/hard implementation granted continuation at batch scope. A high-signal `server_client.rs` observation kept `cli/client/connection.rs` alive for two extra low-value reads. The file-scoped follow-up run 35833457198 corrected this: the CLI file scored 0.64 at round four and stopped immediately, while `server_client.rs` independently continued through rounds five, six, and seven.
 
 See [the file-scoped round budget baseline](pilots/nession-websocket-file-scoped-round-budget-2026-09-23.md).
+
+## Accuracy finding: static Phase-1 frontier
+
+A same-revision Claude Code + `ds` reference run showed that the reader has strong local accuracy once it reaches a primary file, but the static Phase-1 file frontier creates irreversible false negatives.
+
+For the websocket task, System One covered 4/5 Claude primary files and 16/20 primary evidence regions (85.8% of reference primary evidence lines). The missed primary file was `MessageRouter.ts`, scored 0.64 at rank 21. Yet the first high-confidence observation from `WebSocketService.ts` explicitly imports `./MessageRouter` and `./types`.
+
+This changes the preferred next design from 'lower Phase-1 confidence until all dependencies fit' to 'allow Phase 2 observations to disclose new grounded cross-file actions'. Candidate action types include `InspectDependency`, `FindReferences`, and `InspectDefinition`. Such actions should remain harness-generated and bounded; System One only selects among valid discovered actions.
+
+See [the Claude reference accuracy study](pilots/nession-websocket-claude-reference-accuracy-2026-09-23.md).
