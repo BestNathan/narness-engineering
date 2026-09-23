@@ -1,11 +1,6 @@
 name: System One Range Runtime v0
 
 on:
-  push:
-    branches:
-      - fix/code-locator-three-stage-requests
-    paths:
-      - ".github/workflows/system-one-range-runtime-v0.yml"
   workflow_dispatch:
     inputs:
       subject_repository:
