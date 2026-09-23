@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Range-only System One Harness Runtime v0.
+"""Per-file range-only System One Harness Runtime v0.
 
-Phase 1 locates files. Phase 2 never parses source semantics: it only manages
-file lengths, covered ranges, raw observations, and a dynamic ReadRange /
-StopTask action space. System One is the only semantic decision-maker.
+Phase 1 locates plausible files. Phase 2 creates one independent FileRuntime
+per file. A FileRuntime never sees another file's observations. The harness
+only understands line counts, ranges, coverage, and history; it never parses
+source semantics.
 """
 from __future__ import annotations
 
@@ -34,34 +35,10 @@ from system_one_code_locator import (
 
 DEFAULT_WINDOW_LINES = 140
 DEFAULT_PARALLEL_THRESHOLD = 0.65
-DEFAULT_MAX_JUMPS_PER_FILE = 2
-DEFAULT_MAX_EPOCHS = 64
-DEFAULT_ACTION_SCORE_BATCH_SIZE = 8
+DEFAULT_EVIDENCE_THRESHOLD = 0.65
+DEFAULT_MAX_JUMPS = 2
+DEFAULT_MAX_FILE_EPOCHS = 32
 DEFAULT_DECISION_OBSERVATION_CHAR_BUDGET = 48000
-
-
-def make_action(action_id, path, start, end, navigation, reason, source=None):
-    return {
-        "id": action_id,
-        "kind": "read_range",
-        "path": path,
-        "start_line": int(start),
-        "end_line": int(end),
-        "navigation": navigation,
-        "reason": reason,
-        "source": source,
-    }
-
-
-def range_key(start, end):
-    return int(start), int(end)
-
-
-def fully_uncovered(start, end, coverage):
-    for left, right in merge_ranges(coverage):
-        if not (end < left or start > right):
-            return False
-    return True
 
 
 def bounded_range(start, end, line_count):
@@ -72,31 +49,65 @@ def bounded_range(start, end, line_count):
     return start, end
 
 
+def fully_uncovered(start, end, coverage):
+    for left, right in merge_ranges(coverage):
+        if not (end < left or start > right):
+            return False
+    return True
+
+
 def gap_midpoint_window(gap_start, gap_end, window_lines):
-    gap_length = gap_end - gap_start + 1
-    if gap_length <= window_lines:
+    length = gap_end - gap_start + 1
+    if length <= window_lines:
         return gap_start, gap_end
     midpoint = (gap_start + gap_end) // 2
-    start = max(gap_start, midpoint - (window_lines // 2))
+    start = max(gap_start, midpoint - window_lines // 2)
     end = min(gap_end, start + window_lines - 1)
     if end - start + 1 < window_lines:
         start = max(gap_start, end - window_lines + 1)
     return start, end
 
 
+def make_read_action(
+    file_state,
+    start,
+    end,
+    navigation,
+    reason,
+    source=None,
+):
+    return {
+        "id": (
+            f"read:{file_state['path']}:{start}-{end}:"
+            f"{navigation}"
+        ),
+        "kind": "read_range",
+        "path": file_state["path"],
+        "start_line": int(start),
+        "end_line": int(end),
+        "navigation": navigation,
+        "reason": reason,
+        "source": source,
+    }
+
+
 def generate_file_actions(
     file_state,
     window_lines,
-    max_jumps_per_file=DEFAULT_MAX_JUMPS_PER_FILE,
+    max_jumps=DEFAULT_MAX_JUMPS,
 ):
-    """Generate actions from coverage geometry only; never inspect file text."""
-    path = file_state["path"]
+    """Generate a bounded action space using coverage geometry only."""
     line_count = int(file_state["line_count"])
     coverage = merge_ranges(file_state["coverage"])
     if line_count <= 0:
-        return []
+        return [{
+            "id": f"stop:{file_state['path']}",
+            "kind": "stop_file",
+            "path": file_state["path"],
+            "reason": "the file is empty",
+        }]
 
-    actions = []
+    reads = []
     seen = set()
 
     def add(start, end, navigation, reason, source=None):
@@ -104,14 +115,17 @@ def generate_file_actions(
         if bounded is None:
             return
         start, end = bounded
-        key = range_key(start, end)
-        if key in seen or not fully_uncovered(start, end, coverage):
+        key = (start, end)
+        if key in seen or not fully_uncovered(
+            start,
+            end,
+            coverage,
+        ):
             return
         seen.add(key)
-        actions.append(
-            make_action(
-                f"read:{path}:{start}-{end}:{navigation}",
-                path,
+        reads.append(
+            make_read_action(
+                file_state,
                 start,
                 end,
                 navigation,
@@ -125,313 +139,306 @@ def generate_file_actions(
             1,
             min(line_count, window_lines),
             "seed_head",
-            "initial probe at the beginning of an unread file",
+            "probe the beginning of this unread file",
         )
         if line_count > window_lines:
             middle_start = max(
                 1,
-                (line_count // 2) - (window_lines // 2),
+                line_count // 2 - window_lines // 2,
             )
             add(
                 middle_start,
                 middle_start + window_lines - 1,
                 "seed_middle",
-                "initial probe near the middle of an unread file",
+                "probe near the middle of this unread file",
             )
         if line_count > window_lines * 2:
             add(
                 max(1, line_count - window_lines + 1),
                 line_count,
                 "seed_tail",
-                "initial probe at the end of an unread file",
+                "probe the end of this unread file",
             )
-        return actions
+    else:
+        # Expand mechanically around every range selected in the previous
+        # epoch. These are runtime-history anchors, not semantic anchors.
+        anchors = file_state.get("last_selected_ranges", [])
+        if not anchors and file_state["observations"]:
+            latest = file_state["observations"][-1]
+            anchors = [[
+                latest["start_line"],
+                latest["end_line"],
+            ]]
 
-    latest = file_state.get("latest_range")
-    if latest:
-        start, end = latest
-        add(
-            start - window_lines,
-            start - 1,
-            "expand_before",
-            "expand immediately before the most recent read range",
-            {"start_line": start, "end_line": end},
-        )
-        add(
-            end + 1,
-            end + window_lines,
-            "expand_after",
-            "expand immediately after the most recent read range",
-            {"start_line": start, "end_line": end},
-        )
+        for start, end in anchors:
+            add(
+                start - window_lines,
+                start - 1,
+                "expand_before",
+                "read immediately before a range chosen last epoch",
+                {"start_line": start, "end_line": end},
+            )
+            add(
+                end + 1,
+                end + window_lines,
+                "expand_after",
+                "read immediately after a range chosen last epoch",
+                {"start_line": start, "end_line": end},
+            )
 
-    gaps = unread_gaps(line_count, coverage)
-    gaps = sorted(
-        gaps,
-        key=lambda item: (-(item[1] - item[0] + 1), item[0]),
-    )[:max_jumps_per_file]
-    for index, (gap_start, gap_end) in enumerate(gaps, 1):
-        start, end = gap_midpoint_window(
-            gap_start,
-            gap_end,
-            window_lines,
-        )
-        add(
-            start,
-            end,
-            "jump",
-            (
-                f"jump to the midpoint of unread gap #{index} "
-                f"{gap_start}-{gap_end}"
+        # Jump probes are purely geometric: midpoint of the largest unread
+        # gaps. The harness never inspects the gap's text.
+        gaps = sorted(
+            unread_gaps(line_count, coverage),
+            key=lambda item: (
+                -(item[1] - item[0] + 1),
+                item[0],
             ),
-            {
-                "gap_start": gap_start,
-                "gap_end": gap_end,
-                "gap_length": gap_end - gap_start + 1,
-            },
-        )
-
-    return actions
-
-
-def generate_action_space(
-    state,
-    window_lines,
-    max_jumps_per_file=DEFAULT_MAX_JUMPS_PER_FILE,
-):
-    actions = []
-    for file_state in state["files"]:
-        actions.extend(
-            generate_file_actions(
-                file_state,
+        )[:max_jumps]
+        for index, (gap_start, gap_end) in enumerate(gaps, 1):
+            start, end = gap_midpoint_window(
+                gap_start,
+                gap_end,
                 window_lines,
-                max_jumps_per_file,
             )
-        )
-    actions.append({
-        "id": "stop_task",
-        "kind": "stop_task",
+            add(
+                start,
+                end,
+                "jump",
+                (
+                    f"probe midpoint of unread gap #{index} "
+                    f"{gap_start}-{gap_end}"
+                ),
+                {
+                    "gap_start": gap_start,
+                    "gap_end": gap_end,
+                },
+            )
+
+    reads.append({
+        "id": f"stop:{file_state['path']}",
+        "kind": "stop_file",
+        "path": file_state["path"],
         "reason": (
-            "Stop only when the current evidence is sufficient and further "
-            "exploration is unlikely to materially improve the result."
+            "stop exploring this file only when further reads are "
+            "unlikely to materially improve localization for the goal"
         ),
     })
-    return actions
+    return reads
 
 
-def decision_view(
-    state,
-    observation_char_budget=DEFAULT_DECISION_OBSERVATION_CHAR_BUDGET,
+def observation_view(
+    file_state,
+    char_budget=DEFAULT_DECISION_OBSERVATION_CHAR_BUDGET,
 ):
-    files = []
-    for item in state["files"]:
-        coverage = merge_ranges(item["coverage"])
-        covered_lines = sum(
-            end - start + 1
-            for start, end in coverage
-        )
-        files.append({
-            "path": item["path"],
-            "line_count": item["line_count"],
-            "covered_lines": covered_lines,
-            "coverage": [list(value) for value in coverage],
-            "read_count": item["read_count"],
-        })
-
-    # RuntimeState keeps every raw observation. DecisionView is a bounded,
-    # content-agnostic projection: keep the most recent complete observations
-    # until a mechanical character budget is reached.
+    """Bound model context mechanically; durable FileState keeps everything."""
     visible = []
-    used_chars = 0
-    for item in reversed(state["observations"]):
+    used = 0
+    for item in reversed(file_state["observations"]):
         content = sanitize_source(item["content"])
         size = len(content)
-        if visible and used_chars + size > observation_char_budget:
+        if visible and used + size > char_budget:
             continue
-        if not visible and size > observation_char_budget:
-            content = content[-observation_char_budget:]
+        if not visible and size > char_budget:
+            content = content[-char_budget:]
             size = len(content)
         visible.append({
             "path": item["path"],
             "start_line": item["start_line"],
             "end_line": item["end_line"],
-            "content": content,
             "navigation": item["navigation"],
+            "content": content,
         })
-        used_chars += size
-        if used_chars >= observation_char_budget:
+        used += size
+        if used >= char_budget:
             break
     visible.reverse()
-
     return {
-        "goal": state["goal"],
-        "epoch": state["epoch"],
-        "exploration": {
-            "file_count": len(files),
-            "files_with_reads": sum(
-                1 for item in files if item["read_count"] > 0
-            ),
-            "unread_files": sum(
-                1 for item in files if item["read_count"] == 0
-            ),
-            "files": files,
-        },
-        "observation_view": {
-            "total_count": len(state["observations"]),
-            "visible_count": len(visible),
-            "omitted_count": len(state["observations"]) - len(visible),
-            "char_budget": observation_char_budget,
-            "used_chars": used_chars,
-            "items": visible,
-        },
+        "total_count": len(file_state["observations"]),
+        "visible_count": len(visible),
+        "omitted_count": (
+            len(file_state["observations"]) - len(visible)
+        ),
+        "char_budget": char_budget,
+        "used_chars": used,
+        "items": visible,
     }
 
 
+def decision_view(goal, file_state):
+    coverage = merge_ranges(file_state["coverage"])
+    return {
+        "goal": goal,
+        "phase": "file_range_runtime_v0",
+        "file": {
+            "path": file_state["path"],
+            "phase1_score": file_state["phase1_score"],
+            "line_count": file_state["line_count"],
+            "coverage": [list(value) for value in coverage],
+            "read_count": file_state["read_count"],
+            "epoch": file_state["epoch"],
+        },
+        "observations": observation_view(file_state),
+    }
 
-class SystemOneRangeDecider(SystemOneDecider):
-    def score_actions(
-        self,
-        query,
-        state,
-        actions,
-        batch_size=DEFAULT_ACTION_SCORE_BATCH_SIZE,
-    ):
-        """Score one semantic frontier; transport batches may shrink."""
-        total_usage = empty_usage()
-        view = decision_view(state)
 
-        def score_batch(batch):
-            questions = {}
-            for local_index, action in enumerate(batch):
-                question_id = f"action_{local_index}"
-                if action["kind"] == "stop_task":
-                    questions[question_id] = {
-                        "type": "noul",
-                        "instructions": {
-                            "task": query,
-                            "action": action,
-                            "question": (
-                                "Score confidence that exploration should stop "
-                                "now. Raise the score only when current evidence "
-                                "is sufficient and further reads are unlikely "
-                                "to materially improve the result."
-                            ),
+class SystemOneFileDecider(SystemOneDecider):
+    def score_file_actions(self, goal, file_state, actions):
+        questions = {}
+        for index, action in enumerate(actions):
+            qid = f"action_{index}"
+            if action["kind"] == "stop_file":
+                questions[qid] = {
+                    "type": "noul",
+                    "instructions": {
+                        "goal": goal,
+                        "file": file_state["path"],
+                        "question": (
+                            "Score confidence that exploration of THIS FILE "
+                            "should stop now. Increase the score when current "
+                            "observations are sufficient for judging this "
+                            "file's relevance to the goal and further reads "
+                            "are unlikely to materially improve that judgment. "
+                            "If useful unexplored ranges may remain, keep the "
+                            "score low."
+                        ),
+                    },
+                    "criteria": {
+                        "true": (
+                            "No further exploration of this file is necessary."
+                        ),
+                        "false": (
+                            "More ranges in this file may still materially "
+                            "improve localization for the goal."
+                        ),
+                    },
+                }
+            else:
+                questions[qid] = {
+                    "type": "noul",
+                    "instructions": {
+                        "goal": goal,
+                        "action": {
+                            "path": action["path"],
+                            "start_line": action["start_line"],
+                            "end_line": action["end_line"],
+                            "navigation": action["navigation"],
+                            "reason": action["reason"],
+                            "source": action.get("source"),
                         },
-                        "criteria": {
-                            "true": (
-                                "Current evidence is sufficient; important "
-                                "uncertainty is resolved; additional reads "
-                                "are likely redundant."
-                            ),
-                            "false": (
-                                "Useful unexplored directions remain or "
-                                "additional reads could materially improve "
-                                "the result."
-                            ),
-                        },
-                    }
-                else:
-                    questions[question_id] = {
-                        "type": "noul",
-                        "instructions": {
-                            "task": query,
-                            "action": {
-                                "kind": "read_range",
-                                "path": action["path"],
-                                "start_line": action["start_line"],
-                                "end_line": action["end_line"],
-                                "navigation": action["navigation"],
-                                "reason": action["reason"],
-                                "source": action.get("source"),
-                            },
-                            "question": (
-                                "Score how useful this exact ReadRange would be "
-                                "as the next information-gathering action."
-                            ),
-                        },
-                        "criteria": {
-                            "true": (
-                                "This read is a useful next exploration step "
-                                "and is likely to add material information."
-                            ),
-                            "false": (
-                                "This read is likely redundant or low-value."
-                            ),
-                        },
-                    }
+                        "question": (
+                            "Score how useful executing this exact ReadRange "
+                            "would be as the next exploration action for "
+                            "localizing content in this file relevant to the "
+                            "goal."
+                        ),
+                    },
+                    "criteria": {
+                        "true": (
+                            "This read is likely to add material information."
+                        ),
+                        "false": (
+                            "This read is likely redundant or low-value."
+                        ),
+                    },
+                }
 
-            try:
-                response, usage = self.send(
-                    "range_runtime_action_score",
-                    view,
-                    questions,
-                )
-            except RuntimeError as exc:
-                if (
-                    "max_tokens_exceeded" in str(exc)
-                    and len(batch) > 1
-                ):
-                    midpoint = len(batch) // 2
-                    self.trace.emit(
-                        "range_action_transport_split",
-                        original_batch_size=len(batch),
-                        left_size=midpoint,
-                        right_size=len(batch) - midpoint,
-                    )
-                    left, left_usage = score_batch(batch[:midpoint])
-                    right, right_usage = score_batch(batch[midpoint:])
-                    merge_usage(left_usage, right_usage)
-                    return left + right, left_usage
-                raise
-
-            answers = response.get("answers", {})
-            scored = []
-            for local_index, action in enumerate(batch):
-                answer = answers.get(f"action_{local_index}", {})
-                if answer.get("type") != "noul":
-                    raise RuntimeError(
-                        f"unexpected action-score answer: {answer!r}"
-                    )
-                scored.append({
-                    **action,
-                    "score": float(answer["noul"]),
-                })
-            return scored, usage
-
-        all_scored = []
-        for batch_start in range(0, len(actions), batch_size):
-            batch = actions[batch_start:batch_start + batch_size]
-            scored, usage = score_batch(batch)
-            all_scored.extend(scored)
-            merge_usage(total_usage, usage)
-
-        all_scored.sort(
-            key=lambda item: (
-                -item["score"],
-                item["id"],
-            )
+        response, usage = self.send(
+            "file_range_action_score",
+            decision_view(goal, file_state),
+            questions,
         )
-        return all_scored, total_usage
+        answers = response.get("answers", {})
+        scored = []
+        for index, action in enumerate(actions):
+            answer = answers.get(f"action_{index}", {})
+            if answer.get("type") != "noul":
+                raise RuntimeError(
+                    f"unexpected file-action answer: {answer!r}"
+                )
+            scored.append({
+                **action,
+                "score": float(answer["noul"]),
+            })
+        scored.sort(key=lambda item: (-item["score"], item["id"]))
+        return scored, usage
+
+    def score_file_evidence(self, goal, file_state):
+        """Post-loop result scoring; never affects navigation or stopping."""
+        if not file_state["observations"]:
+            return [], empty_usage()
+
+        questions = {}
+        for index, item in enumerate(file_state["observations"]):
+            questions[f"evidence_{index}"] = {
+                "type": "noul",
+                "instructions": {
+                    "goal": goal,
+                    "path": item["path"],
+                    "start_line": item["start_line"],
+                    "end_line": item["end_line"],
+                    "content": sanitize_source(item["content"]),
+                    "question": (
+                        "Does this observed range materially help localize "
+                        "file content relevant to the goal?"
+                    ),
+                },
+                "criteria": {
+                    "true": (
+                        "The range contains useful implementation evidence "
+                        "or directly relevant context for the goal."
+                    ),
+                    "false": (
+                        "The range does not materially contribute to the goal."
+                    ),
+                },
+            }
+
+        response, usage = self.send(
+            "file_evidence_score",
+            {
+                "goal": goal,
+                "file": file_state["path"],
+                "phase": "post_navigation_result_scoring",
+            },
+            questions,
+        )
+        answers = response.get("answers", {})
+        result = []
+        for index, item in enumerate(file_state["observations"]):
+            answer = answers.get(f"evidence_{index}", {})
+            if answer.get("type") != "noul":
+                raise RuntimeError(
+                    f"unexpected evidence answer: {answer!r}"
+                )
+            result.append({
+                **item,
+                "relevance": float(answer["noul"]),
+            })
+        return result, usage
 
 
-
-class OfflineRangeDecider:
-    model = "offline-range-fixture"
+class OfflineFileDecider:
+    model = "offline-file-range-fixture"
 
     def __init__(self, trace):
         self.trace = trace
 
     def score_candidates(self, query, stage, candidates):
-        # Keep the offline fixture deterministic and broad.
-        scored = [{**item, "score": 0.9} for item in candidates]
-        return scored, empty_usage()
+        return [
+            {**item, "score": 0.9}
+            for item in candidates
+        ], empty_usage()
 
-    def score_actions(self, query, state, actions):
+    def score_file_actions(self, goal, file_state, actions):
         scored = []
         for action in actions:
-            if action["kind"] == "stop_task":
-                score = 0.9 if state["observations"] else 0.1
-            elif action["navigation"] in {"seed_head", "expand_after"}:
+            if action["kind"] == "stop_file":
+                score = 0.9 if file_state["read_count"] >= 2 else 0.1
+            elif action["navigation"] in {
+                "seed_head",
+                "expand_after",
+            }:
                 score = 0.8
             else:
                 score = 0.4
@@ -439,16 +446,23 @@ class OfflineRangeDecider:
         scored.sort(key=lambda item: (-item["score"], item["id"]))
         return scored, empty_usage()
 
+    def score_file_evidence(self, goal, file_state):
+        return [
+            {**item, "relevance": 0.8}
+            for item in file_state["observations"]
+        ], empty_usage()
 
-def select_actions(scored_actions, parallel_threshold):
+
+def select_file_actions(scored_actions, parallel_threshold):
     stop = next(
         item for item in scored_actions
-        if item["kind"] == "stop_task"
+        if item["kind"] == "stop_file"
     )
     reads = [
         item for item in scored_actions
         if item["kind"] == "read_range"
     ]
+
     if not reads:
         return [stop], "action_space_exhausted"
 
@@ -469,65 +483,173 @@ def select_actions(scored_actions, parallel_threshold):
     return [best_read], "fallback_top1"
 
 
-def initial_state(query, selected_files, root):
-    state_files = []
-    for item in selected_files:
-        stat = source_stat(root, item)
-        if stat is None:
-            continue
-        state_files.append({
-            "path": item["payload"]["path"],
-            "phase1_score": item["score"],
-            "line_count": stat["line_count"],
-            "size_bytes": stat["size_bytes"],
-            "extension": stat["extension"],
-            "coverage": [],
-            "latest_range": None,
-            "read_count": 0,
-        })
+def new_file_state(root, candidate):
+    stat = source_stat(root, candidate)
+    if stat is None:
+        return None
     return {
-        "goal": query,
+        "path": candidate["payload"]["path"],
+        "phase1_score": candidate["score"],
+        "line_count": stat["line_count"],
+        "size_bytes": stat["size_bytes"],
+        "extension": stat["extension"],
         "epoch": 0,
-        "files": state_files,
+        "coverage": [],
         "observations": [],
-        "action_history": [],
+        "last_selected_ranges": [],
+        "read_count": 0,
         "termination": None,
+        "action_history": [],
     }
 
 
-def apply_read(state, root, action):
-    observation = read_range(root, action)
-    file_state = next(
-        item for item in state["files"]
-        if item["path"] == action["path"]
-    )
-    file_state["coverage"] = [
-        list(item)
-        for item in merge_ranges([
-            *file_state["coverage"],
-            (
-                observation["start_line"],
-                observation["end_line"],
+def apply_reads(root, file_state, selected):
+    observations = []
+    selected_ranges = []
+    for action in selected:
+        observation = read_range(root, action)
+        item = {
+            "id": (
+                f"{observation['path']}:"
+                f"{observation['start_line']}-"
+                f"{observation['end_line']}#"
+                f"{len(file_state['observations']) + 1}"
             ),
+            **observation,
+            "navigation": action["navigation"],
+            "selected_action_score": action["score"],
+        }
+        file_state["observations"].append(item)
+        observations.append(item)
+        selected_ranges.append([
+            observation["start_line"],
+            observation["end_line"],
+        ])
+        file_state["read_count"] += 1
+
+    file_state["coverage"] = [
+        list(value)
+        for value in merge_ranges([
+            *file_state["coverage"],
+            *selected_ranges,
         ])
     ]
-    file_state["latest_range"] = [
-        observation["start_line"],
-        observation["end_line"],
-    ]
-    file_state["read_count"] += 1
+    file_state["last_selected_ranges"] = selected_ranges
+    return observations
 
-    item = {
-        "id": (
-            f"{observation['path']}:{observation['start_line']}-"
-            f"{observation['end_line']}#{len(state['observations']) + 1}"
-        ),
-        **observation,
-        "navigation": action["navigation"],
-        "selected_action_score": action["score"],
-    }
-    state["observations"].append(item)
-    return item
+
+def run_file_runtime(
+    root,
+    goal,
+    candidate,
+    decider,
+    trace,
+    *,
+    window_lines,
+    parallel_threshold,
+    max_jumps,
+    max_file_epochs,
+):
+    usage = empty_usage()
+    state = new_file_state(root, candidate)
+    if state is None:
+        return None, usage
+
+    trace.emit(
+        "file_runtime_started",
+        path=state["path"],
+        phase1_score=state["phase1_score"],
+        line_count=state["line_count"],
+    )
+
+    for epoch in range(1, max_file_epochs + 1):
+        state["epoch"] = epoch
+        actions = generate_file_actions(
+            state,
+            window_lines,
+            max_jumps,
+        )
+        trace.emit(
+            "file_action_space",
+            path=state["path"],
+            epoch=epoch,
+            action_count=len(actions),
+            actions=actions,
+        )
+
+        scored, current = decider.score_file_actions(
+            goal,
+            state,
+            actions,
+        )
+        merge_usage(usage, current)
+        selected, mode = select_file_actions(
+            scored,
+            parallel_threshold,
+        )
+
+        state["action_history"].append({
+            "epoch": epoch,
+            "scores": scored,
+            "selected_ids": [item["id"] for item in selected],
+            "selection_mode": mode,
+        })
+        trace.emit(
+            "file_action_scores",
+            path=state["path"],
+            epoch=epoch,
+            threshold=parallel_threshold,
+            scores=scored,
+            selected_ids=[item["id"] for item in selected],
+            selection_mode=mode,
+        )
+
+        if selected[0]["kind"] == "stop_file":
+            state["termination"] = mode
+            trace.emit(
+                "file_runtime_stopped",
+                path=state["path"],
+                epoch=epoch,
+                reason=mode,
+                stop_score=selected[0]["score"],
+            )
+            break
+
+        observations = apply_reads(
+            root,
+            state,
+            selected,
+        )
+        trace.emit(
+            "file_ranges_observed",
+            path=state["path"],
+            epoch=epoch,
+            observations=observations,
+        )
+    else:
+        state["termination"] = "budget_exhausted"
+        trace.emit(
+            "file_runtime_stopped",
+            path=state["path"],
+            epoch=max_file_epochs,
+            reason="budget_exhausted",
+        )
+
+    evidence, current = decider.score_file_evidence(
+        goal,
+        state,
+    )
+    merge_usage(usage, current)
+    state["evidence"] = evidence
+
+    trace.emit(
+        "file_runtime_completed",
+        path=state["path"],
+        termination=state["termination"],
+        reads=state["read_count"],
+        evidence=evidence,
+    )
+    return state, usage
 
 
 def run_phase1(
@@ -540,26 +662,19 @@ def run_phase1(
 ):
     usage = empty_usage()
     directory_candidates = directories(root)
-    scored_directories, current = decider.score_candidates(
+    scored_dirs, current = decider.score_candidates(
         query,
         "directory",
         directory_candidates,
     )
     merge_usage(usage, current)
-    selected_directories = [
+    selected_dirs = [
         item
-        for item in scored_directories
+        for item in scored_dirs
         if item["score"] >= directory_threshold
     ]
-    trace.emit(
-        "phase1_directory_selected",
-        exposed=len(directory_candidates),
-        selected=len(selected_directories),
-        threshold=directory_threshold,
-        candidates=selected_directories,
-    )
 
-    file_candidates = files(root, selected_directories)
+    file_candidates = files(root, selected_dirs)
     scored_files, current = decider.score_candidates(
         query,
         "file",
@@ -571,24 +686,70 @@ def run_phase1(
         for item in scored_files
         if item["score"] >= file_threshold
     ]
+
     trace.emit(
         "phase1_completed",
-        exposed=len(file_candidates),
-        selected=len(selected_files),
-        threshold=file_threshold,
+        directories_exposed=len(directory_candidates),
+        directories_selected=len(selected_dirs),
+        files_exposed=len(file_candidates),
+        files_selected=len(selected_files),
         files=selected_files,
     )
-    return (
-        selected_directories,
-        selected_files,
-        {
-            **usage,
-            "directories_exposed": len(directory_candidates),
-            "directories_selected": len(selected_directories),
-            "files_exposed": len(file_candidates),
-            "files_selected": len(selected_files),
-        },
-    )
+    return selected_dirs, selected_files, {
+        **usage,
+        "directories_exposed": len(directory_candidates),
+        "directories_selected": len(selected_dirs),
+        "files_exposed": len(file_candidates),
+        "files_selected": len(selected_files),
+    }
+
+
+def canonical_file_results(
+    file_states,
+    evidence_threshold,
+):
+    files = []
+    for state in file_states:
+        evidence = [
+            item
+            for item in state.get("evidence", [])
+            if item["relevance"] >= evidence_threshold
+        ]
+        if not evidence:
+            continue
+        evidence.sort(
+            key=lambda item: (
+                -item["relevance"],
+                item["start_line"],
+            )
+        )
+        file_score = max(item["relevance"] for item in evidence)
+        files.append({
+            "path": state["path"],
+            "score": file_score,
+            "phase1_score": state["phase1_score"],
+            "termination": state["termination"],
+            "read_count": state["read_count"],
+            "coverage": state["coverage"],
+            "evidence": [
+                {
+                    "start_line": item["start_line"],
+                    "end_line": item["end_line"],
+                    "score": item["relevance"],
+                    "content": item["content"],
+                    "navigation": item["navigation"],
+                    "selected_action_score": item[
+                        "selected_action_score"
+                    ],
+                }
+                for item in sorted(
+                    evidence,
+                    key=lambda row: row["start_line"],
+                )
+            ],
+        })
+    files.sort(key=lambda item: (-item["score"], item["path"]))
+    return files
 
 
 def run(
@@ -601,11 +762,12 @@ def run(
     file_threshold=DEFAULT_FILE_THRESHOLD,
     window_lines=DEFAULT_WINDOW_LINES,
     parallel_threshold=DEFAULT_PARALLEL_THRESHOLD,
-    max_jumps_per_file=DEFAULT_MAX_JUMPS_PER_FILE,
-    max_epochs=DEFAULT_MAX_EPOCHS,
+    evidence_threshold=DEFAULT_EVIDENCE_THRESHOLD,
+    max_jumps=DEFAULT_MAX_JUMPS,
+    max_file_epochs=DEFAULT_MAX_FILE_EPOCHS,
 ):
     started = time.perf_counter()
-    directories_selected, selected_files, phase1_metrics = run_phase1(
+    selected_dirs, selected_files, phase1_metrics = run_phase1(
         root,
         query,
         decider,
@@ -614,143 +776,80 @@ def run(
         file_threshold,
     )
     usage = {
-        key: phase1_metrics.get(key, 0)
+        key: phase1_metrics[key]
         for key in ("model_calls", "input_tokens", "output_tokens")
     }
-    state = initial_state(query, selected_files, root)
 
-    trace.emit(
-        "range_runtime_started",
-        architecture="range_runtime_v0",
-        file_count=len(state["files"]),
-        files=state["files"],
-        window_lines=window_lines,
-        parallel_threshold=parallel_threshold,
-        max_jumps_per_file=max_jumps_per_file,
-    )
-
-    reads_executed = 0
-    selector_modes = {}
-    unique_files = set()
-
-    for epoch in range(1, max_epochs + 1):
-        state["epoch"] = epoch
-        actions = generate_action_space(
-            state,
-            window_lines,
-            max_jumps_per_file,
-        )
-        trace.emit(
-            "range_action_space",
-            epoch=epoch,
-            action_count=len(actions),
-            actions=actions,
-        )
-
-        scored, current = decider.score_actions(
+    file_states = []
+    for candidate in selected_files:
+        state, current = run_file_runtime(
+            root,
             query,
-            state,
-            actions,
+            candidate,
+            decider,
+            trace,
+            window_lines=window_lines,
+            parallel_threshold=parallel_threshold,
+            max_jumps=max_jumps,
+            max_file_epochs=max_file_epochs,
         )
         merge_usage(usage, current)
-        selected, mode = select_actions(
-            scored,
-            parallel_threshold,
-        )
-        selector_modes[mode] = selector_modes.get(mode, 0) + 1
+        if state is not None:
+            file_states.append(state)
 
-        trace.emit(
-            "range_action_scores",
-            epoch=epoch,
-            threshold=parallel_threshold,
-            scores=[
-                {
-                    "id": item["id"],
-                    "kind": item["kind"],
-                    "path": item.get("path"),
-                    "start_line": item.get("start_line"),
-                    "end_line": item.get("end_line"),
-                    "navigation": item.get("navigation"),
-                    "score": item["score"],
-                }
-                for item in scored
-            ],
-            selected_ids=[item["id"] for item in selected],
-            selection_mode=mode,
-        )
-
-        state["action_history"].append({
-            "epoch": epoch,
-            "scores": scored,
-            "selected_ids": [item["id"] for item in selected],
-            "selection_mode": mode,
-        })
-
-        if selected[0]["kind"] == "stop_task":
-            state["termination"] = mode
-            trace.emit(
-                "range_runtime_stopped",
-                epoch=epoch,
-                reason=mode,
-                stop_score=selected[0]["score"],
-            )
-            break
-
-        observations = []
-        for action in selected:
-            observation = apply_read(
-                state,
-                root,
-                action,
-            )
-            observations.append(observation)
-            reads_executed += 1
-            unique_files.add(action["path"])
-
-        trace.emit(
-            "range_actions_executed",
-            epoch=epoch,
-            action_count=len(selected),
-            observations=observations,
-        )
-    else:
-        state["termination"] = "budget_exhausted"
-        trace.emit(
-            "range_runtime_stopped",
-            epoch=max_epochs,
-            reason="budget_exhausted",
-        )
-
+    result_files = canonical_file_results(
+        file_states,
+        evidence_threshold,
+    )
     metrics = {
         **phase1_metrics,
         **usage,
-        "epochs": state["epoch"],
-        "reads_executed": reads_executed,
-        "unique_files_read": len(unique_files),
-        "observations": len(state["observations"]),
-        "selector_modes": selector_modes,
+        "file_runtimes": len(file_states),
+        "file_model_stops": sum(
+            state["termination"] == "model_stop"
+            for state in file_states
+        ),
+        "file_space_exhausted": sum(
+            state["termination"] == "action_space_exhausted"
+            for state in file_states
+        ),
+        "file_budget_exhausted": sum(
+            state["termination"] == "budget_exhausted"
+            for state in file_states
+        ),
+        "reads_executed": sum(
+            state["read_count"] for state in file_states
+        ),
+        "valuable_files": len(result_files),
+        "evidence_regions": sum(
+            len(item["evidence"]) for item in result_files
+        ),
         "parallel_threshold": parallel_threshold,
+        "evidence_threshold": evidence_threshold,
         "window_lines": window_lines,
-        "max_jumps_per_file": max_jumps_per_file,
-        "termination": state["termination"],
+        "max_jumps": max_jumps,
+        "max_file_epochs": max_file_epochs,
         "elapsed_ms": round(
             (time.perf_counter() - started) * 1000,
             3,
         ),
     }
+
     result = {
         "query": query,
         "root": str(Path(root).resolve()),
         "model": decider.model,
-        "architecture": "range_runtime_v0",
+        "architecture": "phase1_plus_independent_file_range_runtimes_v0",
         "thresholds": {
             "directory": directory_threshold,
             "file": file_threshold,
             "parallel_action": parallel_threshold,
+            "result_evidence": evidence_threshold,
         },
-        "directories": directories_selected,
+        "directories": selected_dirs,
         "files": selected_files,
-        "state": state,
+        "file_states": file_states,
+        "result_files": result_files,
         "metrics": metrics,
     }
     trace.emit("range_runtime_completed", result=result)
@@ -782,14 +881,19 @@ def main(argv=None):
         default=DEFAULT_PARALLEL_THRESHOLD,
     )
     parser.add_argument(
-        "--max-jumps-per-file",
-        type=int,
-        default=DEFAULT_MAX_JUMPS_PER_FILE,
+        "--evidence-threshold",
+        type=float,
+        default=DEFAULT_EVIDENCE_THRESHOLD,
     )
     parser.add_argument(
-        "--max-epochs",
+        "--max-jumps",
         type=int,
-        default=DEFAULT_MAX_EPOCHS,
+        default=DEFAULT_MAX_JUMPS,
+    )
+    parser.add_argument(
+        "--max-file-epochs",
+        type=int,
+        default=DEFAULT_MAX_FILE_EPOCHS,
     )
     parser.add_argument("--offline-decider", action="store_true")
     parser.add_argument("--trace-file")
@@ -806,16 +910,18 @@ def main(argv=None):
 
     if args.window_lines < 1:
         parser.error("--window-lines must be >= 1")
-    if args.max_jumps_per_file < 0:
-        parser.error("--max-jumps-per-file must be >= 0")
-    if args.max_epochs < 1:
-        parser.error("--max-epochs must be >= 1")
+    if args.max_jumps < 0:
+        parser.error("--max-jumps must be >= 0")
+    if args.max_file_epochs < 1:
+        parser.error("--max-file-epochs must be >= 1")
     if not 0 <= args.parallel_threshold <= 1:
         parser.error("--parallel-threshold must be in [0,1]")
+    if not 0 <= args.evidence_threshold <= 1:
+        parser.error("--evidence-threshold must be in [0,1]")
 
     trace = Trace(args.trace_file)
     if args.offline_decider:
-        decider = OfflineRangeDecider(trace)
+        decider = OfflineFileDecider(trace)
     else:
         key = os.getenv("TYPESAFE_API_KEY", "")
         if not key:
@@ -825,7 +931,7 @@ def main(argv=None):
                 file=sys.stderr,
             )
             return 2
-        decider = SystemOneRangeDecider(
+        decider = SystemOneFileDecider(
             key,
             trace,
             args.typesafe_endpoint,
@@ -841,8 +947,9 @@ def main(argv=None):
         file_threshold=args.file_threshold,
         window_lines=args.window_lines,
         parallel_threshold=args.parallel_threshold,
-        max_jumps_per_file=args.max_jumps_per_file,
-        max_epochs=args.max_epochs,
+        evidence_threshold=args.evidence_threshold,
+        max_jumps=args.max_jumps,
+        max_file_epochs=args.max_file_epochs,
     )
 
     payload = json.dumps(result, indent=2, ensure_ascii=False)
@@ -851,10 +958,9 @@ def main(argv=None):
             payload + "\n",
             encoding="utf-8",
         )
-    print(payload if args.output_json is None else json.dumps(
-        result["metrics"],
-        ensure_ascii=False,
-    ))
+        print(json.dumps(result["metrics"], ensure_ascii=False))
+    else:
+        print(payload)
     return 0
 
 
