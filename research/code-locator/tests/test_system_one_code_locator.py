@@ -7,6 +7,7 @@ import unittest
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 MODULE_PATH = PROJECT_ROOT / "src" / "system_one_code_locator.py"
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 SPEC = importlib.util.spec_from_file_location("system_one_code_locator", MODULE_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
