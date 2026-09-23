@@ -36,7 +36,7 @@ DEFAULT_WINDOW_LINES = 140
 DEFAULT_PARALLEL_THRESHOLD = 0.65
 DEFAULT_MAX_JUMPS_PER_FILE = 2
 DEFAULT_MAX_EPOCHS = 64
-DEFAULT_ACTION_SCORE_BATCH_SIZE = 16
+DEFAULT_ACTION_SCORE_BATCH_SIZE = 8
 
 
 def make_action(action_id, path, start, end, navigation, reason, source=None):
@@ -218,8 +218,8 @@ def generate_action_space(
     return actions
 
 
-def decision_view(state, action_frontier=None):
-    view = {
+def decision_view(state):
+    return {
         "goal": state["goal"],
         "phase": "range_runtime_v0",
         "epoch": state["epoch"],
@@ -252,19 +252,6 @@ def decision_view(state, action_frontier=None):
             "task. StopTask means the current evidence is already sufficient."
         ),
     }
-    if action_frontier is not None:
-        view["action_frontier"] = [
-            {
-                "id": item["id"],
-                "kind": item["kind"],
-                "path": item.get("path"),
-                "start_line": item.get("start_line"),
-                "end_line": item.get("end_line"),
-                "navigation": item.get("navigation"),
-            }
-            for item in action_frontier
-        ]
-    return view
 
 
 class SystemOneRangeDecider(SystemOneDecider):
@@ -275,13 +262,11 @@ class SystemOneRangeDecider(SystemOneDecider):
         actions,
         batch_size=DEFAULT_ACTION_SCORE_BATCH_SIZE,
     ):
-        """Score one semantic frontier; transport may be chunked."""
-        all_scored = []
+        """Score one semantic frontier; transport batches may shrink."""
         total_usage = empty_usage()
-        view = decision_view(state, actions)
+        view = decision_view(state)
 
-        for batch_start in range(0, len(actions), batch_size):
-            batch = actions[batch_start:batch_start + batch_size]
+        def score_batch(batch):
             questions = {}
             for local_index, action in enumerate(batch):
                 question_id = f"action_{local_index}"
@@ -290,7 +275,7 @@ class SystemOneRangeDecider(SystemOneDecider):
                         "type": "noul",
                         "instructions": {
                             "task": query,
-                            "action_id": action["id"],
+                            "action": action,
                             "question": (
                                 "How confident are you that no further "
                                 "exploration is necessary and the current "
@@ -319,13 +304,20 @@ class SystemOneRangeDecider(SystemOneDecider):
                         "type": "noul",
                         "instructions": {
                             "task": query,
-                            "action_id": action["id"],
+                            "action": {
+                                "kind": "read_range",
+                                "path": action["path"],
+                                "start_line": action["start_line"],
+                                "end_line": action["end_line"],
+                                "navigation": action["navigation"],
+                                "reason": action["reason"],
+                                "source": action.get("source"),
+                            },
                             "question": (
-                                "In state.action_frontier find this action_id. "
-                                "Given the current state, observations, and "
-                                "the complete frontier of alternatives, how "
-                                "useful would executing this exact ReadRange "
-                                "be as the next information-gathering action?"
+                                "Given the current state and observations, "
+                                "how useful would executing this exact "
+                                "ReadRange be as the next "
+                                "information-gathering action for the task?"
                             ),
                         },
                         "criteria": {
@@ -334,29 +326,55 @@ class SystemOneRangeDecider(SystemOneDecider):
                                 "and is likely to add material information."
                             ),
                             "false": (
-                                "This read is likely redundant or low-value "
-                                "relative to the available alternatives."
+                                "This read is likely redundant or low-value."
                             ),
                         },
                     }
 
-            response, usage = self.send(
-                "range_runtime_action_score",
-                view,
-                questions,
-            )
-            merge_usage(total_usage, usage)
+            try:
+                response, usage = self.send(
+                    "range_runtime_action_score",
+                    view,
+                    questions,
+                )
+            except RuntimeError as exc:
+                if (
+                    "max_tokens_exceeded" in str(exc)
+                    and len(batch) > 1
+                ):
+                    midpoint = len(batch) // 2
+                    self.trace.emit(
+                        "range_action_transport_split",
+                        original_batch_size=len(batch),
+                        left_size=midpoint,
+                        right_size=len(batch) - midpoint,
+                    )
+                    left, left_usage = score_batch(batch[:midpoint])
+                    right, right_usage = score_batch(batch[midpoint:])
+                    merge_usage(left_usage, right_usage)
+                    return left + right, left_usage
+                raise
+
             answers = response.get("answers", {})
+            scored = []
             for local_index, action in enumerate(batch):
                 answer = answers.get(f"action_{local_index}", {})
                 if answer.get("type") != "noul":
                     raise RuntimeError(
                         f"unexpected action-score answer: {answer!r}"
                     )
-                all_scored.append({
+                scored.append({
                     **action,
                     "score": float(answer["noul"]),
                 })
+            return scored, usage
+
+        all_scored = []
+        for batch_start in range(0, len(actions), batch_size):
+            batch = actions[batch_start:batch_start + batch_size]
+            scored, usage = score_batch(batch)
+            all_scored.extend(scored)
+            merge_usage(total_usage, usage)
 
         all_scored.sort(
             key=lambda item: (
