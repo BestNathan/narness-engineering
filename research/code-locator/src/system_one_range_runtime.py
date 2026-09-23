@@ -219,39 +219,46 @@ def generate_action_space(
 
 
 def decision_view(state):
+    files = []
+    for item in state["files"]:
+        coverage = merge_ranges(item["coverage"])
+        covered_lines = sum(
+            end - start + 1
+            for start, end in coverage
+        )
+        files.append({
+            "path": item["path"],
+            "line_count": item["line_count"],
+            "covered_lines": covered_lines,
+            "coverage": [list(value) for value in coverage],
+            "read_count": item["read_count"],
+        })
+
     return {
         "goal": state["goal"],
-        "phase": "range_runtime_v0",
         "epoch": state["epoch"],
-        "files": [
-            {
-                "path": item["path"],
-                "phase1_score": item["phase1_score"],
-                "line_count": item["line_count"],
-                "coverage": item["coverage"],
-                "latest_range": item.get("latest_range"),
-                "read_count": item["read_count"],
-            }
-            for item in state["files"]
-        ],
+        "exploration": {
+            "file_count": len(files),
+            "files_with_reads": sum(
+                1 for item in files if item["read_count"] > 0
+            ),
+            "unread_files": sum(
+                1 for item in files if item["read_count"] == 0
+            ),
+            "files": files,
+        },
         "observations": [
             {
-                "id": item["id"],
                 "path": item["path"],
                 "start_line": item["start_line"],
                 "end_line": item["end_line"],
                 "content": sanitize_source(item["content"]),
-                "selected_action_score": item["selected_action_score"],
                 "navigation": item["navigation"],
             }
             for item in state["observations"]
         ],
-        "policy": (
-            "The harness does not interpret source content. Score proposed "
-            "ReadRange actions by how useful the next read would be for the "
-            "task. StopTask means the current evidence is already sufficient."
-        ),
     }
+
 
 
 class SystemOneRangeDecider(SystemOneDecider):
@@ -277,13 +284,10 @@ class SystemOneRangeDecider(SystemOneDecider):
                             "task": query,
                             "action": action,
                             "question": (
-                                "How confident are you that no further "
-                                "exploration is necessary and the current "
-                                "evidence is sufficient for the localization "
-                                "task? If further reading is unlikely to "
-                                "materially improve the result, increase the "
-                                "StopTask score. If useful unexplored "
-                                "directions remain, keep StopTask low."
+                                "Score confidence that exploration should stop "
+                                "now. Raise the score only when current evidence "
+                                "is sufficient and further reads are unlikely "
+                                "to materially improve the result."
                             ),
                         },
                         "criteria": {
@@ -314,10 +318,8 @@ class SystemOneRangeDecider(SystemOneDecider):
                                 "source": action.get("source"),
                             },
                             "question": (
-                                "Given the current state and observations, "
-                                "how useful would executing this exact "
-                                "ReadRange be as the next "
-                                "information-gathering action for the task?"
+                                "Score how useful this exact ReadRange would be "
+                                "as the next information-gathering action."
                             ),
                         },
                         "criteria": {
