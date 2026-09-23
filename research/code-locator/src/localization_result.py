@@ -13,6 +13,24 @@ CONFIDENCE_KIND = "code-localization-confidence-assessment"
 ROLES = {"relevant", "primary", "supporting", "context", "unknown"}
 
 
+def subject_identity(repository, revision):
+    if not repository or not revision:
+        return None
+    return {
+        "repository": str(repository),
+        "revision": str(revision),
+    }
+
+
+def attach_subject(result, subject):
+    if subject is not None:
+        result["subject"] = {
+            "repository": str(subject["repository"]),
+            "revision": str(subject["revision"]),
+        }
+    return result
+
+
 def confidence_label(score):
     if score is None:
         return "unknown"
@@ -216,6 +234,14 @@ def validate(result):
     producer = result.get("producer")
     if not isinstance(producer, dict) or not producer.get("system"):
         raise ValueError("localization result requires producer.system")
+    subject = result.get("subject")
+    if subject is not None:
+        if not isinstance(subject, dict):
+            raise ValueError("localization result subject must be an object")
+        if not subject.get("repository") or not subject.get("revision"):
+            raise ValueError(
+                "localization result subject requires repository and revision"
+            )
     validate_cost(result.get("cost"))
     files = result.get("files")
     if not isinstance(files, list):
@@ -399,6 +425,7 @@ def build_claude_result(
     model,
     localization_stage,
     confidence_stage,
+    subject=None,
 ):
     validate_draft(draft)
     validate_confidence_assessment(assessment, draft)
@@ -460,6 +487,7 @@ def build_claude_result(
         ),
         "files": files,
     }
+    attach_subject(result, subject)
     return validate(result)
 
 
@@ -571,6 +599,7 @@ def build_system_one_result(engine_result, model=None):
         "cost": system_one_cost(engine_result),
         "files": files,
     }
+    attach_subject(result, engine_result.get("subject"))
     return validate(result)
 
 
@@ -658,4 +687,5 @@ def build_system_one_range_result(engine_result, model=None):
         "cost": system_one_cost(engine_result),
         "files": files,
     }
+    attach_subject(result, engine_result.get("subject"))
     return validate(result)
