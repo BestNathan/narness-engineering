@@ -222,95 +222,212 @@ def files(root, selected_dirs):
             }
     return [found[k] for k in sorted(found)]
 
-REGION_SPAN = 120
-IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{2,}")
-DECLARATION_RE = re.compile(
-    r"\\b(?:fn|function|def|func|class|struct|enum|trait|impl|interface|type|"
-    r"const|static|pub|export|async)\\b"
-)
-IDENTIFIER_STOPWORDS = {
-    "and", "async", "await", "break", "case", "class", "const", "continue",
-    "def", "else", "enum", "export", "false", "for", "from", "func", "function",
-    "impl", "import", "interface", "let", "match", "mod", "none", "null", "pub",
-    "return", "self", "static", "struct", "super", "this", "trait", "true", "type",
-    "use", "var", "where", "while",
+CONTROL_NAMES = {
+    "if", "for", "while", "switch", "catch", "match", "loop", "return",
 }
 
-def regions(root, file, span=REGION_SPAN):
-    """Build a compact, deterministic third-stage decision frontier.
+def _detect_symbol(line, suffix):
+    stripped = line.strip()
+    if not stripped:
+        return None
 
-    The model does not need every source line plus overlapping context in order
-    to decide which parts of already-selected files deserve expansion. Each
-    region therefore exposes provenance plus a structural lexical outline.
-    The full source remains local and is materialized only after selection.
+    patterns = []
+    if suffix == ".py":
+        patterns = [
+            ("class", r"^(?:@[^ ]+\\s+)?class\\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("function", r"^(?:async\\s+)?def\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\("),
+        ]
+    elif suffix == ".rs":
+        patterns = [
+            ("function", r"^(?:(?:pub(?:\\([^)]*\\))?|unsafe|async|const|extern(?:\\s+\\\"[^\\\"]+\\\")?)\\s+)*fn\\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("struct", r"^(?:(?:pub(?:\\([^)]*\\))?)\\s+)?struct\\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("enum", r"^(?:(?:pub(?:\\([^)]*\\))?)\\s+)?enum\\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("trait", r"^(?:(?:pub(?:\\([^)]*\\))?)\\s+)?trait\\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("impl", r"^impl(?:<[^>]+>)?\\s+(.+?)(?:\\s+where\\b|\\s*\\{)"),
+        ]
+    elif suffix == ".go":
+        patterns = [
+            ("function", r"^func\\s+(?:\\([^)]*\\)\\s*)?([A-Za-z_][A-Za-z0-9_]*)\\s*\\("),
+            ("type", r"^type\\s+([A-Za-z_][A-Za-z0-9_]*)\\s+(?:struct|interface)\\b"),
+        ]
+    elif suffix in {".ts", ".tsx", ".js", ".jsx", ".vue"}:
+        patterns = [
+            ("class", r"^(?:(?:export|default|declare|abstract)\\s+)*class\\s+([A-Za-z_$][A-Za-z0-9_$]*)"),
+            ("interface", r"^(?:(?:export|default|declare)\\s+)*interface\\s+([A-Za-z_$][A-Za-z0-9_$]*)"),
+            ("type", r"^(?:(?:export|declare)\\s+)*type\\s+([A-Za-z_$][A-Za-z0-9_$]*)\\b"),
+            ("function", r"^(?:(?:export|default)\\s+)*(?:async\\s+)?function\\s+([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\("),
+            ("function", r"^(?:(?:export|declare)\\s+)*(?:const|let|var)\\s+([A-Za-z_$][A-Za-z0-9_$]*)\\s*=.*=>"),
+            ("method", r"^(?:(?:public|private|protected|static|async|readonly|override|abstract|get|set)\\s+)*([A-Za-z_$][A-Za-z0-9_$]*)\\s*(?:<[^>{}]+>)?\\s*\\([^;{}]*\\)"),
+        ]
+    elif suffix == ".java":
+        patterns = [
+            ("class", r"^(?:(?:public|private|protected|abstract|final|static)\\s+)*(?:class|interface|enum|record)\\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("method", r"^(?:(?:public|private|protected|static|final|abstract|synchronized|native|default)\\s+)*(?:<[^>]+>\\s*)?(?:[A-Za-z_$][A-Za-z0-9_$.<>?, \\[\\]]+\\s+)?([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\([^;{}]*\\)"),
+        ]
+    elif suffix == ".proto":
+        patterns = [
+            ("service", r"^service\\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("message", r"^message\\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("enum", r"^enum\\s+([A-Za-z_][A-Za-z0-9_]*)"),
+            ("rpc", r"^rpc\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\("),
+        ]
+    elif suffix == ".sh":
+        patterns = [
+            ("function", r"^(?:function\\s+)?([A-Za-z_][A-Za-z0-9_]*)\\s*\\(\\)\\s*\\{?"),
+        ]
+    elif suffix == ".md":
+        match = re.match(r"^(#{1,6})\\s+(.+?)\\s*#*$", stripped)
+        if match:
+            return {
+                "kind": "section",
+                "name": match.group(2)[:120],
+                "heading_level": len(match.group(1)),
+            }
+        return None
+
+    for kind, pattern in patterns:
+        match = re.match(pattern, stripped)
+        if not match:
+            continue
+        name = match.group(1).strip()
+        if name.lower() in CONTROL_NAMES:
+            continue
+        return {"kind": kind, "name": name[:120]}
+    return None
+
+def _normalized_code(line):
+    line = re.sub(r'"(?:\\.|[^"\\])*"', '""', line)
+    line = re.sub(r"'(?:\\.|[^'\\])*'", "''", line)
+    line = re.sub(r"`(?:\\.|[^`\\])*`", "``", line)
+    line = line.split("//", 1)[0]
+    return line
+
+def _brace_symbol_end(source, start0):
+    depth = 0
+    opened = False
+    scan_end = min(len(source), start0 + 800)
+    for index in range(start0, scan_end):
+        code = _normalized_code(source[index])
+        for ch in code:
+            if ch == "{":
+                depth += 1
+                opened = True
+            elif ch == "}" and opened:
+                depth -= 1
+                if depth <= 0:
+                    return index + 1
+        if not opened and index > start0 + 12:
+            break
+    return start0 + 1
+
+def _python_symbol_end(source, start0):
+    line = source[start0]
+    indent = len(line) - len(line.lstrip())
+    end = start0 + 1
+    for index in range(start0 + 1, len(source)):
+        stripped = source[index].strip()
+        if not stripped or stripped.startswith("#"):
+            end = index + 1
+            continue
+        current_indent = len(source[index]) - len(source[index].lstrip())
+        if current_indent <= indent:
+            break
+        end = index + 1
+    return end
+
+def _markdown_symbol_end(source, start0, level):
+    end = len(source)
+    for index in range(start0 + 1, len(source)):
+        match = re.match(r"^\\s*(#{1,6})\\s+", source[index])
+        if match and len(match.group(1)) <= level:
+            return index
+    return end
+
+def _symbol_signature(source, start0, max_lines=6):
+    parts = []
+    for index in range(start0, min(len(source), start0 + max_lines)):
+        stripped = source[index].strip()
+        if stripped:
+            parts.append(stripped)
+        joined = " ".join(parts)
+        if (
+            "{" in stripped
+            or stripped.endswith(":")
+            or stripped.endswith(";")
+            or "=>" in stripped
+        ):
+            break
+    return " ".join(parts)[:420]
+
+def symbols(root, file):
+    """Expose semantic source structure without disclosing function bodies.
+
+    Selected files are scanned locally to build an outline. System One sees
+    only symbol kind/name/signature and source ranges; full source is read into
+    the final result only for symbols retained by the third-stage decision.
     """
     path = Path(root).resolve() / file["payload"]["path"]
     source = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    suffix = path.suffix.lower()
     out = []
 
-    for start0 in range(0, len(source), span):
-        end0 = min(len(source), start0 + span)
-        chunk = source[start0:end0]
-        if not any(line.strip() for line in chunk):
+    for start0, line in enumerate(source):
+        detected = _detect_symbol(line, suffix)
+        if detected is None:
             continue
 
-        declarations = []
-        identifier_stats = {}
-        identifier_order = 0
-
-        for line in chunk:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            if DECLARATION_RE.search(stripped) and len(declarations) < 4:
-                declarations.append(stripped[:120])
-
-            for identifier in IDENTIFIER_RE.findall(stripped):
-                key = identifier.lower()
-                if key in IDENTIFIER_STOPWORDS:
-                    continue
-                stat = identifier_stats.get(key)
-                if stat is None:
-                    stat = {
-                        "value": identifier[:80],
-                        "count": 0,
-                        "order": identifier_order,
-                    }
-                    identifier_stats[key] = stat
-                    identifier_order += 1
-                stat["count"] += 1
-
-        def identifier_rank(stat):
-            value = stat["value"]
-            semantic_shape = int(
-                any(ch.isupper() for ch in value[1:])
-                or "_" in value
-                or len(value) >= 8
+        if suffix == ".py":
+            end_line = _python_symbol_end(source, start0)
+        elif suffix == ".md":
+            end_line = _markdown_symbol_end(
+                source,
+                start0,
+                detected.get("heading_level", 6),
             )
-            return (-stat["count"], -semantic_shape, stat["order"])
-
-        identifiers = [
-            stat["value"]
-            for stat in sorted(identifier_stats.values(), key=identifier_rank)[:16]
-        ]
+        else:
+            end_line = _brace_symbol_end(source, start0)
 
         start_line = start0 + 1
-        end_line = end0
-        rel = file["payload"]["path"]
+        if end_line < start_line:
+            end_line = start_line
+
+        payload = {
+            "path": file["payload"]["path"],
+            "kind": detected["kind"],
+            "name": detected["name"],
+            "start_line": start_line,
+            "end_line": end_line,
+            "signature": _symbol_signature(source, start0),
+        }
         out.append({
-            "id": f"{file['id']}:{start_line}-{end_line}",
-            "payload": {
-                "path": rel,
-                "start_line": start_line,
-                "end_line": end_line,
-                "declarations": declarations,
-                "identifiers": identifiers,
-            },
+            "id": (
+                f"{file['id']}::{payload['kind']}::{payload['name']}"
+                f"@{start_line}"
+            ),
+            "payload": payload,
         })
 
-    return out
+    if out:
+        return out
 
-def region_snippets(root, path, scored, threshold):
+    # Unsupported or declaration-free files still get a structural fallback.
+    # The model sees metadata only, not the body.
+    return [{
+        "id": f"{file['id']}::file",
+        "payload": {
+            "path": file["payload"]["path"],
+            "kind": "file",
+            "name": file["payload"]["filename"],
+            "start_line": 1,
+            "end_line": max(1, len(source)),
+            "signature": (
+                f"{file['payload']['filename']} "
+                f"({len(source)} lines, {file['payload']['extension']})"
+            ),
+        },
+    }]
+
+def symbol_snippets(root, path, scored, threshold):
     relevant = sorted(
         (x for x in scored if x["score"] >= threshold),
         key=lambda x: x["payload"]["start_line"],
@@ -326,29 +443,37 @@ def region_snippets(root, path, scored, threshold):
 
     for item in relevant:
         start = item["payload"]["start_line"]
-        end = item["payload"]["end_line"]
+        end = min(item["payload"]["end_line"], len(source))
         score = item["score"]
-        if ranges and start <= ranges[-1][1] + 1:
-            ranges[-1] = (
-                ranges[-1][0],
-                max(ranges[-1][1], end),
-                max(ranges[-1][2], score),
-            )
+        names = [item["payload"]["name"]]
+        if ranges and start <= ranges[-1]["end_line"] + 1:
+            ranges[-1]["end_line"] = max(ranges[-1]["end_line"], end)
+            ranges[-1]["score"] = max(ranges[-1]["score"], score)
+            ranges[-1]["symbols"].extend(names)
         else:
-            ranges.append((start, end, score))
+            ranges.append({
+                "start_line": start,
+                "end_line": end,
+                "score": score,
+                "symbols": names,
+            })
 
     return [
         {
             "path": path,
-            "start_line": start,
-            "end_line": end,
-            "score": score,
+            "start_line": item["start_line"],
+            "end_line": item["end_line"],
+            "score": item["score"],
+            "symbols": item["symbols"],
             "content": "\\n".join(
                 f"{line_number}: {source[line_number - 1]}"
-                for line_number in range(start, end + 1)
+                for line_number in range(
+                    item["start_line"],
+                    item["end_line"] + 1,
+                )
             ),
         }
-        for start, end, score in ranges
+        for item in ranges
     ]
 
 def run(root, query, scorer, trace, dt, ft, lt):
@@ -376,7 +501,7 @@ def run(root, query, scorer, trace, dt, ft, lt):
         root=str(Path(root).resolve()),
         query=query,
         model=scorer.model,
-        thresholds={"directory": dt, "file": ft, "line": lt},
+        thresholds={"directory": dt, "file": ft, "symbol": lt},
         request_strategy="one_request_per_stage",
     )
 
@@ -386,43 +511,38 @@ def run(root, query, scorer, trace, dt, ft, lt):
     file_candidates = files(root, ds)
     fs, _ = stage("file", file_candidates, ft)
 
-    region_candidates = []
-    region_counts_by_file = {}
-    physical_lines = 0
+    symbol_candidates = []
+    symbol_counts_by_file = {}
+    files_scanned = 0
     for f in fs:
-        source_path = Path(root).resolve() / f["payload"]["path"]
-        physical_lines += len(
-            source_path.read_text(encoding="utf-8", errors="replace").splitlines()
-        )
-        current = regions(root, f)
-        region_candidates.extend(current)
-        region_counts_by_file[f["id"]] = len(current)
+        current = symbols(root, f)
+        symbol_candidates.extend(current)
+        symbol_counts_by_file[f["id"]] = len(current)
+        files_scanned += 1
     trace.emit(
-        "region_frontier_built",
+        "symbol_frontier_built",
         file_count=len(fs),
-        region_count=len(region_candidates),
-        physical_lines=physical_lines,
-        regions_by_file=region_counts_by_file,
-        region_span=REGION_SPAN,
+        symbol_count=len(symbol_candidates),
+        symbols_by_file=symbol_counts_by_file,
     )
 
-    kept_regions, scored_regions = stage("region", region_candidates, lt)
+    kept_symbols, scored_symbols = stage("symbol", symbol_candidates, lt)
 
     scored_by_path = {}
-    for item in scored_regions:
+    for item in scored_symbols:
         scored_by_path.setdefault(item["payload"]["path"], []).append(item)
 
     ss = []
     for f in fs:
         path = f["payload"]["path"]
-        ss += region_snippets(root, path, scored_by_path.get(path, []), lt)
+        ss += symbol_snippets(root, path, scored_by_path.get(path, []), lt)
 
     ss.sort(key=lambda x: (-x["score"], x["path"], x["start_line"]))
     result = {
         "query": query,
         "root": str(Path(root).resolve()),
         "model": scorer.model,
-        "thresholds": {"directory": dt, "file": ft, "line": lt},
+        "thresholds": {"directory": dt, "file": ft, "symbol": lt},
         "directories": ds,
         "files": fs,
         "snippets": ss,
@@ -433,10 +553,9 @@ def run(root, query, scorer, trace, dt, ft, lt):
             "directories_selected": len(ds),
             "files_exposed": len(file_candidates),
             "files_selected": len(fs),
-            "regions_exposed": len(region_candidates),
-            "regions_selected": len(kept_regions),
-            "region_span": REGION_SPAN,
-            "physical_lines_considered": physical_lines,
+            "symbols_exposed": len(symbol_candidates),
+            "symbols_selected": len(kept_symbols),
+            "files_scanned_for_outline": files_scanned,
             "snippets": len(ss),
             "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
         },
