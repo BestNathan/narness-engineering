@@ -13,6 +13,8 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+from localization_result import build_system_one_result
+
 API_URL = "https://api.typesafe.ai/v1/systemone"
 MODEL = "jev-latest"
 TRANSIENT_HTTP_STATUS = {408, 425, 429, 500, 502, 503, 504, 520, 522, 523, 524, 529}
@@ -1205,6 +1207,10 @@ def run(
             "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
         },
     }
+    result["localization_result"] = build_system_one_result(
+        result,
+        decider.model,
+    )
     trace.emit("search_completed", result=result)
     return result
 
@@ -1253,6 +1259,7 @@ def main(argv=None):
     parser.add_argument("--offline-decider", action="store_true")
     parser.add_argument("--trace-file")
     parser.add_argument("--output-json")
+    parser.add_argument("--output-localization-json")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--typesafe-endpoint", default=os.getenv("TYPESAFE_API_URL", API_URL))
     parser.add_argument("--model", default=os.getenv("TYPESAFE_MODEL", MODEL))
@@ -1296,6 +1303,15 @@ def main(argv=None):
     payload = json.dumps(result, indent=2, ensure_ascii=False)
     if args.output_json:
         Path(args.output_json).write_text(payload + "\n", encoding="utf-8")
+    if args.output_localization_json:
+        Path(args.output_localization_json).write_text(
+            json.dumps(
+                result["localization_result"],
+                indent=2,
+                ensure_ascii=False,
+            ) + "\n",
+            encoding="utf-8",
+        )
     if args.json:
         print(payload)
     else:
