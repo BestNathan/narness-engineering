@@ -174,18 +174,42 @@ def directories(root):
     return out
 
 def files(root, selected_dirs):
-    root = Path(root).resolve(); found = {}
+    """Expose only direct source files from directories retained by stage one.
+
+    The directory stage already enumerates the full repository tree. Walking a
+    retained directory recursively here would re-introduce files that live
+    under child directories rejected by the directory stage and would make the
+    second frontier much larger than the semantic selection implies.
+    """
+    root = Path(root).resolve()
+    found = {}
     for d in selected_dirs:
         base = root / d["payload"]["path"]
-        for current, dirs, names in os.walk(base):
-            dirs[:] = sorted(x for x in dirs if x not in IGNORE and not x.startswith("."))
-            for name in names:
-                p = Path(current) / name
-                if name.startswith(".") or p.suffix.lower() not in SUFFIXES: continue
-                try: size = p.stat().st_size
-                except OSError: continue
-                rel = p.relative_to(root).as_posix()
-                found[rel] = {"id": rel, "payload": {"path": rel, "filename": name, "extension": p.suffix.lower(), "size_bytes": size}}
+        try:
+            entries = sorted(base.iterdir(), key=lambda p: p.name)
+        except OSError:
+            continue
+        for p in entries:
+            if not p.is_file():
+                continue
+            name = p.name
+            if name.startswith(".") or p.suffix.lower() not in SUFFIXES:
+                continue
+            try:
+                size = p.stat().st_size
+            except OSError:
+                continue
+            rel = p.relative_to(root).as_posix()
+            found[rel] = {
+                "id": rel,
+                "payload": {
+                    "path": rel,
+                    "directory": d["payload"]["path"],
+                    "filename": name,
+                    "extension": p.suffix.lower(),
+                    "size_bytes": size,
+                },
+            }
     return [found[k] for k in sorted(found)]
 
 def lines(root, file, radius=2):
