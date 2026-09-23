@@ -98,10 +98,13 @@ def claude_settings():
             'enabled': True,
             'failIfUnavailable': True,
             'allowUnsandboxedCommands': False,
+            'enableWeakerNestedSandbox': False,
+            'excludedCommands': [],
             'network': {
                 'allowedDomains': [],
                 'deniedDomains': ['127.0.0.1', '[::1]'],
                 'allowUnixSockets': [],
+                'allowAllUnixSockets': False,
                 'allowLocalBinding': False,
                 'strictAllowlist': True,
             },
