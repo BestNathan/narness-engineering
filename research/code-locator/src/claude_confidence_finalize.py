@@ -44,6 +44,17 @@ def main(argv=None):
         )
 
     assessment = json.loads(strip_json_fence(final_text))
+    if not isinstance(assessment, dict):
+        raise ValueError(
+            "confidence assessment must be a JSON object; "
+            f"actual_type={type(assessment).__name__}"
+        )
+    if not isinstance(assessment.get("files"), list):
+        preview = final_text[:2000].replace("\n", " ")
+        raise ValueError(
+            "confidence assessment requires files[]; "
+            f"keys={sorted(assessment)} preview={preview!r}"
+        )
     confidence_stage = claude_stage_cost(
         "confidence_assessment",
         terminal,
