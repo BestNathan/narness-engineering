@@ -252,6 +252,8 @@ for kind, target in [
         sock.close()
 print('nested Bash network/unix-socket isolation: PASS')
 '''
+    bash_probe_path = subject / 'nested-provider-probe.py'
+    bash_probe_path.write_text(bash_probe)
     with patch.object(adapter.http.client, 'HTTPSConnection', Connection):
         with adapter.model_gateway(
             'https://provider.example/anthropic',
@@ -261,7 +263,7 @@ print('nested Bash network/unix-socket isolation: PASS')
             p = adapter.sandbox_launch(
                 subject,
                 ['srt', '--settings', '/workspace/srt-settings.json',
-                 '/usr/bin/python3', '-c', bash_probe],
+                 '/usr/bin/python3 /workspace/nested-provider-probe.py'],
                 {},
                 gateway_socket=gateway,
                 stdout=subprocess.PIPE,
