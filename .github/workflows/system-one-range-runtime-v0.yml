@@ -75,13 +75,14 @@ jobs:
             --file-threshold 0.65 \
             --window-lines 140 \
             --parallel-threshold 0.65 \
-            --max-jumps-per-file 2 \
-            --max-epochs 64 \
+            --max-jumps 2 \
+            --max-file-epochs 32 \
             --model "$TYPESAFE_MODEL" \
             --trace-file artifacts/range-runtime/trace.jsonl \
             --output-json artifacts/range-runtime/result.json
 
       - name: Write summary
+        if: success()
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -90,37 +91,41 @@ jobs:
 
           root=Path("artifacts/range-runtime")
           result=json.loads((root/"result.json").read_text())
-          state=result["state"]
           metrics=result["metrics"]
 
           lines=[
-              "# System One Range Runtime v0",
+              "# System One Per-File Range Runtime v0",
               "",
-              f"- Termination: {metrics['termination']}",
-              f"- Epochs: {metrics['epochs']}",
               f"- Phase-1 files: {metrics['files_selected']}",
+              f"- File runtimes: {metrics['file_runtimes']}",
+              f"- Model stops: {metrics['file_model_stops']}",
+              f"- Space exhausted: {metrics['file_space_exhausted']}",
+              f"- Budget exhausted: {metrics['file_budget_exhausted']}",
               f"- Reads: {metrics['reads_executed']}",
-              f"- Unique files read: {metrics['unique_files_read']}",
+              f"- Valuable files: {metrics['valuable_files']}",
+              f"- Evidence regions: {metrics['evidence_regions']}",
               f"- Model calls: {metrics['model_calls']}",
               f"- Input tokens: {metrics['input_tokens']}",
               f"- Output tokens: {metrics['output_tokens']}",
               f"- Elapsed ms: {metrics['elapsed_ms']}",
               "",
-              "## Final coverage",
+              "## Per-file runtime",
               "",
           ]
-          for item in state["files"]:
-              if item["read_count"]:
-                  lines.append(
-                      f"- \`{item['path']}\`: "
-                      f"reads={item['read_count']} coverage={item['coverage']}"
-                  )
-          lines += ["", "## Epoch selections", ""]
-          for row in state["action_history"]:
-              selected=", ".join(row["selected_ids"])
+          for state in result["file_states"]:
               lines.append(
-                  f"- epoch {row['epoch']}: "
-                  f"{row['selection_mode']} -> {selected}"
+                  f"- \`{state['path']}\`: "
+                  f"stop={state['termination']} "
+                  f"epochs={state['epoch']} "
+                  f"reads={state['read_count']} "
+                  f"coverage={state['coverage']}"
+              )
+          lines += ["", "## Valuable files", ""]
+          for item in result["result_files"]:
+              lines.append(
+                  f"- \`{item['path']}\`: "
+                  f"score={item['score']:.3f} "
+                  f"evidence={len(item['evidence'])}"
               )
           (root/"summary.md").write_text("\n".join(lines)+"\n")
           PY
