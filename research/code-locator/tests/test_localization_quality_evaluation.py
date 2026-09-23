@@ -55,6 +55,51 @@ class QualityEvaluationTest(unittest.TestCase):
         dimensions["completeness"]["score"] = 0.0
         self.assertEqual(75.0, MODULE.weighted_score(dimensions))
 
+    def test_parse_assessment_tolerates_prose_and_json_fence(self):
+        dimensions = {
+            name: {"score": 8.0, "reason": "grounded"}
+            for name in MODULE.DIMENSIONS
+        }
+        payload = {
+            "schema_version": 1,
+            "kind": "code-localization-quality-evaluation",
+            "candidate_id": "candidate-a",
+            "task": "find websocket",
+            "dimensions": dimensions,
+            "strengths": [],
+            "important_omissions": [],
+            "redundancies": [],
+            "downstream_assessment": {
+                "can_proceed": True,
+                "reason": "enough evidence",
+                "recommended_next_step": "continue",
+            },
+            "summary": "usable",
+        }
+        import json
+        raw = (
+            "Evaluation complete.\n\n```json\n"
+            + json.dumps(payload)
+            + "\n```\n"
+        )
+
+        parsed = MODULE.parse_assessment_text(raw)
+
+        self.assertEqual(
+            "code-localization-quality-evaluation",
+            parsed["kind"],
+        )
+        self.assertEqual("candidate-a", parsed["candidate_id"])
+
+    def test_parse_assessment_failure_reports_preview(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            "did not contain a valid quality-evaluation JSON object",
+        ):
+            MODULE.parse_assessment_text(
+                "The evaluator completed but emitted no JSON object."
+            )
+
     def test_validation_rejects_missing_dimension(self):
         candidate = {"candidate_id": "candidate-a"}
         assessment = {
