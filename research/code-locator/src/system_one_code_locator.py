@@ -444,8 +444,45 @@ def symbols(root, file):
         },
     }]
 
+FILE_OUTLINE_SYMBOL_LIMIT = 40
 OUTLINE_SYMBOL_LIMIT = 30
 SCOPE_KINDS = {"class", "impl", "trait", "interface", "service"}
+
+def file_outlines(root, selected_files):
+    """Expose one compact structural outline per retained file.
+
+    The harness scans a retained file locally, but System One sees only the
+    file identity plus a bounded list of symbol kind/name pairs. This is the
+    semantic gate between file metadata and internal scopes.
+    """
+    candidates = []
+    symbols_by_path = {}
+
+    for file in selected_files:
+        path = file["payload"]["path"]
+        file_symbols = symbols(root, file)
+        symbols_by_path[path] = file_symbols
+        preview = [
+            {
+                "kind": item["payload"]["kind"],
+                "name": item["payload"]["name"],
+            }
+            for item in file_symbols[:FILE_OUTLINE_SYMBOL_LIMIT]
+        ]
+        candidates.append({
+            "id": f"{file['id']}::file-outline",
+            "payload": {
+                "path": path,
+                "filename": file["payload"]["filename"],
+                "extension": file["payload"]["extension"],
+                "symbol_count": len(file_symbols),
+                "symbols": preview,
+                "truncated": len(file_symbols) > FILE_OUTLINE_SYMBOL_LIMIT,
+            },
+        })
+
+    return candidates, symbols_by_path
+
 
 def _contains_symbol(container, item):
     c = container["payload"]
@@ -457,7 +494,7 @@ def _contains_symbol(container, item):
         and container["id"] != item["id"]
     )
 
-def outlines(root, selected_files):
+def outlines(root, selected_files, symbols_by_path=None):
     """Build semantic scope outlines from retained files.
 
     A scope outline is a class/impl/trait/interface/service with its direct
@@ -466,10 +503,13 @@ def outlines(root, selected_files):
     """
     candidates = []
     symbols_by_outline = {}
+    symbols_by_path = symbols_by_path or {}
 
     for file in selected_files:
         path = file["payload"]["path"]
-        file_symbols = symbols(root, file)
+        file_symbols = symbols_by_path.get(path)
+        if file_symbols is None:
+            file_symbols = symbols(root, file)
         containers = [
             item for item in file_symbols
             if item["payload"]["kind"] in SCOPE_KINDS
@@ -606,7 +646,7 @@ def symbol_snippets(root, path, scored, threshold):
         for item in ranges
     ]
 
-def run(root, query, scorer, trace, dt, ft, ot, st):
+def run(root, query, scorer, trace, dt, ft, fot, sct, st):
     started = time.perf_counter()
     usage = {"model_calls": 0, "input_tokens": 0, "output_tokens": 0}
 
@@ -631,7 +671,13 @@ def run(root, query, scorer, trace, dt, ft, ot, st):
         root=str(Path(root).resolve()),
         query=query,
         model=scorer.model,
-        thresholds={"directory": dt, "file": ft, "outline": ot, "symbol": st},
+        thresholds={
+            "directory": dt,
+            "file": ft,
+            "file_outline": fot,
+            "scope": sct,
+            "symbol": st,
+        },
         request_strategy="one_request_per_stage",
     )
 
@@ -641,15 +687,30 @@ def run(root, query, scorer, trace, dt, ft, ot, st):
     file_candidates = files(root, ds)
     fs, _ = stage("file", file_candidates, ft)
 
-    outline_candidates, symbols_by_outline = outlines(root, fs)
-    os_, _ = stage("outline", outline_candidates, ot)
+    file_outline_candidates, symbols_by_path = file_outlines(root, fs)
+    fos, _ = stage("file_outline", file_outline_candidates, fot)
+    selected_file_paths = {
+        item["payload"]["path"]
+        for item in fos
+    }
+    scope_files = [
+        file for file in fs
+        if file["payload"]["path"] in selected_file_paths
+    ]
+
+    scope_candidates, symbols_by_scope = outlines(
+        root,
+        scope_files,
+        symbols_by_path,
+    )
+    scopes, _ = stage("scope", scope_candidates, sct)
 
     symbol_candidates = []
-    symbol_counts_by_outline = {}
+    symbol_counts_by_scope = {}
     seen_symbol_ids = set()
-    for outline in os_:
-        current = symbols_by_outline.get(outline["id"], [])
-        symbol_counts_by_outline[outline["id"]] = len(current)
+    for scope in scopes:
+        current = symbols_by_scope.get(scope["id"], [])
+        symbol_counts_by_scope[scope["id"]] = len(current)
         for item in current:
             if item["id"] in seen_symbol_ids:
                 continue
@@ -658,9 +719,10 @@ def run(root, query, scorer, trace, dt, ft, ot, st):
 
     trace.emit(
         "symbol_frontier_built",
-        outline_count=len(os_),
+        file_outline_count=len(fos),
+        scope_count=len(scopes),
         symbol_count=len(symbol_candidates),
-        symbols_by_outline=symbol_counts_by_outline,
+        symbols_by_scope=symbol_counts_by_scope,
     )
 
     kept_symbols, scored_symbols = stage("symbol", symbol_candidates, st)
@@ -679,7 +741,13 @@ def run(root, query, scorer, trace, dt, ft, ot, st):
         "query": query,
         "root": str(Path(root).resolve()),
         "model": scorer.model,
-        "thresholds": {"directory": dt, "file": ft, "outline": ot, "symbol": st},
+        "thresholds": {
+            "directory": dt,
+            "file": ft,
+            "file_outline": fot,
+            "scope": sct,
+            "symbol": st,
+        },
         "directories": ds,
         "files": fs,
         "snippets": ss,
@@ -690,12 +758,15 @@ def run(root, query, scorer, trace, dt, ft, ot, st):
             "directories_selected": len(ds),
             "files_exposed": len(file_candidates),
             "files_selected": len(fs),
-            "outlines_exposed": len(outline_candidates),
-            "outlines_selected": len(os_),
+            "file_outlines_exposed": len(file_outline_candidates),
+            "file_outlines_selected": len(fos),
+            "scopes_exposed": len(scope_candidates),
+            "scopes_selected": len(scopes),
             "symbols_exposed": len(symbol_candidates),
             "symbols_selected": len(kept_symbols),
             "files_scanned_for_outline": len(fs),
-            "outline_symbol_limit": OUTLINE_SYMBOL_LIMIT,
+            "file_outline_symbol_limit": FILE_OUTLINE_SYMBOL_LIMIT,
+            "scope_member_limit": OUTLINE_SYMBOL_LIMIT,
             "snippets": len(ss),
             "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
         },
@@ -709,7 +780,9 @@ def main(argv=None):
     p.add_argument("query")
     p.add_argument("--directory-threshold",type=float,default=.35)
     p.add_argument("--file-threshold",type=float,default=.50)
-    p.add_argument("--outline-threshold",type=float,default=.50)
+    p.add_argument("--file-outline-threshold",type=float,default=.50)
+    p.add_argument("--scope-threshold",type=float,default=.50)
+    p.add_argument("--outline-threshold",dest="scope_threshold",type=float,help=argparse.SUPPRESS)
     p.add_argument("--symbol-threshold",type=float,default=.70)
     p.add_argument("--line-threshold",dest="symbol_threshold",type=float,help=argparse.SUPPRESS)
     p.add_argument("--batch-size",type=int,default=None,help=argparse.SUPPRESS)
@@ -738,7 +811,8 @@ def main(argv=None):
         trace,
         a.directory_threshold,
         a.file_threshold,
-        a.outline_threshold,
+        a.file_outline_threshold,
+        a.scope_threshold,
         a.symbol_threshold,
     )
     payload=json.dumps(result,indent=2,ensure_ascii=False)
