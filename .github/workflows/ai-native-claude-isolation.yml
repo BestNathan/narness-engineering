@@ -6,6 +6,7 @@ on:
     paths:
       - 'research/claude-runtime/bwrap.apparmor'
       - 'scripts/narness-claude-adapter.py'
+      - 'scripts/ai-native-repo-experiment.py'
       - 'scripts/narness-selftest-claude-isolation.py'
       - '.github/workflows/ai-native-claude-isolation.yml'
 
@@ -26,10 +27,14 @@ jobs:
       - name: Install namespace sandbox and pinned client
         run: |
           sudo apt-get update
-          sudo apt-get install -y bubblewrap socat
+          sudo apt-get install -y bubblewrap socat libseccomp-dev
           # Scope the user-namespace exception to the sandbox executable.
           sudo apparmor_parser -r research/claude-runtime/bwrap.apparmor
-          npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
+          npm install --global --no-fund --no-audit \
+            @anthropic-ai/claude-code@2.1.278 \
+            @anthropic-ai/sandbox-runtime@0.0.77
+          claude --version
+          srt --help >/dev/null
       - name: Verify production isolation without credentials or model requests
         run: |
           set -euo pipefail
