@@ -1,6 +1,8 @@
 # Nession Terminal / Session Reconnect Experiment
 
-> Status: Benchmark Revision 2 and Analysis Revision 2 frozen. Real Claude Code R6 instrumentation pilots on GitHub-hosted Actions are the remaining gate before reportable formal collection.
+> Status: Benchmark Revision 3 and Analysis Revision 2 frozen. Real Claude Code R9 instrumentation pilots on GitHub-hosted Actions are the remaining gate before reportable formal collection.
+
+The R1 formal attempt [35731390660](https://github.com/BestNathan/narness-engineering/actions/runs/35731390660) stopped on a scoring instrumentation defect. Its original freeze files and partial artifact are retained for audit. The active R2 freeze files must be generated from fresh R9 pilots; restart formal collection at sequence 1 after their promotion PR is merged.
 
 ## Research question
 
@@ -19,9 +21,9 @@ while keeping the model, task set, harness policy, verification surface, and hid
 ## Frozen identities
 
 ```text
-Benchmark Revision 2
+Benchmark Revision 3
   definition SHA
-  194bf5dc1a28f4e4c10491d7326891ba157d325b
+  bb56a330c90755d9c149bff64aaeb3a841d8015c
 
 Analysis Revision 2
   definition SHA
@@ -70,11 +72,11 @@ T23–T24   evidence / mutation-oriented tasks
 ```text
 Frozen benchmark + analysis
           ↓
-3 non-reportable Claude Code R6 pilots on GitHub-hosted Actions
+3 non-reportable Claude Code R9 pilots on GitHub-hosted Actions
           ↓
-execution-profile-r1.json
-formal-schedule-r1.json
-formal-plan-r1.lock.json
+execution-profile-r2.json
+formal-schedule-r2.json
+formal-plan-r2.lock.json
           ↓
 promotion PR merged + collection-start lock
           ↓
@@ -95,7 +97,7 @@ research-artifact-manifest.json
           ↓
 deterministic sealed raw archive
           ↓
-published/benchmark-r2-analysis-r2/
+published/benchmark-r3-analysis-r2/
 publication-manifest.json
 ```
 
@@ -114,15 +116,15 @@ T08 / B
 T20 / C
 ```
 
-Pilot task success itself is not required. Complete, trustworthy instrumentation is required. The active execution handoff is the registered direct Claude Code R6 lock in `EXECUTION-PREPILOT-LOCK.json`.
+Pilot task success itself is not required. Complete, trustworthy instrumentation is required. The active execution handoff is the registered direct Claude Code R9 lock in `EXECUTION-PREPILOT-LOCK.json`.
 
 ## Key documents
 
 - [Protocol](protocol.md)
 - [Runbook](RUNBOOK.md)
 - [Instrumentation pilots](instrumentation-pilots.md)
-- [Execution Pre-Pilot Revision 6](EXECUTION-PREPILOT-R6.md)
-- [Benchmark Revision 2](REVISION-2-FROZEN.md)
+- [Execution Pre-Pilot Revision 9](EXECUTION-PREPILOT-R9.md)
+- [Benchmark Revision 3](REVISION-3-FROZEN.md)
 - [Analysis Revision 2](ANALYSIS-REVISION-2-FROZEN.md)
 - [Pre-registered analysis plan](ANALYSIS-PLAN.md)
 - [Failure review protocol](FAILURE-REVIEW-PROTOCOL.md)
@@ -149,9 +151,9 @@ runner/oracle.json
 After the real pilots, these are joined by:
 
 ```text
-runner/execution-profile-r1.json
-runner/formal-schedule-r1.json
-runner/formal-plan-r1.lock.json
+runner/execution-profile-r2.json
+runner/formal-schedule-r2.json
+runner/formal-plan-r2.lock.json
 ```
 
 ## Research integrity
@@ -180,7 +182,7 @@ Negative, mixed, or inconclusive results are valid outcomes.
 
 Once reportable formal collection begins:
 
-- changing benchmark semantics creates Benchmark Revision 3;
+- changing benchmark semantics creates Benchmark Revision 4;
 - changing analysis semantics creates Analysis Revision 3;
 - changing profile/schedule/formal-plan bytes invalidates the current formal plan;
 - changing the harness commit used by the collection invalidates the collection-start lock;

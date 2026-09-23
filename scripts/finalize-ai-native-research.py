@@ -54,9 +54,9 @@ def main() -> int:
     validate_conclusion = ROOT / "scripts" / "validate-ai-native-conclusion.py"
     verify_collection = ROOT / "scripts" / "verify-ai-native-collection.py"
 
-    schedule_path = EXPERIMENT / "runner" / "formal-schedule-r1.json"
-    profile_path = EXPERIMENT / "runner" / "execution-profile-r1.json"
-    plan_path = EXPERIMENT / "runner" / "formal-plan-r1.lock.json"
+    schedule_path = EXPERIMENT / "runner" / "formal-schedule-r2.json"
+    profile_path = EXPERIMENT / "runner" / "execution-profile-r2.json"
+    plan_path = EXPERIMENT / "runner" / "formal-plan-r2.lock.json"
     lock_path = EXPERIMENT / "BENCHMARK-LOCK.json"
     analysis_lock_path = EXPERIMENT / "ANALYSIS-LOCK.json"
     collection_manifest_path = out / "collection-manifest.json"
@@ -194,7 +194,7 @@ def main() -> int:
         schedule_path,
         profile_path,
         plan_path,
-        EXPERIMENT / "runner" / "PILOT-FREEZE.json",
+        EXPERIMENT / "runner" / "PILOT-FREEZE-r2.json",
         ROOT / "scripts" / "aggregate-ai-native-results.py",
         ROOT / "scripts" / "analyze-ai-native-effects.py",
         ROOT / "scripts" / "generate-ai-native-research-report.py",

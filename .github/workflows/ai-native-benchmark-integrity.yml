@@ -134,7 +134,7 @@ jobs:
           value={
             'schema_version':1,
             'experiment_id':'nession-terminal-session-reconnect-2026-09',
-            'benchmark_revision':2,
+            'benchmark_revision':3,
             'analysis_revision':2,
             'hypotheses':{
               key:{'classification':'Inconclusive','rationale':'synthetic CI rationale'}
@@ -163,9 +163,9 @@ jobs:
               "nession-terminal-session-reconnect-2026-09"
           )
           root = Path("/tmp/finalize-runs")
-          profile_path = experiment / "runner/execution-profile-r1.json"
-          schedule_path = experiment / "runner/formal-schedule-r1.json"
-          plan_path = experiment / "runner/formal-plan-r1.lock.json"
+          profile_path = experiment / "runner/execution-profile-r2.json"
+          schedule_path = experiment / "runner/formal-schedule-r2.json"
+          plan_path = experiment / "runner/formal-plan-r2.lock.json"
           benchmark_path = experiment / "BENCHMARK-LOCK.json"
           analysis_path = experiment / "ANALYSIS-LOCK.json"
           frozen = all(path.exists() for path in (
@@ -381,11 +381,11 @@ jobs:
           from pathlib import Path
           import json
           lock=json.loads(Path('docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/EXECUTION-PREPILOT-LOCK.json').read_text())
-          assert lock['execution_prepilot_revision'] == 8
+          assert lock['execution_prepilot_revision'] == 9
           assert lock['required_agent_config']['agent'] == 'claude-code'
           pilot_runner=Path('scripts/narness-run-claude-pilots.sh').read_text()
           assert "--setup-cmd 'cd web && npm ci --legacy-peer-deps'" in pilot_runner
-          assert '--profile-id claude-code-r8-r1' in pilot_runner
+          assert '--profile-id claude-code-r9-r2' in pilot_runner
           active=Path('.github/workflows/ai-native-claude-pilots.yml').read_text()
           for required in (
               'runs-on: ubuntu-24.04',
