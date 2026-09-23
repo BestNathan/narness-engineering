@@ -311,6 +311,7 @@ def main() -> int:
             "subagents_enabled",
             "web_search",
             "permission_profile",
+            "provider_policy",
             "filesystem_read_scope",
             "bash_network",
             "git_metadata",
