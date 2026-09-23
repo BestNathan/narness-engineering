@@ -389,3 +389,22 @@ State
 ~~~
 
 The harness provides valid bounded actions. The model decides which semantic direction to take.
+
+
+## Canonical localization result
+
+Execution strategy and final result are separate contracts.
+
+~~~text
+ExecutionTrace
+  = how the system searched, decided, and observed
+
+LocalizationResult
+  = which files and source regions it ultimately considers valuable
+~~~
+
+Both System One and Claude Code now emit the same `code-localization-result` schema. The common comparison layer consumes this schema only; it does not depend on System One's internal ReaderState or Claude's tool protocol.
+
+File and evidence confidence explicitly retain their semantics (`noul_relevance`, `derived_max_evidence_relevance`, or `model_self_assessment`) because these numbers are not assumed to be calibrated against each other.
+
+See [localization-result.md](localization-result.md).
