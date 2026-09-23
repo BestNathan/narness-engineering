@@ -20,6 +20,10 @@ def result(system, files):
         "schema_version": 1,
         "kind": "code-localization-result",
         "task": "same task",
+        "subject": {
+            "repository": "BestNathan/nession",
+            "revision": "abc123",
+        },
         "producer": {
             "system": system,
             "model": system,
@@ -138,6 +142,26 @@ class CompareLocalizationResultsTest(unittest.TestCase):
         pair = report["files"]["confidence_pairs"][0]
         self.assertEqual(0.9, pair["left_score"])
         self.assertEqual(0.8, pair["right_score"])
+        self.assertEqual(
+            {"repository": "BestNathan/nession", "revision": "abc123"},
+            report["subject"],
+        )
+
+    def test_rejects_different_subject_revisions(self):
+        left = result("system_one", [])
+        right = result("claude_code", [])
+        right["subject"]["revision"] = "different"
+
+        with self.assertRaisesRegex(ValueError, "different subjects"):
+            MODULE.compare(left, right)
+
+    def test_rejects_missing_subject_identity(self):
+        left = result("system_one", [])
+        right = result("claude_code", [])
+        del right["subject"]
+
+        with self.assertRaisesRegex(ValueError, "missing canonical subject"):
+            MODULE.compare(left, right)
 
 
 if __name__ == "__main__":
