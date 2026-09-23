@@ -56,6 +56,7 @@ Topics do not need to move through these stages linearly. They may remain open r
 | [Engineering Surfaces](engineering-surfaces/README.md) | The semantic model connecting intent, context, constraints, change impact, and evidence. | Active research |
 | [Agent-Native Repository Architecture](agent-native-repository-architecture/README.md) | How repository structure and projections should evolve for agent-first consumability with human-auditable fallback. | Active research |
 | [Change-to-Evidence Planning](change-to-evidence-planning/README.md) | How repository changes are mapped to affected Surfaces, evidence obligations, produced evidence records, and authoritative proof. | Research / preliminary design |
+| [System One Progressive Action Spaces](system-one-progressive-action-space/README.md) | How dynamic environments can reveal state incrementally and compile it into bounded grounded action frontiers for System One judgment. | Active research |
 
 ## Candidate future topics
 
