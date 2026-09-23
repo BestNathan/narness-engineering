@@ -39,6 +39,7 @@ DEFAULT_EVIDENCE_THRESHOLD = 0.65
 DEFAULT_MAX_JUMPS = 2
 DEFAULT_MAX_FILE_EPOCHS = 32
 DEFAULT_DECISION_OBSERVATION_CHAR_BUDGET = 48000
+DEFAULT_EVIDENCE_SCORE_BATCH_SIZE = 4
 
 
 def bounded_range(start, end, line_count):
@@ -363,59 +364,91 @@ class SystemOneFileDecider(SystemOneDecider):
         scored.sort(key=lambda item: (-item["score"], item["id"]))
         return scored, usage
 
-    def score_file_evidence(self, goal, file_state):
+    def score_file_evidence(
+        self,
+        goal,
+        file_state,
+        batch_size=DEFAULT_EVIDENCE_SCORE_BATCH_SIZE,
+    ):
         """Post-loop result scoring; never affects navigation or stopping."""
-        if not file_state["observations"]:
+        observations = file_state["observations"]
+        if not observations:
             return [], empty_usage()
 
-        questions = {}
-        for index, item in enumerate(file_state["observations"]):
-            questions[f"evidence_{index}"] = {
-                "type": "noul",
-                "instructions": {
-                    "goal": goal,
-                    "path": item["path"],
-                    "start_line": item["start_line"],
-                    "end_line": item["end_line"],
-                    "content": sanitize_source(item["content"]),
-                    "question": (
-                        "Does this observed range materially help localize "
-                        "file content relevant to the goal?"
-                    ),
-                },
-                "criteria": {
-                    "true": (
-                        "The range contains useful implementation evidence "
-                        "or directly relevant context for the goal."
-                    ),
-                    "false": (
-                        "The range does not materially contribute to the goal."
-                    ),
-                },
-            }
+        total_usage = empty_usage()
+        scored = []
 
-        response, usage = self.send(
-            "file_evidence_score",
-            {
-                "goal": goal,
-                "file": file_state["path"],
-                "phase": "post_navigation_result_scoring",
-            },
-            questions,
-        )
-        answers = response.get("answers", {})
-        result = []
-        for index, item in enumerate(file_state["observations"]):
-            answer = answers.get(f"evidence_{index}", {})
-            if answer.get("type") != "noul":
-                raise RuntimeError(
-                    f"unexpected evidence answer: {answer!r}"
+        def score_batch(batch):
+            questions = {}
+            for local_index, item in enumerate(batch):
+                questions[f"evidence_{local_index}"] = {
+                    "type": "noul",
+                    "instructions": {
+                        "goal": goal,
+                        "path": item["path"],
+                        "start_line": item["start_line"],
+                        "end_line": item["end_line"],
+                        "content": sanitize_source(item["content"]),
+                        "question": (
+                            "Does this observed range materially help localize "
+                            "file content relevant to the goal?"
+                        ),
+                    },
+                    "criteria": {
+                        "true": (
+                            "The range contains useful implementation evidence "
+                            "or directly relevant context for the goal."
+                        ),
+                        "false": (
+                            "The range does not materially contribute to the goal."
+                        ),
+                    },
+                }
+
+            try:
+                response, usage = self.send(
+                    "file_evidence_score",
+                    {
+                        "goal": goal,
+                        "file": file_state["path"],
+                        "phase": "post_navigation_result_scoring",
+                    },
+                    questions,
                 )
-            result.append({
-                **item,
-                "relevance": float(answer["noul"]),
-            })
-        return result, usage
+            except RuntimeError as exc:
+                if (
+                    "max_tokens_exceeded" in str(exc)
+                    and len(batch) > 1
+                ):
+                    midpoint = len(batch) // 2
+                    left, left_usage = score_batch(batch[:midpoint])
+                    right, right_usage = score_batch(batch[midpoint:])
+                    merge_usage(left_usage, right_usage)
+                    return left + right, left_usage
+                raise
+
+            answers = response.get("answers", {})
+            out = []
+            for local_index, item in enumerate(batch):
+                answer = answers.get(f"evidence_{local_index}", {})
+                if answer.get("type") != "noul":
+                    raise RuntimeError(
+                        f"unexpected evidence answer: {answer!r}"
+                    )
+                out.append({
+                    **item,
+                    "relevance": float(answer["noul"]),
+                })
+            return out, usage
+
+        for start in range(0, len(observations), batch_size):
+            batch = observations[start:start + batch_size]
+            current, usage = score_batch(batch)
+            scored.extend(current)
+            merge_usage(total_usage, usage)
+
+        return scored, total_usage
+
 
 
 class OfflineFileDecider:
@@ -453,6 +486,13 @@ class OfflineFileDecider:
         ], empty_usage()
 
 
+def ranges_overlap(left, right):
+    return not (
+        left["end_line"] < right["start_line"]
+        or left["start_line"] > right["end_line"]
+    )
+
+
 def select_file_actions(scored_actions, parallel_threshold):
     stop = next(
         item for item in scored_actions
@@ -473,14 +513,23 @@ def select_file_actions(scored_actions, parallel_threshold):
     ):
         return [stop], "model_stop"
 
-    parallel = [
+    eligible = [
         item for item in reads
         if item["score"] >= parallel_threshold
     ]
-    if parallel:
-        return parallel, "parallel_above_threshold"
+    if eligible:
+        # Threshold controls concurrency, but overlapping reads are conflicting
+        # effects. Keep the highest-scored non-overlapping set greedily.
+        selected = []
+        for item in eligible:
+            if any(ranges_overlap(item, chosen) for chosen in selected):
+                continue
+            selected.append(item)
+        if selected:
+            return selected, "parallel_above_threshold"
 
     return [best_read], "fallback_top1"
+
 
 
 def new_file_state(root, candidate):
