@@ -224,7 +224,7 @@ bash plugins/narness/scripts/narness-rust-test-integration.sh examples/rust-work
 
 The example contains a root workspace contract, a task Skill with progressive disclosure, unit and integration evidence, an environment declaration, and a stable CI required gate.
 
-The repository also contains research prototypes that are intentionally outside the canonical Narness runtime scope, including the [System One Kubernetes command generator](examples/system-one-k8s/README.md) used by the progressive-action-space topic.
+The repository also contains research prototypes that are intentionally outside the canonical Narness runtime scope, including the [System One Kubernetes command generator](examples/system-one-k8s/README.md) and [System One code locator](research/code-locator/README.md) used by the progressive-action-space topic.
 
 ## Adopt Narness
 
@@ -259,6 +259,7 @@ Start with [docs/adoption.md](docs/adoption.md):
 - [Change-to-Evidence Planning topic](docs/topics/change-to-evidence-planning/README.md)
 - [System One Progressive Action Spaces topic](docs/topics/system-one-progressive-action-space/README.md)
 - [System One Kubernetes command generator](examples/system-one-k8s/README.md)
+- [System One code locator](research/code-locator/README.md)
 - [AI Workspace architecture](docs/architecture.md)
 - [Adoption guide](docs/adoption.md)
 - [Runnable Rust example](examples/rust-workspace/README.md)
