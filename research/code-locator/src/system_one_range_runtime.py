@@ -295,37 +295,34 @@ class SystemOneFileDecider(SystemOneDecider):
                         "goal": goal,
                         "file": file_state["path"],
                         "question": (
-                            "Score whether the expected marginal value of "
-                            "another ReadRange is low enough that you would "
-                            "FINALIZE THIS FILE NOW. StopFile is a sufficiency "
-                            "decision, NOT a coverage-completion decision. "
-                            "Full coverage and certainty about every unread "
-                            "range are NOT required. Raise StopFile when the "
-                            "current observations already give enough evidence "
-                            "to characterize this file's contribution to the "
-                            "goal, or enough evidence to conclude the file is "
-                            "not useful, and more reading would mainly add "
-                            "detail, confirmation, or redundant evidence. "
-                            "Do not lower StopFile merely because unread ranges "
-                            "still exist. Prefer continued reading only when "
-                            "there is a concrete unresolved question inside "
-                            "this file that another range could materially "
-                            "resolve or when the current evidence is too weak "
-                            "to produce a useful final localization result."
+                            "Score how useful executing StopFile would be as "
+                            "the NEXT ACTION for achieving the localization "
+                            "goal. StopFile means finalize this file now using "
+                            "the observations already collected. Use the same "
+                            "action-utility scale used for ReadRange actions. "
+                            "Give StopFile a high score when the current "
+                            "observations are already sufficient for a useful "
+                            "final file-level result and the expected marginal "
+                            "utility of more reading is low, redundant, or "
+                            "mostly confirmatory. Full-file coverage and "
+                            "certainty about every unread range are NOT "
+                            "required. A clearly irrelevant file can also have "
+                            "high StopFile utility. Give StopFile a low score "
+                            "when another read has meaningful expected "
+                            "information gain that could materially improve "
+                            "the final result."
                         ),
                     },
                     "criteria": {
                         "true": (
-                            "Finalize now: current observations are sufficient "
-                            "for a useful file-level localization result and "
-                            "the expected marginal benefit of another read is "
-                            "low. Unread ranges may remain."
+                            "Stopping now is a useful next action: finalize "
+                            "with sufficient evidence because further reading "
+                            "has low expected marginal utility."
                         ),
                         "false": (
-                            "Continue: there is a concrete material uncertainty "
-                            "about this file's relevance or useful regions that "
-                            "another read could resolve, or current evidence is "
-                            "still too weak to finalize."
+                            "Stopping now is a poor next action: more reading "
+                            "still has meaningful expected information gain "
+                            "for the file-level localization result."
                         ),
                     },
                 }
