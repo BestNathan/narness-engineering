@@ -37,9 +37,9 @@ For the initial prototype:
 ```text
 repository
   -> directories
-  -> files
-  -> source lines
-  -> merged code ranges
+  -> direct files
+  -> compact code regions
+  -> grounded code snippets
 ```
 
 This is the same underlying shape as the Kubernetes experiment:
@@ -49,7 +49,7 @@ Kubernetes:
 cluster -> namespaces -> pods -> containers -> grounded command
 
 Code localization:
-repository -> directories -> files -> lines -> grounded snippets
+repository -> directories -> direct files -> regions -> grounded snippets
 ```
 
 The domain adapter changes; the harness pattern does not.
@@ -88,10 +88,10 @@ The request topology is deliberately fixed:
 ```text
 directory frontier -> request 1
 file frontier      -> request 2
-line frontier      -> request 3
+region frontier    -> request 3
 ```
 
-Every candidate still receives its own Noul question, but all questions for the same stage are submitted together. The previous prototype split candidates into batches of 48 and also invoked the line scorer once per selected file. On the first Nession websocket pilot that turned three semantic stages into 598 model calls (382 directories exposed, 1,040 files exposed, 92 files selected, and 25,006 lines exposed). That behavior measured transport batching rather than the intended System One architecture, so it is now treated as a harness bug rather than an experiment parameter.
+Every candidate still receives its own Noul question, but all questions for the same stage are submitted together. The previous prototype split candidates into batches of 48 and also invoked the source scorer once per selected file. On the first Nession websocket pilot that turned three semantic stages into 598 model calls (382 directories exposed, 1,040 files exposed, 92 files selected, and 25,006 lines exposed). That behavior measured transport batching rather than the intended System One architecture, so it is now treated as a harness bug rather than an experiment parameter.
 
 Transient HTTP retries remain independent of this invariant: a stage is one logical model call even if the transport must retry the same request.
 
@@ -110,7 +110,7 @@ The initial schedule is deliberately recall-biased at the top and precision-bias
 ```text
 directory >= 0.35
 file      >= 0.50
-line      >= 0.70
+region    >= 0.70
 ```
 
 The exact values are experimental.
@@ -138,8 +138,8 @@ directory stage
 file stage
   path + filename + extension + size
 
-line stage
-  line + small neighboring context
+region stage
+  path + bounded line range + compact declarations/identifiers
 ```
 
 This means context volume grows only for candidates that survive previous semantic gates.
@@ -153,11 +153,26 @@ The final answer is not a bag of strings. It retains the path from coarse state 
 ```text
 RelevantDirectory
   -> RelevantFile
-      -> RelevantLine
+      -> RelevantCodeRegion
           -> CodeSnippet(path, line range, score, content)
 ```
 
 That provenance is required for later evaluation, explainability, cache design, and any System Two handoff.
+
+## Stable operational baseline
+
+The current reference implementation uses direct-file expansion and compact 120-line regions. A real TypeSafe run against `BestNathan/nession@67062f3e622b83360aed20fd8c4b3cb052a00404` completed successfully with exactly three model calls:
+
+```text
+directory: 380 exposed -> 91 selected
+file:      272 exposed -> 82 selected
+region:    267 exposed -> 89 selected
+model calls: 3
+input tokens: 168,697
+elapsed: 1.822s
+```
+
+This baseline exists to separate harness correctness from research variables. Threshold sweeps, Noul-versus-Choice comparisons, symbol-aware region generation, and beam policies should be evaluated as deltas from this fixed topology.
 
 ## Research hypotheses
 
@@ -260,7 +275,7 @@ The current Noul pipeline with fixed thresholds is the baseline. Before changing
 2. **Noul versus Choice study.** Run the same gold localization tasks with independent Noul relevance judgments and with Choice-based frontier selection under comparable state budgets. Measure multi-hit recall, concentration on dominant candidates, stability, cost, and whether Choice prematurely suppresses supporting files that are jointly relevant.
 3. Build a small gold dataset from real Nession changes and issue/PR history.
 4. Compare threshold-only pruning with threshold + minimum beam retention.
-5. Replace line candidates with syntax-aware symbols or blocks while retaining line provenance.
+5. Compare the fixed 120-line region baseline with syntax-aware symbols or blocks while retaining exact line provenance.
 6. Add cache keys based on repository revision, goal, stage, and candidate content hash.
 7. Compare System One localization against a System Two coding agent under the same gold tasks and evidence contract.
 8. Test a System One -> System Two handoff where the fast locator supplies grounded code context to the reasoning model.
@@ -268,8 +283,9 @@ The current Noul pipeline with fixed thresholds is the baseline. Before changing
 ## Pilot evidence
 
 - [Nession WebSocket localization pilot — 2026-09-23](pilots/nession-websocket-2026-09-23.md)
+- [Nession WebSocket stable three-stage baseline — 2026-09-23](pilots/nession-websocket-three-stage-baseline-2026-09-23.md)
 
-The first real run confirmed useful semantic localization, while also showing that threshold-only whole-tree search spends most of its cost at the line layer. This is the baseline for the next recursive-beam / symbol-level experiment.
+The original real run exposed transport batching and recursive frontier bugs. The stable reference baseline is now the three-stage direct-file / bounded-region run below; subsequent experiments should change one variable at a time.
 
 ## Reference implementation
 
