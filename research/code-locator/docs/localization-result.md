@@ -297,3 +297,66 @@ missed regions in both directions
 Neither side is treated as ground truth.
 
 Absolute accuracy requires an independently reviewed gold set.
+
+
+## Two-session real validation
+
+Run `35846265667` validates the split end to end on the Nession websocket task.
+
+Claude localization session:
+
+~~~text
+final files       13
+evidence regions  42
+confidence keys    0
+
+elapsed          67,864 ms
+turns                 32
+tool calls            31
+input tokens      51,398
+output tokens     11,575
+cache-read       554,368
+provider cost   $0.823549
+~~~
+
+Claude confidence session:
+
+~~~text
+new independent session
+repository tool calls    0
+files changed            0
+evidence ranges changed  0
+
+elapsed          24,424 ms
+turns                  1
+input tokens      32,119
+output tokens      5,616
+provider cost   $0.300995
+~~~
+
+Combined Claude result cost:
+
+~~~text
+elapsed          92,288 ms
+turns                 33
+tool calls            31
+input tokens      83,517
+output tokens     17,191
+cache-read       554,368
+provider cost   $1.124544
+~~~
+
+The final overall confidence was 0.84, but that value exists only in the second-session assessment. The localization draft remains confidence-free.
+
+The same run's System One result carried:
+
+~~~text
+elapsed           3,770 ms
+model calls            15
+reads                  10
+scheduler rounds        5
+input tokens      249,871
+output tokens      13,009
+~~~
+
+These values are cost records, not a winner/loser judgment. Provider token semantics differ, especially around cache accounting.
