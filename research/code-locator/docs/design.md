@@ -2,21 +2,54 @@
 
 ## Research question
 
-Can a fast System One model localize code by operating over a bounded, dynamically disclosed read-action space instead of running an open-ended ReAct browsing loop or scoring a pre-expanded representation of the whole file?
+Can a fast System One model localize code by operating over a bounded, progressively disclosed state/action space without requiring an open-ended ReAct loop or a harness-defined traversal order?
 
 Running task:
 
 > Help me optimize the websocket connection implementation.
 
-## Why the previous pipeline was insufficient
+## Core principle
 
-Earlier prototypes exposed directory -> file -> line, fixed region, outline, and symbol frontiers. They established three important facts:
+The harness should own validity and bounds, but should avoid making semantic navigation decisions that the model itself can make.
 
-1. Transport batching is not semantic progress. Splitting one oversized frontier into many HTTP calls only hides a state-space problem.
-2. Directory pruning must be preserved. The file stage may only expose direct files of retained directories.
-3. Pre-expanding file interiors is the wrong abstraction. Even symbols can form a huge flat frontier before the model has chosen to inspect those parts of the file.
+The current abstraction is:
 
-A file body should therefore appear as an observation produced by a chosen read action.
+~~~text
+State
+  -> ActionSpaceGenerator
+  -> DecisionPrimitive
+  -> Effect
+  -> Observation
+  -> State transition
+~~~
+
+The state/action space is progressively disclosed by real observations.
+
+## Why earlier variants were rejected
+
+### Transport batching
+
+Splitting one large candidate set into batches of HTTP requests does not create semantic progress. The original pilot reached 598 model calls because transport batching and per-file line scoring scaled with candidate count.
+
+### Recursive file expansion
+
+Once the directory stage has enumerated every repository directory, selected directories must expose direct files only. Recursively walking selected directories reintroduces descendants that the previous decision already rejected.
+
+### Lines / fixed regions / flat symbols
+
+Pre-expanding file bodies into line, chunk, region, outline, or all-symbol candidate sets exposes too much interior state before the model has decided to inspect it. Source content should appear as an observation produced by an information-gathering action.
+
+### Fixed file batches
+
+A fixed batch adds another harness semantic decision:
+
+~~~text
+these four files first
+then these four files
+then these four files
+~~~
+
+Nothing in the task establishes that this ordering is meaningful. The current baseline therefore has no harness-defined file batches.
 
 ## Phase 1 — File Locator
 
@@ -25,47 +58,86 @@ repository metadata
   -> directory Noul
   -> direct-file metadata
   -> file Noul
-  -> bounded PotentialFile[]
+  -> PotentialFile[]
 ~~~
 
 No source body is exposed in Phase 1.
 
-Baseline defaults:
+Current defaults:
 
 ~~~text
 directory threshold = 0.50
 file threshold      = 0.65
-max files           = 16
 ~~~
 
-These values are intentionally tighter than the original 0.35 / 0.50 pilot and are research parameters rather than claimed optima.
+There is no Phase-1 max-files cap. Every file above the file threshold becomes part of the Phase-2 initial state.
 
-## Phase 2 — Progressive Reader
+Phase 1 is therefore a coarse state-space boundary, not a ranking that dictates read order.
 
-For each batch of PotentialFile values:
+## Phase 2 — Global Progressive Reader
+
+All retained Phase-1 files are stat'ed locally and placed in one shared ReaderState.
 
 ~~~text
-stat
-  -> ActionSpaceGenerator
-  -> Choice
-  -> read_file
-  -> Observation
-  -> append Observation to ReaderState
-  -> Noul relevance
-  -> update coverage / evidence
-  -> ActionSpaceGenerator
-  -> repeat
+PotentialFile[]
+  -> stat
+  -> ReaderState.files[]
 ~~~
 
-A line range is an information-gathering action, not a semantic answer candidate.
+A scheduler epoch begins by exposing the complete eligible file frontier to System One.
+
+~~~text
+ReaderState
+  -> Noul(file A: read now?)
+  -> Noul(file B: read now?)
+  -> Noul(file C: read now?)
+  -> ...
+  -> activated file subset
+~~~
+
+All file questions are sent in one System One request and share the same state.
+
+The activation score answers a relative temporal question:
+
+> Is reading this file now likely to add useful information, given the complete current state?
+
+It is intentionally distinct from the Phase-1 file score.
+
+An unselected file is deferred, not rejected. It remains in ReaderState and can be rescored after other reads add observations.
+
+## Local file action space
+
+Only globally activated files receive local read-action choices.
+
+For an unread file:
+
+~~~text
+ReadRange(head)
+ReadRange(middle)
+ReadRange(tail)
+StopFile
+~~~
+
+After observations exist, high-relevance observations are merged into disconnected `RelevantRegion[]` hotspots.
+
+~~~text
+RelevantRegion #1 -> before / after
+RelevantRegion #2 -> before / after
+RelevantRegion #3 -> before / after
+largest unread gap
+StopFile
+~~~
+
+The frontier is bounded to at most eight actions per file.
+
+System One chooses one next action per activated file through Choice. Multiple activated files can therefore be read in the same scheduler epoch without the harness deciding a fixed batch membership.
 
 ## ReaderState
 
 ~~~text
 ReaderState
   goal
-  batch_index
-  round
+  scheduler_round
 
   files[]
     path
@@ -75,6 +147,9 @@ ReaderState
       size_bytes
       extension
     coverage[]
+    read_count
+    activation_count
+    last_activation_score
     stopped
     stop_reason
 
@@ -88,172 +163,229 @@ ReaderState
     relevance
 ~~~
 
-The read observation is appended before its relevance question is evaluated. The next Choice request sees previous observations and coverage. State therefore changes as a direct consequence of execution.
+A read observation is appended before its relevance question is evaluated. The next file-scheduling request sees the updated observations and coverage.
 
-## Dynamic action frontier
+## File-owned read budget
 
-The harness constructs valid actions; the model never invents paths or offsets.
+A scheduler epoch is not a read budget unit. A file can be deferred for several epochs without consuming budget.
 
-Initial unread file:
-
-~~~text
-ReadRange(head)
-ReadRange(middle)
-ReadRange(tail)
-StopFile
-~~~
-
-After observations exist, high-relevance observations are merged into disconnected `RelevantRegion[]` hotspots. The frontier is built from several retained hotspots rather than collapsing the file onto one strongest anchor:
+Current per-file budget:
 
 ~~~text
-RelevantRegion #1 -> before / after
-RelevantRegion #2 -> before / after
-RelevantRegion #3 -> before / after
-largest unread gap
-StopFile
+soft reads = 4
+hard reads = 8
 ~~~
 
-The baseline caps the file at three relevant regions and eight total actions, so multi-hotspot preservation does not become whole-file expansion. Regions are ranked by maximum relevance and recency. Low-relevance observations still contribute coverage but do not create local expansion actions.
-
-The generator remains deliberately simple. Future generators may use identifiers, imports, declarations, or LSP information discovered from observations, but should not pre-expand the entire file.
-
-## Multi-file batches
-
-Files are active in fixed-size batches, four by default. One reader round sends one Choice question per active file in one System One request. All questions share the same ReaderState for that batch.
+At or beyond four reads:
 
 ~~~text
-file_0 -> choose one action for A
-file_1 -> choose one action for B
-file_2 -> choose one action for C
-file_3 -> choose one action for D
+new observation >= observation threshold
+  -> file remains eligible
+
+new observation < observation threshold
+  -> stop that file
 ~~~
 
-This is semantic concurrency, not transport batching: the batch defines the files that are simultaneously active and mutually visible in state.
+At eight reads the file stops unconditionally.
 
-## Decision primitives and confidence
+This preserves the earlier file-scoped continuation finding while removing batch ownership completely.
 
-Phase-1 directory/file localization uses Noul because multiple candidates may independently be relevant.
-
-Reader navigation uses Choice because each active file needs one next action. The chosen option probability is compared with a reader-action threshold before execution.
-
-Observed content uses Noul because multiple read ranges may independently contain useful evidence.
+## Decision primitives
 
 ~~~text
-directory relevance  >= 0.50
-file relevance       >= 0.65
-read action prob.    >= 0.40
-observation relevance>= 0.65
+Phase-1 directory relevance  -> Noul
+Phase-1 file relevance       -> Noul
+Phase-2 file activation      -> Noul
+Per-file next read action    -> Choice
+Observation relevance        -> Noul
 ~~~
 
-These thresholds control different failure modes and should be calibrated independently.
+Each threshold controls a different failure mode:
+
+~~~text
+directory relevance       0.50
+Phase-1 file relevance    0.65
+file activation           0.65
+read-action probability   0.40
+observation relevance     0.65
+~~~
+
+These are research parameters rather than claimed optima.
 
 ## Request topology
 
-The runtime intentionally has no fixed total call count.
-
-Phase 1 currently uses two requests:
+Phase 1:
 
 ~~~text
-directory Noul
-file Noul
+1. directory Noul
+2. file Noul
 ~~~
 
-Each active reader batch then uses at most two requests per round:
+Each Phase-2 scheduler epoch can then use:
 
 ~~~text
-Choice next actions for all active files
-Noul relevance for all newly-read observations
+3. global file-priority Noul
+4. local read-action Choice for activated files
+5. observation-relevance Noul for produced observations
 ~~~
 
-Call count therefore follows semantic interaction depth and active batches, not source-line count.
+There is no fixed total call count. Calls follow state transitions rather than candidate-array transport batching.
+
+## Real global-scheduler trace
+
+Run `35839323377` used the same Nession revision and websocket task as the earlier experiments.
+
+Phase 1 retained 18 files — all files above threshold, with no top-k truncation.
+
+The first Phase-2 global scheduling request selected only:
+
+~~~text
+0.86 crates/nession-server/src/server/websocket.rs
+0.81 web/src/platform/socket/WebSocketService.ts
+0.78 crates/nession-agent/src/server/websocket.rs
+~~~
+
+The other 15 files remained in state but were deferred.
+
+Epoch 2 selected the same three. Epoch 3 selected only `WebSocketService.ts` and the agent websocket file. Epoch 4 selected none and the scheduler stopped.
+
+Aggregate:
+
+~~~text
+18 Phase-1 files in initial ReaderState
+4 scheduler epochs
+72 file-priority decisions
+8 file activations
+8 reads
+3 unique files read
+12 model calls
+195,977 input tokens
+3.78s elapsed
+~~~
+
+This trace demonstrates that fixed file batches are unnecessary for the model to form a narrower read frontier.
+
+It does not establish that the three-file trajectory is correct.
+
+## Activation versus sufficiency
+
+The current baseline stops when no file activation score meets the activation threshold.
+
+That means one threshold currently answers two distinct questions:
+
+~~~text
+FilePriority(path):
+  should this file be read now?
+
+TaskSufficiency(state):
+  is there enough evidence to stop exploring?
+~~~
+
+Those are not obviously equivalent.
+
+A future experiment should separate them. For example, a scheduler could defer all current files yet still decide that exploration should continue via a different action, dependency discovery, or another frontier.
+
+This question should be evaluated independently rather than tuning activation because another agent explored more files.
+
+## Observation-driven cross-file discovery
+
+Phase 1 remains a static frontier. Observations can reveal imports, identifiers, types, modules, or runtime relationships that point to files outside that frontier.
+
+Potential grounded actions include:
+
+~~~text
+InspectDependency(path)
+InspectDefinition(identifier)
+FindReferences(identifier)
+SwitchToDiscoveredFile(path)
+~~~
+
+The harness should derive valid actions from observed repository facts; System One should choose among those actions.
+
+This preserves a high-confidence Phase 1 while allowing the state space to grow from real evidence.
+
+## Claude Code cross-trace methodology
+
+Claude Code + `ds` is recorded as a separate System-2 trajectory, not ground truth and not an optimization target.
+
+The manual workflow:
+
+~~~text
+.github/workflows/system-one-code-locator-accuracy.yml
+~~~
+
+uses the historical filename but now records a cross-trace.
+
+For Claude it saves:
+
+~~~text
+claude.raw.jsonl
+execution-path.json
+execution-summary.md
+reference.json
+manifest.json
+~~~
+
+The raw stream preserves every Claude Code event. The normalized execution path records ordered Read / Grep / Glob / Bash calls, inputs, errors, and result-size/preview metadata.
+
+Run `35839323377` recorded:
+
+~~~text
+42 Claude tool calls
+  24 Read
+   2 Grep
+  16 Bash
+43 turns
+79.8s
+~~~
+
+Its sequence progressed from repository inspection and broad websocket grep to server/agent websocket files, connection clients, web transport, session runtime, MessageRouter, handler/broker/registry paths, and additional targeted regions.
+
+That trajectory can be compared with System One's much narrower global-scheduler trajectory without assuming that either final file set is the correct answer.
+
+See:
+
+~~~text
+pilots/nession-websocket-global-scheduler-cross-trace-2026-09-23.md
+~~~
+
+## Historical findings retained
+
+### Multi-hotspot
+
+A single strongest relevance anchor prevented a second high-relevance region from expanding. The reader now retains several disconnected `RelevantRegion[]` anchors.
+
+### Fixed round budget
+
+A hard four-round loop could stop immediately after discovering a new hotspot. Read continuation became evidence-driven and file-scoped.
+
+### Batch-scoped continuation
+
+One high-signal file could previously keep low-value sibling files alive. Continuation ownership was moved to the file.
+
+These findings remain valid under the global scheduler; only the batch concept itself has now been removed.
 
 ## Research studies
 
-### A. Phase-1 threshold calibration
+1. File activation versus explicit task sufficiency / stop.
+2. Observation-driven cross-file discovery.
+3. Phase-1 and activation threshold replay on frozen score snapshots.
+4. ReaderState compaction as raw observations accumulate.
+5. Noul versus Choice for semantically equivalent decision points.
+6. Multi-task cross-traces between System One and System 2 agents.
+7. Human-reviewed gold datasets only when an absolute accuracy claim is required.
 
-Sweep directory and file thresholds while holding reader settings fixed. Measure relevant-file recall/precision, file frontier size, downstream reads, tokens, and false-prune stage.
+## Shared harness model
 
-### B. Reader confidence calibration
-
-Sweep reader-action threshold independently of observation threshold. Measure discovery failure, wasted reads, evidence precision/recall, and stop reasons.
-
-### C. Multi-file batch size
-
-Compare 1, 2, 4, and 8 files per batch. Measure cross-file decision quality, state size, model calls, token cost, and latency.
-
-### D. Noul versus Choice
-
-Compare the primitives only in decision points that can reasonably be represented both ways. The baseline intentionally uses Noul for independent relevance and Choice for one-next-action selection.
-
-### E. Dynamic action-space quality
-
-Compare the simple range generator against richer observation-driven generators, including identifier-bearing neighbors, import/dependency targets, and syntax/LSP proposals.
-
-## Shared System One harness model
-
-The code reader and Kubernetes demo now share the same core abstraction:
+The code reader and Kubernetes System One experiment converge on the same abstraction:
 
 ~~~text
 State
-  -> ActionSpaceGenerator
-  -> DecisionPrimitive
+  -> grounded ActionSpace
+  -> System One decision
   -> Effect
   -> Observation
   -> State transition
 ~~~
 
-The action space is progressively disclosed by real observations rather than enumerated in full at the start.
-
-
-## Multi-hotspot trace finding
-
-The first real two-phase trace showed why a single strongest anchor is insufficient. In `crates/nession-agent/src/server/websocket.rs`, the reader found one relevant region at lines 1-140 (0.87), lost local relevance at 141-280 (0.60), then discovered a second relevant region at 1585-1724 (0.74). A strongest-only generator could not expose neighbors of the second hotspot because the first hotspot still had the higher score.
-
-The current baseline therefore treats disconnected high-relevance regions as separate action-space anchors. See [the trace analysis](pilots/nession-websocket-two-phase-trace-analysis-2026-09-23.md).
-
-## Evidence-driven round budget
-
-The fixed four-round baseline can terminate immediately after discovering a useful new hotspot. The reader therefore distinguishes a soft interaction budget from an absolute hard cap:
-
-~~~text
-soft rounds = 4
-hard rounds = 8
-~~~
-
-At or beyond the soft limit, continuation is file-scoped. Every active file must independently produce a new observation whose relevance is at or above the observation threshold to earn its own next round. Files that fail this test stop, while other files in the same batch may continue. The hard limit is unconditional.
-
-~~~text
-round < soft limit
-  -> all active files continue normally
-
-round >= soft limit
-  -> for each active file:
-       new high-relevance observation?
-         yes -> file earns one more round
-         no  -> stop that file
-
-batch continues while any file remains active
-
-round == hard limit
-  -> stop all remaining files regardless of score
-~~~
-
-This separates two roles that were previously conflated: the batch is concurrent decision context, while the file owns continuation budget. Continuation remains a consequence of newly observed state and still has a deterministic upper cost bound.
-
-The first experiment should hold thresholds, window size, file batch size, and multi-hotspot logic constant. The target trace case is `server/handler.rs`, where the previous run discovered a new relevant region on round four but could not expose a follow-up action because the hard `max_rounds=4` loop ended.
-
-### File-scoped continuation finding
-
-The first soft/hard implementation granted continuation at batch scope. A high-signal `server_client.rs` observation kept `cli/client/connection.rs` alive for two extra low-value reads. The file-scoped follow-up run 35833457198 corrected this: the CLI file scored 0.64 at round four and stopped immediately, while `server_client.rs` independently continued through rounds five, six, and seven.
-
-See [the file-scoped round budget baseline](pilots/nession-websocket-file-scoped-round-budget-2026-09-23.md).
-
-## Accuracy finding: static Phase-1 frontier
-
-A same-revision Claude Code + `ds` reference run showed that the reader has strong local accuracy once it reaches a primary file, but the static Phase-1 file frontier creates irreversible false negatives.
-
-For the websocket task, System One covered 4/5 Claude primary files and 16/20 primary evidence regions (85.8% of reference primary evidence lines). The missed primary file was `MessageRouter.ts`, scored 0.64 at rank 21. Yet the first high-confidence observation from `WebSocketService.ts` explicitly imports `./MessageRouter` and `./types`.
-
-This changes the preferred next design from 'lower Phase-1 confidence until all dependencies fit' to 'allow Phase 2 observations to disclose new grounded cross-file actions'. Candidate action types include `InspectDependency`, `FindReferences`, and `InspectDefinition`. Such actions should remain harness-generated and bounded; System One only selects among valid discovered actions.
-
-See [the Claude reference accuracy study](pilots/nession-websocket-claude-reference-accuracy-2026-09-23.md).
+The harness provides valid bounded actions. The model decides which semantic direction to take.
