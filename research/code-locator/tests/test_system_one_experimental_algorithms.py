@@ -165,6 +165,7 @@ class AdaptiveZoomGeometryTest(unittest.TestCase):
                 "score": 0.9,
                 "payload": {
                     "path": "notes.md",
+                    "extension": ".md",
                 },
             }
             trace = type(
