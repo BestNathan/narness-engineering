@@ -69,6 +69,8 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Initialize deterministic evidence directory
+        run: |
       - name: Run demo tests
         run: |
           set -euo pipefail
@@ -142,6 +144,8 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Initialize System One evidence directory
+        run: |
       - name: Require TypeSafe credentials
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
@@ -218,7 +222,27 @@ jobs:
           set -euo pipefail
           python3 narness/examples/system-one-k8s/system_one_k8s.py             "Show me the Kubernetes logs for nession in staging."             --fixture narness/examples/system-one-k8s/fixtures/cluster.json             --json | tee "$EVIDENCE_DIR/k8s/result.json"
 
-          python3 narness/examples/system-one-k8s/system_one_k8s.py             "Show me the Kubernetes logs for nession in staging."             --fixture narness/examples/system-one-k8s/fixtures/cluster.json             | tee "$EVIDENCE_DIR/k8s/stdout.log"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["EVIDENCE_DIR"])
+          state = json.loads((root / "k8s/result.json").read_text())
+          lines = [
+              f"goal: {state['goal']}",
+              f"context: {state.get('context') or '-'}",
+              f"phase: {state['phase']}",
+              "decisions:",
+          ]
+          for index, decision in enumerate(state.get("decisions", []), start=1):
+              confidence = decision.get("confidence")
+              suffix = f" confidence={confidence:.3f}" if confidence is not None else ""
+              lines.append(
+                  f"  {index}. {decision['action_id']} [{decision['source']}]{suffix}"
+              )
+          if state.get("final_command"):
+              lines.append("final command: " + " ".join(state["final_command"]))
+          (root / "k8s/stdout.log").write_text("\n".join(lines) + "\n")
+          PY
 
       - name: Run code-localization System One demo
         env:
