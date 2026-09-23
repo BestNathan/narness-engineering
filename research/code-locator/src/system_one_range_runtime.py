@@ -266,6 +266,50 @@ def observation_view(
     }
 
 
+def exploration_view(file_state, limit=8):
+    """Expose recent decision yield without interpreting source semantics."""
+    threshold = float(file_state.get(
+        "parallel_threshold",
+        DEFAULT_PARALLEL_THRESHOLD,
+    ))
+    history = file_state.get("action_history", [])
+    recent = []
+    for item in history[-limit:]:
+        scores = item.get("scores") or []
+        max_read_utility = (
+            max(float(score["score"]) for score in scores)
+            if scores
+            else None
+        )
+        recent.append({
+            "epoch": item.get("epoch"),
+            "control_choice": (
+                item.get("stop_decision") or {}
+            ).get("choice"),
+            "max_read_utility": max_read_utility,
+            "selection_mode": item.get("selection_mode"),
+            "selected_ids": item.get("selected_ids", []),
+        })
+
+    low_yield_streak = 0
+    for item in reversed(history):
+        scores = item.get("scores") or []
+        if not scores:
+            break
+        max_read_utility = max(
+            float(score["score"]) for score in scores
+        )
+        if max_read_utility >= threshold:
+            break
+        low_yield_streak += 1
+
+    return {
+        "parallel_threshold": threshold,
+        "recent_epochs": recent,
+        "consecutive_low_utility_epochs": low_yield_streak,
+    }
+
+
 def decision_view(goal, file_state):
     coverage = merge_ranges(file_state["coverage"])
     return {
@@ -279,6 +323,7 @@ def decision_view(goal, file_state):
             "read_count": file_state["read_count"],
             "epoch": file_state["epoch"],
         },
+        "exploration": exploration_view(file_state),
         "observations": observation_view(file_state),
     }
 
@@ -502,6 +547,107 @@ class SystemOneFileDecider(SystemOneDecider):
         }
         return stop_decision, scored, usage
 
+    def resolve_file_control_conflict(
+        self,
+        goal,
+        file_state,
+        stop_decision,
+        scored_reads,
+        threshold,
+    ):
+        """Reconcile control flow with the best concrete read when they disagree."""
+        if not scored_reads:
+            return stop_decision, empty_usage()
+
+        best_read = scored_reads[0]
+        conflict = None
+        if (
+            stop_decision["choice"] == "stop"
+            and best_read["score"] >= threshold
+        ):
+            conflict = "stop_with_high_utility_read"
+        elif (
+            stop_decision["choice"] == "continue"
+            and best_read["score"] < threshold
+        ):
+            conflict = "continue_without_high_utility_read"
+
+        if conflict is None:
+            return {
+                **stop_decision,
+                "reconciled": False,
+                "read_authorized": False,
+            }, empty_usage()
+
+        response, usage = self.send(
+            "file_range_control_conflict",
+            decision_view(goal, file_state),
+            {
+                "resolution": {
+                    "type": "choice",
+                    "instructions": {
+                        "goal": goal,
+                        "file": file_state["path"],
+                        "conflict": conflict,
+                        "current_control": stop_decision,
+                        "best_concrete_read": {
+                            "path": best_read["path"],
+                            "start_line": best_read["start_line"],
+                            "end_line": best_read["end_line"],
+                            "navigation": best_read["navigation"],
+                            "utility": best_read["score"],
+                        },
+                        "question": (
+                            "Resolve the conflict between the file-level "
+                            "Stop/Continue decision and the utility of the "
+                            "best concrete ReadRange. Choose StopFile when "
+                            "the existing observations are sufficient and "
+                            "this concrete read is not worth its additional "
+                            "cost. Choose ReadRange only when executing this "
+                            "specific best read can materially improve the "
+                            "final file-level localization result."
+                        ),
+                    },
+                    "criteria": {
+                        "stop": {
+                            "action": "StopFile",
+                            "meaning": (
+                                "Finalize the file from current evidence."
+                            ),
+                        },
+                        "read": {
+                            "action": "ReadRange",
+                            "meaning": (
+                                "Execute the displayed best concrete read."
+                            ),
+                        },
+                    },
+                },
+            },
+        )
+        answer = response.get("answers", {}).get("resolution", {})
+        if answer.get("type") != "choice":
+            raise RuntimeError(
+                f"unexpected conflict-resolution answer: {answer!r}"
+            )
+        choice = answer.get("choice")
+        if choice not in {"stop", "read"}:
+            raise RuntimeError(
+                f"unexpected conflict-resolution choice: {choice!r}"
+            )
+        probabilities = answer.get("probabilities", {})
+        return {
+            **stop_decision,
+            "choice": "stop" if choice == "stop" else "continue",
+            "reconciled": True,
+            "reconcile_reason": conflict,
+            "reconcile_choice": choice,
+            "reconcile_probability": float(
+                probabilities.get(choice, 0.0) or 0.0
+            ),
+            "read_authorized": choice == "read",
+        }, usage
+
     def score_file_evidence(
         self,
         goal,
@@ -649,6 +795,47 @@ class OfflineFileDecider:
         scored.sort(key=lambda item: (-item["score"], item["id"]))
         return decision, scored, empty_usage()
 
+    def resolve_file_control_conflict(
+        self,
+        goal,
+        file_state,
+        stop_decision,
+        scored_reads,
+        threshold,
+    ):
+        if not scored_reads:
+            return stop_decision, empty_usage()
+        best = scored_reads[0]
+        if (
+            stop_decision["choice"] == "stop"
+            and best["score"] >= threshold
+        ):
+            return {
+                **stop_decision,
+                "choice": "continue",
+                "reconciled": True,
+                "reconcile_reason": "stop_with_high_utility_read",
+                "reconcile_choice": "read",
+                "read_authorized": True,
+            }, empty_usage()
+        if (
+            stop_decision["choice"] == "continue"
+            and best["score"] < threshold
+        ):
+            return {
+                **stop_decision,
+                "choice": "stop",
+                "reconciled": True,
+                "reconcile_reason": "continue_without_high_utility_read",
+                "reconcile_choice": "stop",
+                "read_authorized": False,
+            }, empty_usage()
+        return {
+            **stop_decision,
+            "reconciled": False,
+            "read_authorized": False,
+        }, empty_usage()
+
     def score_file_evidence(self, goal, file_state):
         return [
             {**item, "relevance": 0.8}
@@ -680,7 +867,13 @@ def select_file_actions_with_control(
         if selected:
             return selected, "parallel_above_threshold"
 
-    return [scored_reads[0]], "fallback_top1"
+    if stop_decision.get("read_authorized"):
+        return [scored_reads[0]], "reconciled_top1"
+
+    raise RuntimeError(
+        "unreconciled ContinueFile decision has no ReadRange at or above "
+        "the parallel threshold"
+    )
 
 
 def ranges_overlap(left, right):
@@ -800,6 +993,7 @@ def run_file_runtime(
     state = new_file_state(root, candidate)
     if state is None:
         return None, usage
+    state["parallel_threshold"] = parallel_threshold
 
     trace.emit(
         "file_runtime_started",
@@ -842,6 +1036,16 @@ def run_file_runtime(
                 goal,
                 state,
                 actions,
+            )
+        )
+        merge_usage(usage, current)
+        stop_decision, current = (
+            decider.resolve_file_control_conflict(
+                goal,
+                state,
+                stop_decision,
+                scored,
+                parallel_threshold,
             )
         )
         merge_usage(usage, current)
