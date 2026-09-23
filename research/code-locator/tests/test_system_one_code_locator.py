@@ -63,5 +63,49 @@ class DemoTest(unittest.TestCase):
                 q['type']=='noul' for q in request['questions'].values()
             ))
 
+    def test_transient_520_is_retried(self):
+        with tempfile.TemporaryDirectory() as temp:
+            trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
+            scorer=MODULE.SystemOneScorer('test',trace)
+            calls={'count':0}
+            original_urlopen=MODULE.urllib.request.urlopen
+            original_sleep=MODULE.time.sleep
+
+            class Response:
+                def __enter__(self):
+                    return self
+                def __exit__(self,*args):
+                    return False
+                def read(self):
+                    return b'{"answers":{},"usage":{}}'
+
+            def fake_urlopen(*args,**kwargs):
+                calls['count'] += 1
+                if calls['count'] == 1:
+                    raise MODULE.urllib.error.HTTPError(
+                        'https://api.typesafe.ai/v1/systemone',
+                        520,
+                        'origin error',
+                        hdrs=None,
+                        fp=None,
+                    )
+                return Response()
+
+            try:
+                MODULE.urllib.request.urlopen=fake_urlopen
+                MODULE.time.sleep=lambda _: None
+                scorer._request({'model':'jev-latest','questions':{}})
+            finally:
+                MODULE.urllib.request.urlopen=original_urlopen
+                MODULE.time.sleep=original_sleep
+
+            self.assertEqual(2,calls['count'])
+            records=[
+                __import__('json').loads(x)
+                for x in pathlib.Path(trace.path).read_text().splitlines()
+            ]
+            retry=next(x for x in records if x['event']=='system_one_retry')
+            self.assertEqual(520,retry['status'])
+
 if __name__=='__main__':
     unittest.main()

@@ -7,6 +7,8 @@ from pathlib import Path
 
 API_URL = "https://api.typesafe.ai/v1/systemone"
 MODEL = "jev-latest"
+TRANSIENT_HTTP_STATUS = {408, 425, 429, 500, 502, 503, 504, 520, 522, 523, 524, 529}
+MAX_REQUEST_ATTEMPTS = 5
 IGNORE = {".git", ".idea", ".vscode", ".venv", "node_modules", "target", "dist", "build", "__pycache__"}
 SUFFIXES = {".py", ".rs", ".go", ".java", ".ts", ".tsx", ".js", ".jsx", ".vue", ".proto", ".sql", ".sh", ".yaml", ".yml", ".toml", ".md"}
 
@@ -52,16 +54,25 @@ class SystemOneScorer:
         self.key, self.trace, self.endpoint, self.model, self.batch_size = key, trace, endpoint, model, batch_size
     def _request(self, payload):
         body = json.dumps(payload).encode()
-        for attempt in range(4):
+        for attempt in range(MAX_REQUEST_ATTEMPTS):
             req = urllib.request.Request(self.endpoint, data=body, method="POST", headers={"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"})
             try:
                 with urllib.request.urlopen(req, timeout=60) as resp:
                     return json.loads(resp.read().decode())
             except urllib.error.HTTPError as exc:
                 detail = exc.read().decode(errors="replace")
-                if exc.code not in {429, 529}: raise RuntimeError(f"TypeSafe HTTP {exc.code}: {detail}") from exc
-                if attempt == 3: raise RuntimeError(f"TypeSafe HTTP {exc.code}: {detail}") from exc
-                time.sleep(2 ** attempt)
+                retryable = exc.code in TRANSIENT_HTTP_STATUS
+                if not retryable or attempt == MAX_REQUEST_ATTEMPTS - 1:
+                    raise RuntimeError(f"TypeSafe HTTP {exc.code}: {detail[:2000]}") from exc
+                delay = 2 ** attempt
+                self.trace.emit("system_one_retry", status=exc.code, attempt=attempt + 1, delay_seconds=delay)
+                time.sleep(delay)
+            except urllib.error.URLError as exc:
+                if attempt == MAX_REQUEST_ATTEMPTS - 1:
+                    raise RuntimeError(f"TypeSafe transport error: {exc}") from exc
+                delay = 2 ** attempt
+                self.trace.emit("system_one_retry", status="transport", attempt=attempt + 1, delay_seconds=delay)
+                time.sleep(delay)
     def score(self, query, stage, candidates):
         out, usage = [], {"model_calls": 0, "input_tokens": 0, "output_tokens": 0}
         for offset in range(0, len(candidates), self.batch_size):
