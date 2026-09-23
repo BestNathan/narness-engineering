@@ -74,17 +74,22 @@ class ClaudeReferenceTraceTest(unittest.TestCase):
                 {
                     "type": "result",
                     "result": json.dumps({
+                        "schema_version": 1,
+                        "kind": "code-localization-draft",
                         "task": "locate connection",
+                        "producer": {
+                            "system": "claude_code",
+                            "model": "test-model",
+                        },
                         "summary": "connection implementation",
-                        "confidence": "high",
-                        "relevant_files": [{
+                        "files": [{
                             "path": "src/client.py",
-                            "relevance": "primary",
+                            "role": "primary",
                             "reason": "connect implementation",
                             "evidence": [{
                                 "start_line": 1,
                                 "end_line": 2,
-                                "description": "connect function",
+                                "reason": "connect function",
                             }],
                         }],
                     }),
@@ -100,7 +105,7 @@ class ClaudeReferenceTraceTest(unittest.TestCase):
 
             steps, terminal, final_text = MODULE.parse_stream(raw, subject)
             raw_result = json.loads(MODULE.strip_json_fence(final_text))
-            localization = MODULE.normalize_claude_result(
+            localization = MODULE.normalize_claude_draft(
                 raw_result,
                 subject,
                 "test-model",
