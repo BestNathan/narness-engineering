@@ -584,6 +584,108 @@ class DemoTest(unittest.TestCase):
             self.assertEqual(2, metrics["soft_budget_extensions"])
             self.assertEqual(1, metrics["hard_budget_hits"])
 
+    def test_soft_budget_extension_is_file_scoped_inside_batch(self):
+        class PerFileBudgetDecider:
+            model = "budget-test"
+
+            def __init__(self):
+                self.round_paths = []
+
+            def choose_read_actions(self, query, state, action_sets):
+                self.round_paths.append([
+                    item["path"] for item in action_sets
+                ])
+                decisions = []
+                for item in action_sets:
+                    action = next(
+                        action
+                        for action in item["actions"]
+                        if action["kind"] == "read_range"
+                    )
+                    decisions.append({
+                        "path": item["path"],
+                        "action": action,
+                        "choice": "read_0",
+                        "probability": 0.95,
+                        "confidence": 0.95,
+                        "probabilities": {"read_0": 0.95, "stop": 0.05},
+                    })
+                return decisions, MODULE.empty_usage()
+
+            def score_observations(self, query, state, observation_ids):
+                by_id = {
+                    item["id"]: item
+                    for item in state["observations"]
+                }
+                scores = {}
+                for observation_id in observation_ids:
+                    path = by_id[observation_id]["path"]
+                    round_number = state["round"]
+                    if path.endswith("hot.py") and round_number == 1:
+                        scores[observation_id] = 0.90
+                    else:
+                        scores[observation_id] = 0.20
+                return scores, MODULE.empty_usage()
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp) / "repo"
+            src = root / "src"
+            src.mkdir(parents=True)
+
+            files = []
+            for name in ("hot.py", "cold.py"):
+                source = src / name
+                source.write_text(
+                    "\n".join(
+                        f"line_{index} = 'websocket'"
+                        for index in range(1, 81)
+                    ) + "\n",
+                    encoding="utf-8",
+                )
+                files.append({
+                    "id": f"src/{name}",
+                    "payload": {
+                        "path": f"src/{name}",
+                        "filename": name,
+                        "extension": ".py",
+                        "size_bytes": source.stat().st_size,
+                    },
+                    "score": 0.99,
+                })
+
+            trace = MODULE.Trace(pathlib.Path(temp) / "trace.jsonl")
+            decider = PerFileBudgetDecider()
+
+            states, _, metrics = MODULE.progressive_read(
+                root,
+                "locate websocket",
+                decider,
+                files,
+                trace,
+                file_batch_size=2,
+                window_lines=20,
+                soft_rounds=1,
+                hard_rounds=3,
+                action_threshold=0.4,
+                observation_threshold=0.65,
+            )
+
+            self.assertEqual(
+                [["src/hot.py", "src/cold.py"], ["src/hot.py"]],
+                decider.round_paths,
+            )
+            by_path = {
+                item["path"]: item
+                for item in states[0]["files"]
+            }
+            self.assertEqual(
+                "soft_budget_no_high_signal",
+                by_path["src/cold.py"]["stop_reason"],
+            )
+            self.assertEqual(1, metrics["file_soft_budget_extensions"])
+            self.assertEqual(1, metrics["files_stopped_by_soft_budget"])
+            self.assertEqual(3, metrics["reads_executed"])
+
     def test_phase1_caps_files_after_higher_threshold(self):
         class Phase1Decider:
             model = "phase1-test"
