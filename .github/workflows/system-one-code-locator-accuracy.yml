@@ -1,9 +1,6 @@
 name: System One / Claude Code Cross-Trace Record
 
 on:
-  push:
-    branches:
-      - fix/code-locator-three-stage-requests
   workflow_dispatch:
     inputs:
       subject_repository:
