@@ -171,45 +171,36 @@ The important abstraction may therefore be broader than a state machine with a s
 
 ## Evidence contract
 
-Every experiment run should preserve enough data to replay the reasoning surface without relying on GitHub Actions console retention.
+Every Code Locator run should preserve enough data to replay the localization surface without relying on GitHub Actions console retention.
 
-The workflow artifact should contain:
+The dedicated Code Locator artifact contains only this experiment:
 
 ```text
 run-manifest.json
-
-k8s/
-  stdout.log
-  result.json
-
-code-locator/
-  stdout.log
-  result.json
-  trace.jsonl
-
+tests.log          # offline job
+run.log
+result.json
+trace.jsonl
 summary.md
 ```
 
-The manifest records repository and revision identity, workflow run identity, query, thresholds, model, and subject-repository revision.
+The manifest records harness revision, subject repository and revision, workflow run identity, query, thresholds, batch size, and model.
 
-For code localization, JSONL events include candidate disclosure, model requests, score responses, threshold decisions, latency, token usage, and final results. Authorization data is never recorded.
+The JSONL trace records candidate disclosure, model requests, score responses, threshold decisions, latency, token usage, and final results. Authorization data is never recorded.
 
-The Kubernetes demo contributes its final runtime state and human-readable decision log. Its `Decision` records preserve selected action, source, confidence, and probability distribution.
+Kubernetes evidence is intentionally excluded and is owned by the separate `system-one-k8s-experiment` workflow.
 
 ## Workflow experiment design
 
-The GitHub Actions workflow has two roles.
+The dedicated [System One Code Locator workflow](../../../.github/workflows/system-one-code-locator.yml) has two roles.
 
-First, deterministic fixture validation runs on every relevant change so the research harness itself remains reproducible without external services.
+First, deterministic fixture validation runs only when the Code Locator implementation, its research notes, or its workflow changes.
 
-Second, a manual evidence collection job can run the real System One model against:
+Second, a manual TypeSafe job runs the real System One model against a checked-out subject repository such as `BestNathan/nession`.
 
-- the deterministic Kubernetes fixture; and
-- a checked-out subject repository such as `BestNathan/nession`, with a natural-language code-localization query.
+The subject repository, ref, query, thresholds, batch size, and model are workflow inputs so repeated runs can vary one parameter while preserving the rest in the manifest.
 
-The subject repository, ref, query, thresholds, batch size, and online/offline mode are workflow inputs so repeated runs can vary one parameter while preserving the rest in the manifest.
-
-Artifacts are retained for 90 days. Each run should be treated as raw research evidence, not as proof that the hypotheses are already true.
+Artifacts are retained for 90 days. Each run should be treated as raw Code Locator research evidence, not as proof that the hypotheses are already true.
 
 ## Metrics available immediately
 
@@ -221,8 +212,7 @@ Without gold labels, the workflow can already measure operational behavior:
 - TypeSafe input/output tokens;
 - end-to-end elapsed time;
 - selected directories/files/source ranges;
-- stability across repeated runs and threshold settings;
-- Kubernetes selected actions and confidence distributions.
+- stability across repeated runs and threshold settings.
 
 ## Metrics requiring a benchmark dataset
 
