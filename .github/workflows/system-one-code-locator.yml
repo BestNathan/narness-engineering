@@ -331,3 +331,100 @@ jobs:
           path: artifacts/system-one-code-locator/typesafe/
           if-no-files-found: warn
           retention-days: 90
+
+  persist-record:
+    name: Persist experiment record
+    needs:
+      - offline
+      - typesafe
+    if: ${{ always() && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Download offline evidence
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: system-one-code-locator-offline-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .experiment-record/offline
+
+      - name: Download TypeSafe evidence
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_typesafe }}
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: system-one-code-locator-typesafe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .experiment-record/typesafe
+
+      - name: Materialize repository record
+        env:
+          OFFLINE_RESULT: ${{ needs.offline.result }}
+          TYPESAFE_RESULT: ${{ needs.typesafe.result }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          stamp="$(TZ=Asia/Shanghai date +'%Y%m%dT%H%M%S%z')"
+          record="docs/topics/system-one-progressive-action-space/research/runs/code-locator/${stamp}-run-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$record"
+
+          if test -d .experiment-record/offline; then
+            mkdir -p "$record/offline"
+            cp -a .experiment-record/offline/. "$record/offline/"
+          fi
+
+          if test -d .experiment-record/typesafe; then
+            mkdir -p "$record/typesafe"
+            cp -a .experiment-record/typesafe/. "$record/typesafe/"
+          fi
+
+          cat > "$record/README.md" <<EOF
+          # System One Code Locator experiment
+
+          - Recorded at: `${stamp}` (UTC+8)
+          - GitHub run: [${GITHUB_RUN_ID}](${RUN_URL})
+          - Run attempt: `${GITHUB_RUN_ATTEMPT}`
+          - Event: `${GITHUB_EVENT_NAME}`
+          - Repository: `${GITHUB_REPOSITORY}`
+          - Ref: `${GITHUB_REF_NAME}`
+          - Trigger SHA: `${GITHUB_SHA}`
+          - Offline job: `${OFFLINE_RESULT}`
+          - TypeSafe job: `${TYPESAFE_RESULT}`
+
+          ## Evidence
+
+          - [Offline evidence](offline/) when the offline validation produced an artifact.
+          - [TypeSafe evidence](typesafe/) when a real TypeSafe experiment was requested.
+
+          The files in this directory are an immutable snapshot of the evidence produced by this workflow run.
+          EOF
+
+          echo "RECORD_DIR=$record" >> "$GITHUB_ENV"
+
+      - name: Commit experiment record
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add "$RECORD_DIR"
+
+          if git diff --cached --quiet; then
+            echo "No experiment evidence to commit."
+            exit 0
+          fi
+
+          git commit -m "research: record code locator run ${GITHUB_RUN_ID}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
