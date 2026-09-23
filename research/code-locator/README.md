@@ -337,3 +337,40 @@ web_client_registry.rs     99.3%
 the file-level localization result. It does not mean full-file coverage.
 
 See `docs/pilots/nession-websocket-per-file-range-runtime-v0-2026-09-23.md`.
+
+
+## Experimental localization algorithms
+
+Two additional System One localization strategies are implemented as isolated
+experiments and do not replace the current per-file range-runtime baseline.
+
+### A — Explore-Guided Evidence Filtering
+
+Keeps the current FileRuntime state/action-space mechanics, but changes the
+decision objective from topical relevance to NEW MATERIAL EVIDENCE. Reads that
+repeat an already established fact, add only wrappers/logging/debug plumbing,
+or are merely topically related should receive lower value.
+
+~~~text
+research/code-locator/src/system_one_evidence_guided_runtime.py
+~~~
+
+### B — Adaptive Semantic Zoom Search
+
+Starts with stratified probes across the whole file, uses Choice probabilities
+to retain a multi-hotspot beam, keeps an explicit exploration slot, then
+recursively splits/refines selected ranges down to a target resolution.
+
+~~~text
+research/code-locator/src/system_one_adaptive_zoom.py
+~~~
+
+The shared manual workflow runs both algorithms against the same subject and
+task:
+
+~~~text
+.github/workflows/system-one-localization-algorithms.yml
+~~~
+
+See `docs/system-one-localization-algorithms.md` for the full algorithms and
+prototype parameters.
