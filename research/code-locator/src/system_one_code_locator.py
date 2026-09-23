@@ -98,38 +98,39 @@ class SystemOneScorer:
         if not candidates:
             return [], usage
 
-        questions = {
-            f"candidate_{i}": {
+        questions = {}
+        for i, candidate in enumerate(candidates):
+            questions[f"candidate_{i}"] = {
                 "type": "noul",
                 "instructions": {
+                    "task": query,
+                    "stage": stage,
                     "candidate": model_projection(
                         stage,
                         candidate["payload"],
                     ),
                     "question": (
-                        "Should `candidate` be retained for `goal` "
-                        "under `policy`?"
+                        "Would retaining this candidate materially help "
+                        "locate or understand source code relevant to the task?"
+                    ),
+                },
+                "criteria": {
+                    "true": (
+                        "Plausibly relevant; keep it, including indirect "
+                        "supporting code."
+                    ),
+                    "false": (
+                        "Unlikely to help locate or understand the requested "
+                        "implementation."
                     ),
                 },
             }
-            for i, candidate in enumerate(candidates)
-        }
 
         payload = {
             "state": {
                 "goal": query,
                 "stage": stage,
-                "policy": {
-                    "retain": (
-                        "Plausibly relevant to locating or understanding "
-                        "the requested implementation, including indirect "
-                        "supporting code."
-                    ),
-                    "reject": (
-                        "Unlikely to help locate or understand the requested "
-                        "implementation."
-                    ),
-                },
+                "candidate_count": len(candidates),
             },
             "model": self.model,
             "questions": questions,
