@@ -37,6 +37,7 @@ DEFAULT_PARALLEL_THRESHOLD = 0.65
 DEFAULT_MAX_JUMPS_PER_FILE = 2
 DEFAULT_MAX_EPOCHS = 64
 DEFAULT_ACTION_SCORE_BATCH_SIZE = 8
+DEFAULT_DECISION_OBSERVATION_CHAR_BUDGET = 48000
 
 
 def make_action(action_id, path, start, end, navigation, reason, source=None):
@@ -218,7 +219,10 @@ def generate_action_space(
     return actions
 
 
-def decision_view(state):
+def decision_view(
+    state,
+    observation_char_budget=DEFAULT_DECISION_OBSERVATION_CHAR_BUDGET,
+):
     files = []
     for item in state["files"]:
         coverage = merge_ranges(item["coverage"])
@@ -234,6 +238,31 @@ def decision_view(state):
             "read_count": item["read_count"],
         })
 
+    # RuntimeState keeps every raw observation. DecisionView is a bounded,
+    # content-agnostic projection: keep the most recent complete observations
+    # until a mechanical character budget is reached.
+    visible = []
+    used_chars = 0
+    for item in reversed(state["observations"]):
+        content = sanitize_source(item["content"])
+        size = len(content)
+        if visible and used_chars + size > observation_char_budget:
+            continue
+        if not visible and size > observation_char_budget:
+            content = content[-observation_char_budget:]
+            size = len(content)
+        visible.append({
+            "path": item["path"],
+            "start_line": item["start_line"],
+            "end_line": item["end_line"],
+            "content": content,
+            "navigation": item["navigation"],
+        })
+        used_chars += size
+        if used_chars >= observation_char_budget:
+            break
+    visible.reverse()
+
     return {
         "goal": state["goal"],
         "epoch": state["epoch"],
@@ -247,16 +276,14 @@ def decision_view(state):
             ),
             "files": files,
         },
-        "observations": [
-            {
-                "path": item["path"],
-                "start_line": item["start_line"],
-                "end_line": item["end_line"],
-                "content": sanitize_source(item["content"]),
-                "navigation": item["navigation"],
-            }
-            for item in state["observations"]
-        ],
+        "observation_view": {
+            "total_count": len(state["observations"]),
+            "visible_count": len(visible),
+            "omitted_count": len(state["observations"]) - len(visible),
+            "char_budget": observation_char_budget,
+            "used_chars": used_chars,
+            "items": visible,
+        },
     }
 
 
