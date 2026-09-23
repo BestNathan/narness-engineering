@@ -130,15 +130,18 @@ def run(root, query, scorer, trace, dt, ft, lt):
         trace.emit("threshold_applied", stage=name, threshold=threshold, input_count=len(scored), selected_count=len(selected), selected=selected)
         return selected
     trace.emit("search_started", root=str(Path(root).resolve()), query=query, model=scorer.model, thresholds={"directory":dt,"file":ft,"line":lt})
-    ds=stage("directory", directories(root), dt); fs=stage("file", files(root,ds), ft); ss=[]; line_count=0; line_kept=0
+    directory_candidates=directories(root); ds=stage("directory", directory_candidates, dt)
+    file_candidates=files(root,ds); fs=stage("file", file_candidates, ft); ss=[]; line_count=0; line_kept=0
     for f in fs:
-        lc=lines(root,f); line_count += len(lc); scored,u=scorer.score(query,"line",lc)
+        lc=lines(root,f); line_count += len(lc)
+        trace.emit("candidates_exposed", stage="line", parent=f["id"], count=len(lc), candidates=lc)
+        scored,u=scorer.score(query,"line",lc)
         for k in usage: usage[k]+=u[k]
         kept=[x for x in scored if x["score"]>=lt]; line_kept += len(kept)
         trace.emit("threshold_applied", stage="line", parent=f["id"], threshold=lt, input_count=len(scored), selected_count=len(kept), selected=kept)
         ss += snippets(root,f["payload"]["path"],scored,lt)
     ss.sort(key=lambda x:(-x["score"],x["path"],x["start_line"]))
-    result={"query":query,"root":str(Path(root).resolve()),"model":scorer.model,"thresholds":{"directory":dt,"file":ft,"line":lt},"directories":ds,"files":fs,"snippets":ss,"metrics":{**usage,"directories_selected":len(ds),"files_selected":len(fs),"lines_exposed":line_count,"lines_selected":line_kept,"snippets":len(ss),"elapsed_ms":round((time.perf_counter()-started)*1000,3)}}
+    result={"query":query,"root":str(Path(root).resolve()),"model":scorer.model,"thresholds":{"directory":dt,"file":ft,"line":lt},"directories":ds,"files":fs,"snippets":ss,"metrics":{**usage,"directories_exposed":len(directory_candidates),"directories_selected":len(ds),"files_exposed":len(file_candidates),"files_selected":len(fs),"lines_exposed":line_count,"lines_selected":line_kept,"snippets":len(ss),"elapsed_ms":round((time.perf_counter()-started)*1000,3)}}
     trace.emit("search_completed", result=result); return result
 
 def main(argv=None):
