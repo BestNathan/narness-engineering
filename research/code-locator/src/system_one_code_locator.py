@@ -74,6 +74,7 @@ def reader_model_state(state):
         "phase": "progressive_reader",
         "batch_index": state["batch_index"],
         "round": state["round"],
+        "thresholds": state.get("thresholds", {}),
         "files": [
             {
                 "path": item["path"],
@@ -479,7 +480,11 @@ def make_read_action(path, start, end, reason):
     }
 
 
-def generate_read_actions(file_state, window_lines):
+def generate_read_actions(
+    file_state,
+    window_lines,
+    observation_threshold=DEFAULT_OBSERVATION_THRESHOLD,
+):
     """Generate a small dynamic action space from stat, coverage, and scores."""
     path = file_state["path"]
     line_count = file_state["stat"]["line_count"]
@@ -511,24 +516,38 @@ def generate_read_actions(file_state, window_lines):
     else:
         relevant = [
             item for item in file_state["observations"]
-            if item.get("relevance") is not None
+            if (
+                item.get("relevance") is not None
+                and item["relevance"] >= observation_threshold
+            )
         ]
-        anchor = None
-        if relevant:
-            anchor = max(relevant, key=lambda item: (item["relevance"], item["end_line"] - item["start_line"]))
-        elif file_state["observations"]:
-            anchor = file_state["observations"][-1]
 
-        if anchor:
-            append(
-                anchor["end_line"] + 1,
-                anchor["end_line"] + window_lines,
-                "continue after the strongest observed range",
+        if relevant:
+            strongest = max(
+                relevant,
+                key=lambda item: (
+                    item["relevance"],
+                    item["end_line"] - item["start_line"],
+                ),
+            )
+            relevant_ranges = merge_ranges(
+                (item["start_line"], item["end_line"])
+                for item in relevant
+            )
+            anchor_start, anchor_end = next(
+                (start, end)
+                for start, end in relevant_ranges
+                if start <= strongest["start_line"] <= end
             )
             append(
-                anchor["start_line"] - window_lines,
-                anchor["start_line"] - 1,
-                "expand before the strongest observed range",
+                anchor_end + 1,
+                anchor_end + window_lines,
+                "continue after high-relevance evidence",
+            )
+            append(
+                anchor_start - window_lines,
+                anchor_start - 1,
+                "expand before high-relevance evidence",
             )
 
         gaps = unread_gaps(line_count, coverage)
@@ -562,7 +581,14 @@ def read_range(root, action):
     }
 
 
-def new_reader_state(query, batch_index, files_in_batch, root):
+def new_reader_state(
+    query,
+    batch_index,
+    files_in_batch,
+    root,
+    action_threshold,
+    observation_threshold,
+):
     state_files = []
     for file in files_in_batch:
         stat = source_stat(root, file)
@@ -581,6 +607,10 @@ def new_reader_state(query, batch_index, files_in_batch, root):
         "goal": query,
         "batch_index": batch_index,
         "round": 0,
+        "thresholds": {
+            "reader_action": action_threshold,
+            "observation": observation_threshold,
+        },
         "files": state_files,
         "observations": [],
     }
@@ -649,7 +679,14 @@ def progressive_read(
     for offset in range(0, len(files_to_read), file_batch_size):
         batch_index = offset // file_batch_size
         batch = files_to_read[offset: offset + file_batch_size]
-        state = new_reader_state(query, batch_index, batch, root)
+        state = new_reader_state(
+            query,
+            batch_index,
+            batch,
+            root,
+            action_threshold,
+            observation_threshold,
+        )
         reader_states.append(state)
 
         trace.emit(
@@ -669,7 +706,11 @@ def progressive_read(
                     continue
                 action_sets.append({
                     "path": file_state["path"],
-                    "actions": generate_read_actions(file_state, window_lines),
+                    "actions": generate_read_actions(
+                        file_state,
+                        window_lines,
+                        observation_threshold,
+                    ),
                 })
             if not action_sets:
                 break
