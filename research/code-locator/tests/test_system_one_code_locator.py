@@ -163,6 +163,108 @@ class DemoTest(unittest.TestCase):
             for item in reads
         ))
 
+    def test_multiple_relevant_regions_generate_independent_neighbor_actions(self):
+        file_state = {
+            "path": "src/large.ts",
+            "stat": {"line_count": 3000, "size_bytes": 10000, "extension": ".ts"},
+            "coverage": [
+                [1, 140],
+                [141, 280],
+                [1500, 1639],
+            ],
+            "observations": [
+                {
+                    "id": "obs-head",
+                    "path": "src/large.ts",
+                    "start_line": 1,
+                    "end_line": 140,
+                    "content": "websocket server",
+                    "relevance": 0.87,
+                },
+                {
+                    "id": "obs-low",
+                    "path": "src/large.ts",
+                    "start_line": 141,
+                    "end_line": 280,
+                    "content": "unrelated",
+                    "relevance": 0.60,
+                },
+                {
+                    "id": "obs-second-hotspot",
+                    "path": "src/large.ts",
+                    "start_line": 1500,
+                    "end_line": 1639,
+                    "content": "heartbeat reconnect",
+                    "relevance": 0.74,
+                },
+            ],
+            "stopped": False,
+        }
+
+        regions = MODULE.relevant_regions(file_state, 0.65)
+        actions = MODULE.generate_read_actions(file_state, 140, 0.65)
+        reads = [item for item in actions if item["kind"] == "read_range"]
+
+        self.assertEqual(2, len(regions))
+        self.assertEqual((1, 140), (
+            regions[0]["start_line"],
+            regions[0]["end_line"],
+        ))
+        self.assertEqual((1500, 1639), (
+            regions[1]["start_line"],
+            regions[1]["end_line"],
+        ))
+
+        # The first hotspot's immediate continuation is already covered by the
+        # low-relevance 141-280 observation. The second hotspot must still
+        # receive its own before/after actions.
+        self.assertTrue(any(
+            item["start_line"] == 1640
+            and "relevant region" in item["reason"]
+            for item in reads
+        ))
+        self.assertTrue(any(
+            item["end_line"] == 1499
+            and "relevant region" in item["reason"]
+            for item in reads
+        ))
+
+    def test_adjacent_high_relevance_observations_merge_into_one_region(self):
+        file_state = {
+            "path": "src/client.ts",
+            "stat": {"line_count": 800, "size_bytes": 10000, "extension": ".ts"},
+            "coverage": [[1, 280]],
+            "observations": [
+                {
+                    "id": "obs-1",
+                    "path": "src/client.ts",
+                    "start_line": 1,
+                    "end_line": 140,
+                    "content": "connect",
+                    "relevance": 0.89,
+                },
+                {
+                    "id": "obs-2",
+                    "path": "src/client.ts",
+                    "start_line": 141,
+                    "end_line": 280,
+                    "content": "reconnect",
+                    "relevance": 0.77,
+                },
+            ],
+            "stopped": False,
+        }
+
+        regions = MODULE.relevant_regions(file_state, 0.65)
+
+        self.assertEqual(1, len(regions))
+        self.assertEqual((1, 280), (
+            regions[0]["start_line"],
+            regions[0]["end_line"],
+        ))
+        self.assertEqual(0.89, regions[0]["max_relevance"])
+        self.assertEqual(2, regions[0]["observation_count"])
+
     def test_multiple_files_are_decided_in_one_choice_request(self):
         with tempfile.TemporaryDirectory() as temp:
             trace = MODULE.Trace(pathlib.Path(temp) / "trace.jsonl")
