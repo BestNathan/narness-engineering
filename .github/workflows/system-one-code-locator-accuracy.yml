@@ -18,11 +18,6 @@ on:
         required: true
         default: Help me optimize the websocket connection implementation
         type: string
-  push:
-    branches:
-      - fix/code-locator-three-stage-requests
-    paths:
-      - ".github/workflows/system-one-code-locator-accuracy.yml"
 
 permissions:
   contents: read
