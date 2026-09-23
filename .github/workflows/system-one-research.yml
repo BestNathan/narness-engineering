@@ -123,9 +123,9 @@ jobs:
 
   system-one:
     name: Real System One evidence
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.collect_system_one }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.collect_system_one) || (github.event_name == 'push' && github.ref == 'refs/heads/research/system-one-code-localization' && contains(github.event.head_commit.message, '[system-one-e2e]')) }}
     runs-on: ubuntu-24.04
-    environment: ds
+    environment: typesave
     timeout-minutes: 120
     steps:
       - name: Checkout Narness harness
@@ -138,8 +138,8 @@ jobs:
       - name: Checkout subject repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.subject_repository }}
-          ref: ${{ inputs.subject_ref }}
+          repository: ${{ inputs.subject_repository || 'BestNathan/nession' }}
+          ref: ${{ inputs.subject_ref || 'staging' }}
           path: subject
           fetch-depth: 1
           persist-credentials: false
@@ -166,13 +166,13 @@ jobs:
 
       - name: Initialize evidence manifest
         env:
-          QUERY: ${{ inputs.query }}
-          SUBJECT_REPOSITORY: ${{ inputs.subject_repository }}
-          SUBJECT_REF: ${{ inputs.subject_ref }}
-          DIRECTORY_THRESHOLD: ${{ inputs.directory_threshold }}
-          FILE_THRESHOLD: ${{ inputs.file_threshold }}
-          LINE_THRESHOLD: ${{ inputs.line_threshold }}
-          BATCH_SIZE: ${{ inputs.batch_size }}
+          QUERY: ${{ inputs.query || 'Help me optimize the websocket connection implementation' }}
+          SUBJECT_REPOSITORY: ${{ inputs.subject_repository || 'BestNathan/nession' }}
+          SUBJECT_REF: ${{ inputs.subject_ref || 'staging' }}
+          DIRECTORY_THRESHOLD: ${{ inputs.directory_threshold || '0.35' }}
+          FILE_THRESHOLD: ${{ inputs.file_threshold || '0.50' }}
+          LINE_THRESHOLD: ${{ inputs.line_threshold || '0.70' }}
+          BATCH_SIZE: ${{ inputs.batch_size || '48' }}
           TYPESAFE_MODEL: ${{ vars.TYPESAFE_MODEL || 'jev-latest' }}
         run: |
           set -euo pipefail
