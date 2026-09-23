@@ -8,7 +8,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
-from localization_result import normalize_claude_result
+from localization_result import claude_stage_cost, normalize_claude_draft
 
 
 def text_content(value):
@@ -152,7 +152,7 @@ def parse_stream(raw_path, subject_root):
     return steps, terminal or {}, final_text
 
 
-def markdown_summary(steps, localization_result, terminal):
+def markdown_summary(steps, localization_draft, terminal):
     counts = Counter(step["tool"] for step in steps)
     lines = [
         "# Claude Code localization execution path",
@@ -166,7 +166,7 @@ def markdown_summary(steps, localization_result, terminal):
         f"- Greps: {counts.get('Grep', 0)}",
         f"- Globs: {counts.get('Glob', 0)}",
         f"- Bash calls: {counts.get('Bash', 0)}",
-        f"- Relevant files in final answer: {len(localization_result.get('files', []))}",
+        f"- Relevant files in final answer: {len(localization_draft.get('files', []))}",
         f"- Turns: {terminal.get('num_turns')}",
         f"- Duration ms: {terminal.get('duration_ms')}",
         "",
@@ -188,7 +188,7 @@ def main(argv=None):
     parser.add_argument("--query", required=True)
     parser.add_argument("--model", required=True)
     parser.add_argument("--subject-sha", required=True)
-    parser.add_argument("--output-reference", required=True)
+    parser.add_argument("--output-draft", required=True)
     parser.add_argument("--output-trace", required=True)
     parser.add_argument("--output-manifest", required=True)
     parser.add_argument("--output-summary", required=True)
@@ -200,7 +200,7 @@ def main(argv=None):
         subject_root,
     )
     raw_result = json.loads(strip_json_fence(final_text))
-    localization_result = normalize_claude_result(
+    localization_draft = normalize_claude_draft(
         raw_result,
         subject_root,
         args.model,
@@ -227,11 +227,16 @@ def main(argv=None):
         "model_usage": terminal.get("modelUsage"),
         "tool_calls": len(steps),
         "tool_counts": dict(sorted(counts.items())),
+        "stage_cost": claude_stage_cost(
+            "localization",
+            terminal,
+            len(steps),
+        ),
     }
 
-    Path(args.output_reference).write_text(
+    Path(args.output_draft).write_text(
         json.dumps(
-            localization_result,
+            localization_draft,
             indent=2,
             ensure_ascii=False,
         ) + "\n",
@@ -246,7 +251,7 @@ def main(argv=None):
         encoding="utf-8",
     )
     Path(args.output_summary).write_text(
-        markdown_summary(steps, localization_result, terminal),
+        markdown_summary(steps, localization_draft, terminal),
         encoding="utf-8",
     )
     return 0
