@@ -31,7 +31,8 @@ class DemoTest(unittest.TestCase):
                 phase1_max_files=8,
                 reader_file_batch_size=2,
                 reader_window_lines=40,
-                reader_max_rounds=2,
+                reader_soft_rounds=2,
+                reader_hard_rounds=4,
                 reader_action_threshold=0.40,
                 observation_threshold=0.65,
             )
@@ -411,7 +412,8 @@ class DemoTest(unittest.TestCase):
                 trace,
                 file_batch_size=1,
                 window_lines=20,
-                max_rounds=1,
+                soft_rounds=1,
+                hard_rounds=1,
                 action_threshold=0.4,
                 observation_threshold=0.65,
             )
@@ -421,6 +423,166 @@ class DemoTest(unittest.TestCase):
             self.assertEqual(1, len(states[0]["observations"]))
             self.assertEqual(1, len(snippets))
             self.assertEqual(1, metrics["reads_executed"])
+
+    def test_soft_round_budget_extends_while_new_high_signal_arrives(self):
+        class BudgetDecider:
+            model = "budget-test"
+
+            def __init__(self):
+                self.score_round = 0
+
+            def choose_read_actions(self, query, state, action_sets):
+                decisions = []
+                for item in action_sets:
+                    action = next(
+                        action
+                        for action in item["actions"]
+                        if action["kind"] == "read_range"
+                    )
+                    decisions.append({
+                        "path": item["path"],
+                        "action": action,
+                        "choice": "read_0",
+                        "probability": 0.95,
+                        "confidence": 0.95,
+                        "probabilities": {"read_0": 0.95, "stop": 0.05},
+                    })
+                return decisions, MODULE.empty_usage()
+
+            def score_observations(self, query, state, observation_ids):
+                self.score_round += 1
+                score = {
+                    1: 0.90,
+                    2: 0.80,
+                    3: 0.20,
+                }[self.score_round]
+                return (
+                    {observation_id: score for observation_id in observation_ids},
+                    MODULE.empty_usage(),
+                )
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp) / "repo"
+            src = root / "src"
+            src.mkdir(parents=True)
+            source = src / "client.py"
+            source.write_text(
+                "\n".join(
+                    f"line_{index} = 'websocket'"
+                    for index in range(1, 101)
+                ) + "\n",
+                encoding="utf-8",
+            )
+            file = {
+                "id": "src/client.py",
+                "payload": {
+                    "path": "src/client.py",
+                    "filename": "client.py",
+                    "extension": ".py",
+                    "size_bytes": source.stat().st_size,
+                },
+                "score": 0.99,
+            }
+            trace = MODULE.Trace(pathlib.Path(temp) / "trace.jsonl")
+
+            states, snippets, metrics = MODULE.progressive_read(
+                root,
+                "locate websocket",
+                BudgetDecider(),
+                [file],
+                trace,
+                file_batch_size=1,
+                window_lines=20,
+                soft_rounds=2,
+                hard_rounds=5,
+                action_threshold=0.4,
+                observation_threshold=0.65,
+            )
+
+            self.assertEqual(3, states[0]["round"])
+            self.assertEqual(3, metrics["reads_executed"])
+            self.assertEqual(1, metrics["soft_budget_extensions"])
+            self.assertEqual(1, metrics["batches_extended"])
+            self.assertEqual(0, metrics["hard_budget_hits"])
+            self.assertEqual(2, len(snippets))
+
+            events = [
+                json.loads(line)["event"]
+                for line in (pathlib.Path(temp) / "trace.jsonl").read_text().splitlines()
+            ]
+            self.assertIn("reader_budget_extended", events)
+            self.assertIn("reader_soft_budget_stop", events)
+
+    def test_hard_round_budget_caps_continuous_high_signal(self):
+        class AlwaysRelevantDecider:
+            model = "budget-test"
+
+            def choose_read_actions(self, query, state, action_sets):
+                decisions = []
+                for item in action_sets:
+                    action = next(
+                        action
+                        for action in item["actions"]
+                        if action["kind"] == "read_range"
+                    )
+                    decisions.append({
+                        "path": item["path"],
+                        "action": action,
+                        "choice": "read_0",
+                        "probability": 0.95,
+                        "confidence": 0.95,
+                        "probabilities": {"read_0": 0.95, "stop": 0.05},
+                    })
+                return decisions, MODULE.empty_usage()
+
+            def score_observations(self, query, state, observation_ids):
+                return (
+                    {observation_id: 0.90 for observation_id in observation_ids},
+                    MODULE.empty_usage(),
+                )
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp) / "repo"
+            src = root / "src"
+            src.mkdir(parents=True)
+            source = src / "client.py"
+            source.write_text(
+                "\n".join(
+                    f"line_{index} = 'websocket'"
+                    for index in range(1, 121)
+                ) + "\n",
+                encoding="utf-8",
+            )
+            file = {
+                "id": "src/client.py",
+                "payload": {
+                    "path": "src/client.py",
+                    "filename": "client.py",
+                    "extension": ".py",
+                    "size_bytes": source.stat().st_size,
+                },
+                "score": 0.99,
+            }
+            trace = MODULE.Trace(pathlib.Path(temp) / "trace.jsonl")
+
+            states, _, metrics = MODULE.progressive_read(
+                root,
+                "locate websocket",
+                AlwaysRelevantDecider(),
+                [file],
+                trace,
+                file_batch_size=1,
+                window_lines=20,
+                soft_rounds=1,
+                hard_rounds=3,
+                action_threshold=0.4,
+                observation_threshold=0.65,
+            )
+
+            self.assertEqual(3, states[0]["round"])
+            self.assertEqual(3, metrics["reads_executed"])
+            self.assertEqual(2, metrics["soft_budget_extensions"])
+            self.assertEqual(1, metrics["hard_budget_hits"])
 
     def test_phase1_caps_files_after_higher_threshold(self):
         class Phase1Decider:
@@ -476,7 +638,8 @@ class DemoTest(unittest.TestCase):
                 phase1_max_files=3,
                 reader_file_batch_size=2,
                 reader_window_lines=20,
-                reader_max_rounds=1,
+                reader_soft_rounds=1,
+                reader_hard_rounds=1,
                 reader_action_threshold=0.4,
                 observation_threshold=0.65,
             )
