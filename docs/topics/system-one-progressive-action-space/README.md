@@ -556,9 +556,9 @@ Skipping the model when there is only one legal action should improve latency an
 
 The quality of entity extraction and affordance compilation may matter more than prompt sophistication.
 
-## 16. Measurements for a future experiment
+## 16. Measurements and hosted experiment evidence
 
-A useful comparison against a System Two command-generating agent could measure:
+A useful comparison against a System Two command-generating agent can measure:
 
 - total model calls;
 - latency;
@@ -571,6 +571,44 @@ A useful comparison against a System Two command-generating agent could measure:
 - escalation rate;
 - ability to recover after a pod is replaced;
 - trace explainability.
+
+The repository now hosts the Kubernetes prototype through GitHub Actions. Each run emits an append-only JSONL trace plus a final state snapshot and derived analysis report.
+
+The trace records:
+
+~~~text
+runtime_started
+frontier_compiled
+action_selected
+observation_recorded
+state_bound
+model_exchange
+command_rendered
+runtime_completed / runtime_blocked
+~~~
+
+This makes the research falsifiable at the harness level. A run can be inspected for the exact frontier visible at each decision, which steps were deterministic, which steps were model-mediated, and how each observation expanded the next local action space.
+
+Real TypeSafe runs also preserve the structured API request and response, including probabilities, confidence, model version, usage, and latency. The authorization secret is deliberately excluded.
+
+The first hosted offline fixture run produced this path:
+
+~~~text
+frontier sizes: 1 -> 4 -> 1 -> 4
+decisions: 4
+deterministic short-circuits: 2
+observations: 2
+
+discover.namespaces
+  -> namespace:staging
+  -> discover.pods:staging
+  -> logs:nession-staging-7d4c6d9d7f-k8m2p
+
+final:
+kubectl -n staging logs nession-staging-7d4c6d9d7f-k8m2p
+~~~
+
+The offline run is a control for the runtime and frontier mechanics, not evidence about Jev quality. A real TypeSafe run is needed to evaluate the System One judgment steps.
 
 The result should distinguish between tasks that are naturally frontier-driven and tasks that require open-ended reasoning.
 
