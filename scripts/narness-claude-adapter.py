@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Translate Claude Code stream-json into the unchanged benchmark trace contract.
 
-The entire Claude process, including every tool subprocess, runs in a bubblewrap
-mount/PID namespace. Only the current subject checkout and runtime files are
-mounted. HOME, Claude state and temporary files are private to each invocation.
-Network access is limited to a credential-bearing, fixed-provider Unix gateway.
+The Claude client runs in an outer bubblewrap mount/PID/network namespace.
+Claude's Bash tool is additionally forced through Claude Code's strict sandbox,
+with no network or Unix-socket access and no provider environment. Only the
+current subject checkout and runtime files are mounted; Git metadata and setup
+dependencies are read-only. HOME, Claude state and temporary files are private
+to each invocation. Provider access is limited to the client process through a
+credential-bearing, fixed-provider Unix gateway.
 """
 from __future__ import annotations
 import argparse
@@ -39,6 +42,7 @@ AGENT_KEYS = (
     'base_url',
     'credential_env',
     'runtime_mode',
+    'sandbox_runtime_version',
     'max_turns',
     'command_mapper_sha256',
 )
@@ -52,6 +56,66 @@ def capture(args):
     return subprocess.check_output(args, text=True).strip()
 
 
+def package_version_for_executable(executable, package_name):
+    path = Path(executable).resolve()
+    for parent in (path.parent, *path.parents):
+        manifest = parent / 'package.json'
+        if not manifest.is_file():
+            continue
+        try:
+            data = json.loads(manifest.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if data.get('name') == package_name and data.get('version'):
+            return str(data['version'])
+    raise RuntimeError(f'Cannot resolve {package_name} version from {executable}')
+
+
+def readonly_dependency_dirs(subject):
+    """Return setup-produced dependency trees that the agent may execute but not alter."""
+    result = []
+    for root, dirs, _ in os.walk(subject):
+        if '.git' in dirs:
+            dirs.remove('.git')
+        if 'node_modules' in dirs:
+            candidate = Path(root) / 'node_modules'
+            if candidate.is_dir() and not candidate.is_symlink():
+                result.append(candidate)
+            dirs.remove('node_modules')
+    return result
+
+
+def claude_settings():
+    """Hard policy for Claude-spawned Bash processes.
+
+    The outer namespace protects the host. This inner sandbox is what prevents a
+    Bash tool (or one of its children) from reaching the provider bridge that the
+    Claude client itself must use.
+    """
+    return {
+        'disableAllHooks': True,
+        'sandbox': {
+            'enabled': True,
+            'failIfUnavailable': True,
+            'allowUnsandboxedCommands': False,
+            'network': {
+                'allowedDomains': [],
+                'deniedDomains': ['127.0.0.1', '[::1]'],
+                'allowUnixSockets': [],
+                'allowLocalBinding': False,
+                'strictAllowlist': True,
+            },
+            'credentials': {
+                'envVars': [
+                    {'name': 'ANTHROPIC_API_KEY', 'mode': 'deny'},
+                    {'name': 'ANTHROPIC_AUTH_TOKEN', 'mode': 'deny'},
+                    {'name': 'ANTHROPIC_BASE_URL', 'mode': 'deny'},
+                ],
+            },
+        },
+    }
+
+
 def sandbox_command(subject, command, environment, gateway_socket=None):
     """Build a deny-by-default filesystem view; never fall back to direct execution.
 
@@ -61,13 +125,20 @@ def sandbox_command(subject, command, environment, gateway_socket=None):
     bwrap = shutil.which('bwrap')
     if bwrap is None:
         raise RuntimeError('bubblewrap is required; direct-host fallback is forbidden')
+    srt = shutil.which('srt')
+    if srt is None:
+        raise RuntimeError('Anthropic sandbox-runtime is required for Bash isolation')
     subject = Path(subject).resolve(strict=True)
     if not (subject / '.git').is_dir() or (subject / '.git').is_symlink():
         raise RuntimeError('Sandbox requires a standalone Git checkout')
     if (subject / '.git/objects/info/alternates').exists():
         raise RuntimeError('Shared Git object databases are forbidden')
+    # Nested user namespaces are intentionally available *inside* this already
+    # isolated namespace so Claude Code can put Bash in its own bwrap sandbox.
+    # A nested namespace cannot recover mounts, host PIDs, or host networking
+    # that the outer namespace never exposed.
     argv = [bwrap, '--unshare-all', '--unshare-user', '--die-with-parent',
-            '--new-session', '--cap-drop', 'ALL', '--disable-userns']
+            '--new-session', '--cap-drop', 'ALL']
     # Do not mount /, /home, /tmp, /run, /opt or the controller checkout.
     for path in ('/usr', '/bin', '/sbin', '/lib', '/lib64'):
         if Path(path).is_symlink():
@@ -87,13 +158,19 @@ def sandbox_command(subject, command, environment, gateway_socket=None):
     argv += ['--proc', '/proc', '--dev', '/dev', '--tmpfs', '/tmp',
              '--tmpfs', '/home', '--dir', '/home/agent',
              '--dir', '/home/agent/.claude', '--dir', '/home/agent/.cache',
-             '--bind', str(subject), '/workspace', '--chdir', '/workspace']
+             '--bind', str(subject), '/workspace',
+             '--ro-bind', str(subject / '.git'), '/workspace/.git']
+    for dependency in readonly_dependency_dirs(subject):
+        relative = dependency.relative_to(subject)
+        argv += ['--ro-bind', str(dependency), '/workspace/' + relative.as_posix()]
+    argv += ['--chdir', '/workspace']
     clean = {'HOME': '/home/agent', 'CLAUDE_CONFIG_DIR': '/home/agent/.claude',
              'XDG_CONFIG_HOME': '/home/agent/.config', 'XDG_CACHE_HOME': '/home/agent/.cache',
              'TMPDIR': '/tmp', 'TMP': '/tmp', 'TEMP': '/tmp',
              'PATH': str(node_root / 'bin') + ':/usr/bin:/bin',
              'LANG': 'C.UTF-8', 'SHELL': '/bin/bash', 'USER': 'agent',
-             'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1'}
+             'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
+             'CLAUDE_CODE_SUBPROCESS_ENV_SCRUB': '1'}
     if gateway_socket is not None:
         argv += ['--ro-bind', str(gateway_socket), '/run/provider.sock']
         clean['ANTHROPIC_BASE_URL'] = 'http://127.0.0.1:18080'
@@ -125,6 +202,8 @@ def model_gateway(base_url, credential, model):
             or upstream.password or upstream.query or upstream.fragment):
         raise RuntimeError('Provider gateway requires a credential-free HTTPS base URL')
 
+    allowed_local_tools = set(TOOLS.split(','))
+
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_):
             pass
@@ -144,6 +223,17 @@ def model_gateway(base_url, credential, model):
                 if not isinstance(payload, dict) or payload.get('model') != model:
                     self.send_error(403)
                     return
+                # Freeze the provider-side tool surface as well as the model.
+                # Typed/server tools (web search, code execution, computer use,
+                # etc.) are never part of this benchmark. Custom tools must be
+                # exactly the local Claude Code tools admitted by cli_args().
+                for tool in payload.get('tools', []):
+                    if not isinstance(tool, dict) or tool.get('type'):
+                        self.send_error(403)
+                        return
+                    if tool.get('name') not in allowed_local_tools:
+                        self.send_error(403)
+                        return
                 headers = {'Content-Type': 'application/json', 'x-api-key': credential,
                            'Authorization': 'Bearer ' + credential,
                            'anthropic-version': self.headers.get('anthropic-version', '2023-06-01')}
@@ -211,13 +301,19 @@ def runtime_identity(expected_model, *, require_credentials=True):
     if expected_model in ('sonnet', 'opus', 'haiku', 'default'):
         raise RuntimeError('Use an explicit Claude model ID, not a moving alias')
 
+    srt = shutil.which('srt')
+    if srt is None:
+        raise RuntimeError('Install @anthropic-ai/sandbox-runtime for Claude Bash isolation')
+
     return {
         'claude_version': version,
         'claude_bin': resolved,
         'base_url': base_url,
         'credential_env': credential_env,
-        'runtime_mode': 'bubblewrap-provider-gateway-v1',
+        'runtime_mode': 'bubblewrap-claude-bash-sandbox-provider-gateway-v2',
         'bubblewrap_version': capture(['bwrap', '--version']),
+        'sandbox_runtime_version': package_version_for_executable(
+            srt, '@anthropic-ai/sandbox-runtime'),
     }
 
 
@@ -230,7 +326,7 @@ def cli_args(model, effort, max_turns):
             '--disable-slash-commands', '--tools', TOOLS,
             '--allowedTools', 'Bash(*)', 'Read', 'Edit', 'Write', 'Glob', 'Grep',
             '--disallowedTools', 'Agent', 'Task', 'WebFetch', 'WebSearch', 'EndConversation', 'mcp__*',
-            '--settings', '{"disableAllHooks":true}']
+            '--settings', json.dumps(claude_settings(), sort_keys=True, separators=(',', ':'))]
 
 
 class Translator:
@@ -353,10 +449,12 @@ def main():
            'model': args.model, 'reasoning_effort': args.effort, 'max_turns': args.max_turns,
            'adapter_file_sha256': digest(__file__), 'command_mapper_sha256': digest(ROOT / 'scripts/ai-native-codex-adapter.py'),
            'adapter_repository_sha': common.adapter_repo_head(),
-           'network': 'private-net-fixed-provider-unix-gateway', 'subagents_enabled': False, 'web_search': 'disabled',
-           'permission_profile': 'claude-bubblewrap-provider-gateway-v1',
-           'filesystem_read_scope': 'current subject plus read-only runtime; private HOME and tmp',
-           'shell_environment_allowlist': ['PATH', 'HOME', 'CLAUDE_CONFIG_DIR', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'SHELL', 'USER', 'ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY', 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'],
+           'network': 'outer-private-net-fixed-provider; bash-strict-no-network', 'subagents_enabled': False, 'web_search': 'disabled',
+           'permission_profile': 'claude-bubblewrap-bash-sandbox-provider-gateway-v2',
+           'filesystem_read_scope': 'current subject plus read-only runtime; read-only .git/dependencies; private HOME/tmp',
+           'bash_network': 'strict-deny-all-including-loopback-and-unix-sockets',
+           'git_metadata': 'read-only',
+           'shell_environment_allowlist': ['PATH', 'HOME', 'CLAUDE_CONFIG_DIR', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'SHELL', 'USER', 'ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY', 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC', 'CLAUDE_CODE_SUBPROCESS_ENV_SCRUB'],
            'harness_environment_scrubbed': True, 'raw_trace_file': 'claude.raw.jsonl', **identity}
     common.append_jsonl(trace, cfg)
     translator = Translator(trace, origin)
@@ -369,10 +467,11 @@ def main():
             else:
                 command = cli_args(args.model, args.effort, args.max_turns)
                 command[0] = identity['claude_bin']
-                allowed = {'PATH', 'HOME', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'SHELL', 'USER', 'ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'}
+                allowed = {'PATH', 'HOME', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'SHELL', 'USER', 'ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC', 'CLAUDE_CODE_SUBPROCESS_ENV_SCRUB'}
                 child_env = {key: value for key, value in os.environ.items() if key in allowed or key.startswith('LC_')}
                 child_env['ANTHROPIC_BASE_URL'] = identity['base_url']
                 child_env['CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'] = '1'
+                child_env['CLAUDE_CODE_SUBPROCESS_ENV_SCRUB'] = '1'
                 for key in ('ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'):
                     if key != identity['credential_env']:
                         child_env.pop(key, None)
