@@ -63,6 +63,81 @@ class DemoTest(unittest.TestCase):
                 q['type']=='noul' for q in request['questions'].values()
             ))
 
+    def test_system_one_scores_large_stage_in_one_request(self):
+        with tempfile.TemporaryDirectory() as temp:
+            trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
+            scorer=MODULE.SystemOneScorer('test',trace,batch_size=2)
+            candidates=[
+                {'id':f'candidate-{i}','payload':{'path':f'candidate-{i}'}}
+                for i in range(125)
+            ]
+            calls=[]
+
+            def fake_request(payload):
+                calls.append(payload)
+                return {
+                    'model':'jev-test',
+                    'answers':{
+                        key:{'type':'noul','noul':0.5}
+                        for key in payload['questions']
+                    },
+                    'usage':{'input_tokens':125,'output_tokens':125},
+                }
+
+            scorer._request=fake_request
+            scored,usage=scorer.score('locate websocket','file',candidates)
+
+            self.assertEqual(1,len(calls))
+            self.assertEqual(125,len(calls[0]['questions']))
+            self.assertEqual(125,len(scored))
+            self.assertEqual(1,usage['model_calls'])
+
+    def test_run_uses_exactly_one_model_call_per_stage(self):
+        class CountingScorer:
+            model='counting-test'
+
+            def __init__(self):
+                self.stages=[]
+
+            def score(self,query,stage,candidates):
+                self.stages.append(stage)
+                return (
+                    [{**candidate,'score':0.99} for candidate in candidates],
+                    {
+                        'model_calls':1 if candidates else 0,
+                        'input_tokens':0,
+                        'output_tokens':0,
+                    },
+                )
+
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)/'repo'
+            source=root/'src'
+            source.mkdir(parents=True)
+            (source/'one.py').write_text(
+                'def connect_one():\n    return "websocket"\n',
+                encoding='utf-8',
+            )
+            (source/'two.py').write_text(
+                'def connect_two():\n    return "websocket"\n',
+                encoding='utf-8',
+            )
+
+            trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
+            scorer=CountingScorer()
+            result=MODULE.run(
+                root,
+                'locate websocket connection',
+                scorer,
+                trace,
+                .1,.1,.1,
+            )
+
+            self.assertEqual(['directory','file','line'],scorer.stages)
+            self.assertEqual(3,result['metrics']['model_calls'])
+            self.assertEqual('one_request_per_stage',result['metrics']['request_strategy'])
+            self.assertEqual(2,result['metrics']['files_selected'])
+
     def test_transient_520_is_retried(self):
         with tempfile.TemporaryDirectory() as temp:
             trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
