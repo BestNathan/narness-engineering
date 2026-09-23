@@ -574,7 +574,8 @@ def main(argv=None):
     p.add_argument("query")
     p.add_argument("--directory-threshold",type=float,default=.35)
     p.add_argument("--file-threshold",type=float,default=.50)
-    p.add_argument("--line-threshold",type=float,default=.70)
+    p.add_argument("--symbol-threshold",type=float,default=.70)
+    p.add_argument("--line-threshold",dest="symbol_threshold",type=float,help=argparse.SUPPRESS)
     p.add_argument("--batch-size",type=int,default=None,help=argparse.SUPPRESS)
     p.add_argument("--offline-decider",action="store_true")
     p.add_argument("--trace-file")
@@ -594,7 +595,7 @@ def main(argv=None):
             return 2
         scorer=SystemOneScorer(key,trace,a.typesafe_endpoint,a.model,a.batch_size)
 
-    result=run(a.root,a.query,scorer,trace,a.directory_threshold,a.file_threshold,a.line_threshold)
+    result=run(a.root,a.query,scorer,trace,a.directory_threshold,a.file_threshold,a.symbol_threshold)
     payload=json.dumps(result,indent=2,ensure_ascii=False)
     if a.output_json:
         Path(a.output_json).write_text(payload+"\n",encoding="utf-8")
