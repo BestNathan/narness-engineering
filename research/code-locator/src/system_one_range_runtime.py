@@ -36,6 +36,7 @@ DEFAULT_WINDOW_LINES = 140
 DEFAULT_PARALLEL_THRESHOLD = 0.65
 DEFAULT_MAX_JUMPS_PER_FILE = 2
 DEFAULT_MAX_EPOCHS = 64
+DEFAULT_ACTION_SCORE_BATCH_SIZE = 16
 
 
 def make_action(action_id, path, start, end, navigation, reason, source=None):
@@ -217,8 +218,8 @@ def generate_action_space(
     return actions
 
 
-def decision_view(state):
-    return {
+def decision_view(state, action_frontier=None):
+    view = {
         "goal": state["goal"],
         "phase": "range_runtime_v0",
         "epoch": state["epoch"],
@@ -251,96 +252,120 @@ def decision_view(state):
             "task. StopTask means the current evidence is already sufficient."
         ),
     }
+    if action_frontier is not None:
+        view["action_frontier"] = [
+            {
+                "id": item["id"],
+                "kind": item["kind"],
+                "path": item.get("path"),
+                "start_line": item.get("start_line"),
+                "end_line": item.get("end_line"),
+                "navigation": item.get("navigation"),
+            }
+            for item in action_frontier
+        ]
+    return view
 
 
 class SystemOneRangeDecider(SystemOneDecider):
-    def score_actions(self, query, state, actions):
-        questions = {}
-        for index, action in enumerate(actions):
-            question_id = f"action_{index}"
-            if action["kind"] == "stop_task":
-                questions[question_id] = {
-                    "type": "noul",
-                    "instructions": {
-                        "task": query,
-                        "action": action,
-                        "question": (
-                            "How confident are you that no further exploration "
-                            "is necessary and the current evidence is sufficient "
-                            "for the localization task? If further reading is "
-                            "unlikely to materially improve the result, increase "
-                            "the StopTask score. If useful unexplored directions "
-                            "remain, keep StopTask low."
-                        ),
-                    },
-                    "criteria": {
-                        "true": (
-                            "Current evidence is sufficient; important "
-                            "uncertainty is resolved; additional reads are "
-                            "likely redundant."
-                        ),
-                        "false": (
-                            "Useful unexplored directions remain or additional "
-                            "reads could materially improve the result."
-                        ),
-                    },
-                }
-            else:
-                questions[question_id] = {
-                    "type": "noul",
-                    "instructions": {
-                        "task": query,
-                        "action": {
-                            "kind": "read_range",
-                            "path": action["path"],
-                            "start_line": action["start_line"],
-                            "end_line": action["end_line"],
-                            "navigation": action["navigation"],
-                            "reason": action["reason"],
-                            "source": action.get("source"),
-                        },
-                        "question": (
-                            "Given the current state and observations, how useful "
-                            "would executing this exact ReadRange be as the next "
-                            "information-gathering action for the task?"
-                        ),
-                    },
-                    "criteria": {
-                        "true": (
-                            "This read is a useful next exploration step and is "
-                            "likely to add material information."
-                        ),
-                        "false": (
-                            "This read is likely redundant, low-value, or less "
-                            "useful than the available alternatives."
-                        ),
-                    },
-                }
+    def score_actions(
+        self,
+        query,
+        state,
+        actions,
+        batch_size=DEFAULT_ACTION_SCORE_BATCH_SIZE,
+    ):
+        """Score one semantic frontier; transport may be chunked."""
+        all_scored = []
+        total_usage = empty_usage()
+        view = decision_view(state, actions)
 
-        response, usage = self.send(
-            "range_runtime_action_score",
-            decision_view(state),
-            questions,
-        )
-        answers = response.get("answers", {})
-        scored = []
-        for index, action in enumerate(actions):
-            answer = answers.get(f"action_{index}", {})
-            if answer.get("type") != "noul":
-                raise RuntimeError(
-                    f"unexpected action-score answer: {answer!r}"
-                )
-            scored.append({
-                **action,
-                "score": float(answer["noul"]),
-            })
-        scored.sort(
+        for batch_start in range(0, len(actions), batch_size):
+            batch = actions[batch_start:batch_start + batch_size]
+            questions = {}
+            for local_index, action in enumerate(batch):
+                question_id = f"action_{local_index}"
+                if action["kind"] == "stop_task":
+                    questions[question_id] = {
+                        "type": "noul",
+                        "instructions": {
+                            "task": query,
+                            "action_id": action["id"],
+                            "question": (
+                                "How confident are you that no further "
+                                "exploration is necessary and the current "
+                                "evidence is sufficient for the localization "
+                                "task? If further reading is unlikely to "
+                                "materially improve the result, increase the "
+                                "StopTask score. If useful unexplored "
+                                "directions remain, keep StopTask low."
+                            ),
+                        },
+                        "criteria": {
+                            "true": (
+                                "Current evidence is sufficient; important "
+                                "uncertainty is resolved; additional reads "
+                                "are likely redundant."
+                            ),
+                            "false": (
+                                "Useful unexplored directions remain or "
+                                "additional reads could materially improve "
+                                "the result."
+                            ),
+                        },
+                    }
+                else:
+                    questions[question_id] = {
+                        "type": "noul",
+                        "instructions": {
+                            "task": query,
+                            "action_id": action["id"],
+                            "question": (
+                                "In state.action_frontier find this action_id. "
+                                "Given the current state, observations, and "
+                                "the complete frontier of alternatives, how "
+                                "useful would executing this exact ReadRange "
+                                "be as the next information-gathering action?"
+                            ),
+                        },
+                        "criteria": {
+                            "true": (
+                                "This read is a useful next exploration step "
+                                "and is likely to add material information."
+                            ),
+                            "false": (
+                                "This read is likely redundant or low-value "
+                                "relative to the available alternatives."
+                            ),
+                        },
+                    }
+
+            response, usage = self.send(
+                "range_runtime_action_score",
+                view,
+                questions,
+            )
+            merge_usage(total_usage, usage)
+            answers = response.get("answers", {})
+            for local_index, action in enumerate(batch):
+                answer = answers.get(f"action_{local_index}", {})
+                if answer.get("type") != "noul":
+                    raise RuntimeError(
+                        f"unexpected action-score answer: {answer!r}"
+                    )
+                all_scored.append({
+                    **action,
+                    "score": float(answer["noul"]),
+                })
+
+        all_scored.sort(
             key=lambda item: (
                 -item["score"],
                 item["id"],
             )
         )
-        return scored, usage
+        return all_scored, total_usage
+
 
 
 class OfflineRangeDecider:
