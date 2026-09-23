@@ -1,4 +1,5 @@
 name: one-shot-code-locator-dispatch
+# retry after transient TypeSafe 520
 
 on:
   push:
