@@ -179,6 +179,61 @@ class SelectorTest(unittest.TestCase):
         self.assertEqual(["a", "c"], [item["id"] for item in selected])
         self.assertEqual("parallel_above_threshold", mode)
 
+    def test_control_choice_stops_when_probability_crosses_threshold(self):
+        stop = {
+            "id": "stop",
+            "kind": "stop_file",
+            "choice": "stop",
+            "stop_probability": 0.72,
+        }
+        reads = [
+            {
+                "id": "read",
+                "kind": "read_range",
+                "start_line": 1,
+                "end_line": 100,
+                "score": 0.95,
+            },
+        ]
+        selected, mode = MODULE.select_file_actions_with_control(
+            stop,
+            reads,
+            0.65,
+        )
+        self.assertEqual(["stop"], [item["id"] for item in selected])
+        self.assertEqual("model_stop", mode)
+
+    def test_control_choice_below_threshold_continues_with_read_policy(self):
+        stop = {
+            "id": "stop",
+            "kind": "stop_file",
+            "choice": "stop",
+            "stop_probability": 0.61,
+        }
+        reads = [
+            {
+                "id": "a",
+                "kind": "read_range",
+                "start_line": 1,
+                "end_line": 100,
+                "score": 0.58,
+            },
+            {
+                "id": "b",
+                "kind": "read_range",
+                "start_line": 201,
+                "end_line": 300,
+                "score": 0.40,
+            },
+        ]
+        selected, mode = MODULE.select_file_actions_with_control(
+            stop,
+            reads,
+            0.65,
+        )
+        self.assertEqual(["a"], [item["id"] for item in selected])
+        self.assertEqual("fallback_top1", mode)
+
     def test_low_stop_never_terminates_when_read_exists(self):
         scored = [
             {"id": "read", "kind": "read_range", "score": 0.31},
