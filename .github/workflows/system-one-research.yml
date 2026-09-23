@@ -71,6 +71,10 @@ jobs:
 
       - name: Initialize deterministic evidence directory
         run: |
+          evidence="$RUNNER_TEMP/system-one-fixtures-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$evidence/k8s" "$evidence/code-locator"
+          echo "EVIDENCE_DIR=$evidence" >> "$GITHUB_ENV"
+
       - name: Run demo tests
         run: |
           set -euo pipefail
@@ -146,6 +150,10 @@ jobs:
 
       - name: Initialize System One evidence directory
         run: |
+          evidence="$RUNNER_TEMP/system-one-research-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$evidence/k8s" "$evidence/code-locator"
+          echo "EVIDENCE_DIR=$evidence" >> "$GITHUB_ENV"
+
       - name: Require TypeSafe credentials
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
