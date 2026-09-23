@@ -14,7 +14,7 @@ SPEC.loader.exec_module(MODULE)
 
 
 class LocalizationResultTest(unittest.TestCase):
-    def test_system_one_result_groups_evidence_by_file(self):
+    def test_system_one_result_groups_evidence_and_cost(self):
         engine = {
             "query": "find websocket",
             "model": "jev-latest",
@@ -46,6 +46,14 @@ class LocalizationResultTest(unittest.TestCase):
                     "content": "21: def reconnect():",
                 },
             ],
+            "metrics": {
+                "elapsed_ms": 1234,
+                "model_calls": 7,
+                "input_tokens": 1000,
+                "output_tokens": 200,
+                "reads_executed": 2,
+                "reader_scheduler_rounds": 3,
+            },
         }
 
         result = MODULE.build_system_one_result(engine)
@@ -62,8 +70,15 @@ class LocalizationResultTest(unittest.TestCase):
             "noul_relevance",
             result["files"][0]["evidence"][0]["confidence"]["type"],
         )
+        self.assertEqual(1234, result["cost"]["elapsed_ms"])
+        self.assertEqual(7, result["cost"]["model_calls"])
+        self.assertEqual(1000, result["cost"]["tokens"]["input"])
+        self.assertEqual(
+            2,
+            result["cost"]["stages"][0]["operations"]["reads_executed"],
+        )
 
-    def test_claude_canonical_result_materializes_evidence_content(self):
+    def test_claude_localization_draft_has_no_confidence(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
             src = root / "src"
@@ -74,41 +89,175 @@ class LocalizationResultTest(unittest.TestCase):
             )
             raw = {
                 "schema_version": 1,
-                "kind": "code-localization-result",
+                "kind": "code-localization-draft",
                 "task": "find client",
                 "producer": {
                     "system": "claude_code",
                     "model": "ds",
                 },
                 "summary": "client implementation",
-                "confidence": 0.92,
                 "files": [{
                     "path": "src/client.py",
                     "role": "primary",
-                    "confidence": 0.88,
                     "reason": "main implementation",
                     "evidence": [{
                         "start_line": 2,
                         "end_line": 3,
-                        "confidence": 0.81,
                         "reason": "relevant logic",
                     }],
                 }],
             }
 
-            result = MODULE.normalize_claude_result(raw, root, "ds")
+            draft = MODULE.normalize_claude_draft(raw, root, "ds")
 
-            self.assertEqual(
-                "model_self_assessment",
-                result["confidence"]["type"],
+            self.assertNotIn("confidence", draft)
+            self.assertNotIn("confidence", draft["files"][0])
+            self.assertNotIn(
+                "confidence",
+                draft["files"][0]["evidence"][0],
             )
             self.assertEqual(
                 "2: line2\n3: line3",
-                result["files"][0]["evidence"][0]["content"],
+                draft["files"][0]["evidence"][0]["content"],
             )
-            self.assertEqual(
-                0.88,
-                result["files"][0]["confidence"]["score"],
+
+    def test_claude_draft_rejects_confidence_from_localization_session(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            src = root / "src"
+            src.mkdir()
+            (src / "client.py").write_text("line1\n", encoding="utf-8")
+            raw = {
+                "schema_version": 1,
+                "kind": "code-localization-draft",
+                "task": "find client",
+                "confidence": 0.9,
+                "producer": {"system": "claude_code"},
+                "summary": "",
+                "files": [],
+            }
+
+            with self.assertRaises(ValueError):
+                MODULE.normalize_claude_draft(raw, root, "ds")
+
+    def test_fresh_confidence_session_cannot_change_localization(self):
+        draft = {
+            "schema_version": 1,
+            "kind": "code-localization-draft",
+            "task": "find client",
+            "producer": {
+                "system": "claude_code",
+                "model": "ds",
+            },
+            "summary": "client implementation",
+            "files": [{
+                "path": "src/client.py",
+                "role": "primary",
+                "reason": "main implementation",
+                "evidence": [{
+                    "id": "src/client.py#evidence-1",
+                    "start_line": 2,
+                    "end_line": 3,
+                    "reason": "relevant logic",
+                    "content": "2: line2\n3: line3",
+                }],
+            }],
+        }
+        assessment = {
+            "schema_version": 1,
+            "kind": "code-localization-confidence-assessment",
+            "task": "find client",
+            "overall": {
+                "score": 0.91,
+                "reason": "strong grounded evidence",
+            },
+            "files": [{
+                "path": "src/client.py",
+                "score": 0.88,
+                "reason": "direct implementation",
+                "evidence": [{
+                    "start_line": 2,
+                    "end_line": 3,
+                    "score": 0.81,
+                    "reason": "directly supports the task",
+                }],
+            }],
+        }
+        localization_stage = {
+            "name": "localization",
+            "elapsed_ms": 1000,
+            "api_elapsed_ms": 900,
+            "model_calls": None,
+            "turns": 10,
+            "tool_calls": 6,
+            "tokens": {
+                "input": 100,
+                "output": 20,
+                "cache_read_input": 500,
+                "cache_creation_input": 0,
+                "thinking": 0,
+            },
+            "provider_cost_usd": 0.4,
+        }
+        confidence_stage = {
+            "name": "confidence_assessment",
+            "elapsed_ms": 200,
+            "api_elapsed_ms": 180,
+            "model_calls": None,
+            "turns": 1,
+            "tool_calls": 0,
+            "tokens": {
+                "input": 50,
+                "output": 10,
+                "cache_read_input": 0,
+                "cache_creation_input": 0,
+                "thinking": 0,
+            },
+            "provider_cost_usd": 0.1,
+        }
+
+        result = MODULE.build_claude_result(
+            draft,
+            assessment,
+            "ds",
+            localization_stage,
+            confidence_stage,
+        )
+
+        self.assertEqual(
+            "src/client.py",
+            result["files"][0]["path"],
+        )
+        self.assertEqual(
+            (2, 3),
+            (
+                result["files"][0]["evidence"][0]["start_line"],
+                result["files"][0]["evidence"][0]["end_line"],
+            ),
+        )
+        self.assertEqual(
+            0.88,
+            result["files"][0]["confidence"]["score"],
+        )
+        self.assertEqual(1200, result["cost"]["elapsed_ms"])
+        self.assertEqual(150, result["cost"]["tokens"]["input"])
+        self.assertEqual(0.5, result["cost"]["provider_cost_usd"])
+        self.assertEqual(2, len(result["cost"]["stages"]))
+
+        changed = {
+            **assessment,
+            "files": [{
+                **assessment["files"][0],
+                "path": "src/other.py",
+            }],
+        }
+        with self.assertRaises(ValueError):
+            MODULE.build_claude_result(
+                draft,
+                changed,
+                "ds",
+                localization_stage,
+                confidence_stage,
             )
 
 
