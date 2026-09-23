@@ -333,7 +333,7 @@ jobs:
     needs:
       - offline
       - typesafe
-    if: ${{ always() && github.event_name != 'pull_request' }}
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref_name == 'main')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
