@@ -26,9 +26,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y bubblewrap socat
-          # Restore the packaged profile omitted by some hosted runner images.
-          sudo apt-get install --reinstall -y apparmor
-          sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
+          # Scope the user-namespace exception to the sandbox executable.
+          sudo apparmor_parser -r research/claude-runtime/bwrap.apparmor
           npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
       - name: Verify production isolation without credentials or model requests
         run: |

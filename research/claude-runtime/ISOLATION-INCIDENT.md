@@ -22,10 +22,7 @@ Provider credentials remain in the parent gateway, never in the agent environmen
 The hosted isolation workflow uses the same launcher to test forbidden reads,
 symlink traversal, runtime writes, task writes, environment filtering, repeated
 invocation state isolation, and the pinned Claude binary. It makes no model calls.
-On Ubuntu 24.04 the hosted workflow loads the distribution-provided
-bwrap-userns-restrict AppArmor profile. Global user-namespace restrictions remain
-enabled; sandbox processes cannot create nested user namespaces. Future pilot
-and collection setup must install bubblewrap/socat and load this same profile.
+Ubuntu 24.04 requires an AppArmor user-namespace exception for /usr/bin/bwrap.\nThe hosted workflow loads the reviewed bwrap.apparmor profile for that executable\nonly. It does not disable AppArmor or global user-namespace restrictions. Nested\nuser namespaces remain disabled inside the sandbox. Future pilot/collection\nsetup must install bubblewrap/socat and load this same profile.
 
 ## Registration remains suspended
 
