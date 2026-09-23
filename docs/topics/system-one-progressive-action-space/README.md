@@ -621,7 +621,7 @@ The decision primitive can therefore vary by state:
 - `Noul` for independently retaining multiple relevant candidates;
 - deterministic short-circuiting where model judgment is unnecessary.
 
-See [Hierarchical Code Localization with System One](research/code-localization.md) for the hypotheses, threshold/recall analysis, evidence contract, and experiment plan.
+See [Hierarchical Code Localization with System One](../../../research/code-locator/docs/design.md) for the hypotheses, threshold/recall analysis, evidence contract, and experiment plan.
 
 ## 19. Research evidence workflows
 
@@ -652,8 +652,8 @@ If the conclusions stabilize, some of them may graduate into Narness concepts ar
 ## Reference implementations
 
 - [System One Kubernetes Command Generator](../../../examples/system-one-k8s/README.md)
-- [System One Code Locator](../../../examples/system-one-code-locator/README.md)
-- [Code localization research note](research/code-localization.md)
+- [System One Code Locator](../../../research/code-locator/README.md)
+- [Code localization research note](../../../research/code-locator/docs/design.md)
 - [System One Kubernetes experiment workflow](../../../.github/workflows/system-one-k8s-experiment.yml)
 - [System One Code Locator experiment workflow](../../../.github/workflows/system-one-code-locator.yml)
 

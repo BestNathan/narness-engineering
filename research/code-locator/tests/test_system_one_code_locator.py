@@ -1,6 +1,7 @@
 import importlib.util, pathlib, sys, tempfile, unittest
 
-MODULE_PATH=pathlib.Path(__file__).with_name('system_one_code_locator.py')
+PROJECT_ROOT=pathlib.Path(__file__).resolve().parents[1]
+MODULE_PATH=PROJECT_ROOT/'src'/'system_one_code_locator.py'
 SPEC=importlib.util.spec_from_file_location('system_one_code_locator',MODULE_PATH)
 MODULE=importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name]=MODULE
@@ -8,7 +9,7 @@ SPEC.loader.exec_module(MODULE)
 
 class DemoTest(unittest.TestCase):
     def fixture(self):
-        return pathlib.Path(__file__).with_name('fixtures')/'repository'
+        return PROJECT_ROOT/'fixtures'/'repository'
 
     def test_progressive_localization(self):
         with tempfile.TemporaryDirectory() as temp:

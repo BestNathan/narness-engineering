@@ -246,10 +246,10 @@ That enables:
 
 ## Pilot evidence
 
-- [Nession WebSocket localization pilot — 2026-09-23](nession-websocket-pilot-2026-09-23.md)
+- [Nession WebSocket localization pilot — 2026-09-23](pilots/nession-websocket-2026-09-23.md)
 
 The first real run confirmed useful semantic localization, while also showing that threshold-only whole-tree search spends most of its cost at the line layer. This is the baseline for the next recursive-beam / symbol-level experiment.
 
 ## Reference implementation
 
-See [System One Code Locator](../../../examples/system-one-code-locator/README.md).
+See the [Code Locator research root](../README.md).

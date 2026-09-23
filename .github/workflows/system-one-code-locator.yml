@@ -3,15 +3,19 @@ name: system-one-code-locator-experiment
 on:
   push:
     paths:
-      - "examples/system-one-code-locator/**"
-      - "docs/topics/system-one-progressive-action-space/research/code-localization.md"
-      - "docs/topics/system-one-progressive-action-space/research/nession-websocket-pilot-2026-09-23.md"
+      - "research/code-locator/src/**"
+      - "research/code-locator/tests/**"
+      - "research/code-locator/fixtures/**"
+      - "research/code-locator/docs/**"
+      - "research/code-locator/README.md"
       - ".github/workflows/system-one-code-locator.yml"
   pull_request:
     paths:
-      - "examples/system-one-code-locator/**"
-      - "docs/topics/system-one-progressive-action-space/research/code-localization.md"
-      - "docs/topics/system-one-progressive-action-space/research/nession-websocket-pilot-2026-09-23.md"
+      - "research/code-locator/src/**"
+      - "research/code-locator/tests/**"
+      - "research/code-locator/fixtures/**"
+      - "research/code-locator/docs/**"
+      - "research/code-locator/README.md"
       - ".github/workflows/system-one-code-locator.yml"
   workflow_dispatch:
     inputs:
@@ -96,13 +100,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python3 -m unittest discover             -s examples/system-one-code-locator             -p 'test_*.py'             -v 2>&1 | tee artifacts/system-one-code-locator/offline/tests.log
+          python3 -m unittest discover             -s research/code-locator/tests             -p 'test_*.py'             -v 2>&1 | tee artifacts/system-one-code-locator/offline/tests.log
 
       - name: Run deterministic fixture experiment
         shell: bash
         run: |
           set -o pipefail
-          python3 examples/system-one-code-locator/system_one_code_locator.py             examples/system-one-code-locator/fixtures/repository             "$QUERY"             --offline-decider             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold 0.60             --batch-size "$BATCH_SIZE"             --trace-file artifacts/system-one-code-locator/offline/trace.jsonl             --output-json artifacts/system-one-code-locator/offline/result.json             2>&1 | tee artifacts/system-one-code-locator/offline/run.log
+          python3 research/code-locator/src/system_one_code_locator.py             research/code-locator/fixtures/repository             "$QUERY"             --offline-decider             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold 0.60             --batch-size "$BATCH_SIZE"             --trace-file artifacts/system-one-code-locator/offline/trace.jsonl             --output-json artifacts/system-one-code-locator/offline/result.json             2>&1 | tee artifacts/system-one-code-locator/offline/run.log
 
       - name: Save run metadata and summary
         env:
@@ -265,7 +269,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python3 narness/examples/system-one-code-locator/system_one_code_locator.py             subject             "$QUERY"             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold "$LINE_THRESHOLD"             --batch-size "$BATCH_SIZE"             --model "$TYPESAFE_MODEL"             --trace-file artifacts/system-one-code-locator/typesafe/trace.jsonl             --output-json artifacts/system-one-code-locator/typesafe/result.json             2>&1 | tee artifacts/system-one-code-locator/typesafe/run.log
+          python3 narness/research/code-locator/src/system_one_code_locator.py             subject             "$QUERY"             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold "$LINE_THRESHOLD"             --batch-size "$BATCH_SIZE"             --model "$TYPESAFE_MODEL"             --trace-file artifacts/system-one-code-locator/typesafe/trace.jsonl             --output-json artifacts/system-one-code-locator/typesafe/result.json             2>&1 | tee artifacts/system-one-code-locator/typesafe/run.log
 
       - name: Build research summary
         if: always()
@@ -376,7 +380,7 @@ jobs:
           set -euo pipefail
 
           stamp="$(TZ=Asia/Shanghai date +'%Y%m%dT%H%M%S%z')"
-          record="research/code-locator/${stamp}-run-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}"
+          record="research/code-locator/runs/${stamp}-run-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}"
           mkdir -p "$record"
 
           if test -d .experiment-record/offline; then
