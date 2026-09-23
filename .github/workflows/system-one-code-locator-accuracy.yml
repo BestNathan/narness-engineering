@@ -648,6 +648,7 @@ jobs:
           cat artifacts/quality-evaluation/evaluation-report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload blind quality evaluation
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: code-locator-quality-evaluation-${{ github.run_id }}
