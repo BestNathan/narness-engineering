@@ -210,6 +210,38 @@ ANONYMOUS CANDIDATE:
 """
 
 
+def parse_assessment_text(value):
+    """Extract the evaluation JSON object from model prose/fences robustly."""
+    value = strip_json_fence(value)
+    try:
+        parsed = json.loads(value)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(value):
+        if char != "{":
+            continue
+        try:
+            parsed, _ = decoder.raw_decode(value[index:])
+        except json.JSONDecodeError:
+            continue
+        if (
+            isinstance(parsed, dict)
+            and parsed.get("kind")
+            == "code-localization-quality-evaluation"
+        ):
+            return parsed
+
+    preview = value[:1000].replace("\n", " ")
+    raise ValueError(
+        "evaluator final text did not contain a valid quality-evaluation "
+        f"JSON object; preview={preview!r}"
+    )
+
+
 def validate_assessment(candidate, assessment):
     if assessment.get("kind") != "code-localization-quality-evaluation":
         raise ValueError("unexpected evaluation kind")
@@ -256,7 +288,7 @@ def finalize(candidate, raw_jsonl, subject_root, model):
         raw_jsonl,
         Path(subject_root),
     )
-    assessment = json.loads(strip_json_fence(final_text))
+    assessment = parse_assessment_text(final_text)
     validate_assessment(candidate, assessment)
 
     assessment["overall_score"] = weighted_score(
