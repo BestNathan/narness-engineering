@@ -525,6 +525,14 @@ def main() -> int:
             if result["exit_code"] != 0:
                 raise RuntimeError("fixture preflight failed")
 
+        # Freeze the dependency surface before the agent starts. The Claude
+        # adapter over-mounts exactly these trees read-only. Validation must
+        # never discover new dependency directories from agent-controlled state.
+        trusted_dependency_mounts = collect_dependency_mounts(worktree)
+        record["environment"]["validation_dependency_mounts"] = [
+            relative.as_posix() for _, relative in trusted_dependency_mounts
+        ]
+
         prompt = task["prompt"].strip() + "\n"
         prompt_path = run_dir / "prompt.txt"
         prompt_path.write_text(prompt, encoding="utf-8")
@@ -581,10 +589,7 @@ def main() -> int:
         final_diff = run_dir / "final.diff"
         final_diff.write_text(diff["stdout"], encoding="utf-8")
 
-        dependency_mounts = collect_dependency_mounts(worktree)
-        record["environment"]["validation_dependency_mounts"] = [
-            relative.as_posix() for _, relative in dependency_mounts
-        ]
+        dependency_mounts = trusted_dependency_mounts
 
         # Fetch hidden oracle bytes only in the trusted controller. They are
         # written into disposable validation checkouts, never the agent checkout.
