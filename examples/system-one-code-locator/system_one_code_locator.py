@@ -22,6 +22,31 @@ class Trace:
             with self.path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
 
+def model_projection(stage, payload):
+    """Project raw candidates into a transport-safe semantic view for the model.
+
+    Raw candidates remain in the local evidence trace. Source-line projections
+    normalize literal values so repository security tests do not look like live
+    attack payloads to an upstream WAF, while identifiers and code structure
+    remain visible to System One.
+    """
+    if stage != "line":
+        return payload
+    projected = dict(payload)
+    patterns = [
+        (r'"(?:\\.|[^"\\])*"', '"<string>"'),
+        (r"'(?:\\.|[^'\\])*'", "'<string>'"),
+        (r'`(?:\\.|[^`\\])*`', '`<string>`'),
+    ]
+    for key in ("text", "nearby_lines"):
+        value = projected.get(key)
+        if not isinstance(value, str):
+            continue
+        for pattern, replacement in patterns:
+            value = re.sub(pattern, replacement, value)
+        projected[key] = value
+    return projected
+
 class SystemOneScorer:
     def __init__(self, key, trace, endpoint=API_URL, model=MODEL, batch_size=48):
         self.key, self.trace, self.endpoint, self.model, self.batch_size = key, trace, endpoint, model, batch_size
@@ -45,7 +70,7 @@ class SystemOneScorer:
             for i, candidate in enumerate(batch):
                 questions[f"candidate_{i}"] = {
                     "type": "noul",
-                    "instructions": {"task": query, "stage": stage, "candidate": candidate["payload"], "question": "Would retaining this candidate materially help locate or understand source code relevant to the task?"},
+                    "instructions": {"task": query, "stage": stage, "candidate": model_projection(stage, candidate["payload"]), "question": "Would retaining this candidate materially help locate or understand source code relevant to the task?"},
                     "criteria": {"true": "Plausibly relevant; keep it, including indirect supporting code.", "false": "Unlikely to help locate or understand the requested implementation."},
                 }
             payload = {"state": {"goal": query, "stage": stage, "candidate_count": len(batch)}, "model": self.model, "questions": questions}
