@@ -214,7 +214,7 @@ jobs:
 
   typesafe:
     name: Real TypeSafe code-locator experiment
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_typesafe) || (github.event_name == 'push' && github.ref_name == 'fix/code-locator-three-stage-requests') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_typesafe }}
     runs-on: ubuntu-24.04
     environment: typesafe
     timeout-minutes: 120
@@ -230,8 +230,8 @@ jobs:
       - name: Checkout subject repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.subject_repository || 'BestNathan/nession' }}
-          ref: ${{ inputs.subject_ref || 'staging' }}
+          repository: ${{ inputs.subject_repository }}
+          ref: ${{ inputs.subject_ref }}
           path: subject
           fetch-depth: 1
           persist-credentials: false
@@ -254,8 +254,8 @@ jobs:
 
       - name: Save run manifest
         env:
-          SUBJECT_REPOSITORY: ${{ inputs.subject_repository || 'BestNathan/nession' }}
-          SUBJECT_REF: ${{ inputs.subject_ref || 'staging' }}
+          SUBJECT_REPOSITORY: ${{ inputs.subject_repository }}
+          SUBJECT_REF: ${{ inputs.subject_ref }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           HARNESS_SHA: ${{ github.sha }}
