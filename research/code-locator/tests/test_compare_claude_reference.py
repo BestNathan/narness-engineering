@@ -68,6 +68,9 @@ class CompareClaudeReferenceTest(unittest.TestCase):
         self.assertEqual(1.0, report["metrics"]["primary_evidence_recall"])
         self.assertEqual(0.5, report["metrics"]["evidence_reference_precision_proxy"])
         self.assertEqual(1.0, report["metrics"]["shared_file_range_overlap_rate"])
+        self.assertEqual(0.5, report["metrics"]["reference_evidence_region_recall"])
+        self.assertEqual(1.0, report["metrics"]["primary_evidence_region_recall"])
+        self.assertEqual(0.5, report["metrics"]["reference_evidence_line_coverage"])
         self.assertEqual(
             ["src/b.py"],
             report["agreement"]["claude_missed_by_evidence"],
