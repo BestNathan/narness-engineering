@@ -344,6 +344,9 @@ jobs:
           Scores are self-assessments from 0 to 1, not calibrated probabilities.
           Do not add or remove files. Do not add or remove evidence ranges.
           Do not change paths or line numbers. Do not perform localization again.
+          The top-level "files" array is REQUIRED even when you are uncertain.
+          It must contain exactly {len(draft.get("files", []))} entries, one for
+          every draft file in the same order. Never return only "overall".
 
           IMMUTABLE LOCALIZATION DRAFT:
           {immutable}
@@ -391,6 +394,7 @@ jobs:
             --output-summary artifacts/claude-reference/confidence-summary.md
 
       - name: Upload Claude trace and result
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: code-locator-cross-trace-claude-${{ github.run_id }}
