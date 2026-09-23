@@ -98,19 +98,21 @@ class SystemOneScorer:
         if not candidates:
             return [], usage
 
-        state_candidates = [
-            model_projection(stage, candidate["payload"])
-            for candidate in candidates
-        ]
         questions = {
             f"candidate_{i}": {
                 "type": "noul",
-                "instructions": (
-                    f"Should `candidates[{i}]` be retained for `goal` "
-                    "under `policy`?"
-                ),
+                "instructions": {
+                    "candidate": model_projection(
+                        stage,
+                        candidate["payload"],
+                    ),
+                    "question": (
+                        "Should `candidate` be retained for `goal` "
+                        "under `policy`?"
+                    ),
+                },
             }
-            for i in range(len(candidates))
+            for i, candidate in enumerate(candidates)
         }
 
         payload = {
@@ -128,7 +130,6 @@ class SystemOneScorer:
                         "implementation."
                     ),
                 },
-                "candidates": state_candidates,
             },
             "model": self.model,
             "questions": questions,
