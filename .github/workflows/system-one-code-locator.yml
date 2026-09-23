@@ -1,0 +1,332 @@
+name: system-one-code-locator-experiment
+
+on:
+  push:
+    paths:
+      - "examples/system-one-code-locator/**"
+      - "docs/topics/system-one-progressive-action-space/research/code-localization.md"
+      - "docs/topics/system-one-progressive-action-space/research/nession-websocket-pilot-2026-09-23.md"
+      - ".github/workflows/system-one-code-locator.yml"
+  pull_request:
+    paths:
+      - "examples/system-one-code-locator/**"
+      - "docs/topics/system-one-progressive-action-space/research/code-localization.md"
+      - "docs/topics/system-one-progressive-action-space/research/nession-websocket-pilot-2026-09-23.md"
+      - ".github/workflows/system-one-code-locator.yml"
+  workflow_dispatch:
+    inputs:
+      subject_repository:
+        description: Repository used by the code-localization experiment
+        required: true
+        default: BestNathan/nession
+        type: string
+      subject_ref:
+        description: Git ref of the subject repository
+        required: true
+        default: staging
+        type: string
+      query:
+        description: Code-localization task
+        required: true
+        default: Help me optimize the websocket connection implementation
+        type: string
+      directory_threshold:
+        description: Directory Noul threshold
+        required: true
+        default: "0.35"
+        type: string
+      file_threshold:
+        description: File Noul threshold
+        required: true
+        default: "0.50"
+        type: string
+      line_threshold:
+        description: Source-line Noul threshold
+        required: true
+        default: "0.70"
+        type: string
+      batch_size:
+        description: Noul questions per TypeSafe request
+        required: true
+        default: "48"
+        type: string
+      model:
+        description: TypeSafe model alias
+        required: true
+        default: jev-latest
+        type: string
+      run_typesafe:
+        description: Run the real TypeSafe System One experiment
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: system-one-code-locator-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  QUERY: ${{ inputs.query || 'Help me optimize the websocket connection implementation' }}
+  DIRECTORY_THRESHOLD: ${{ inputs.directory_threshold || '0.35' }}
+  FILE_THRESHOLD: ${{ inputs.file_threshold || '0.50' }}
+  LINE_THRESHOLD: ${{ inputs.line_threshold || '0.70' }}
+  BATCH_SIZE: ${{ inputs.batch_size || '48' }}
+  TYPESAFE_MODEL: ${{ inputs.model || vars.TYPESAFE_MODEL || 'jev-latest' }}
+
+jobs:
+  offline:
+    name: Offline code-locator validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Prepare artifact directory
+        run: mkdir -p artifacts/system-one-code-locator/offline
+
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -m unittest discover             -s examples/system-one-code-locator             -p 'test_*.py'             -v 2>&1 | tee artifacts/system-one-code-locator/offline/tests.log
+
+      - name: Run deterministic fixture experiment
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 examples/system-one-code-locator/system_one_code_locator.py             examples/system-one-code-locator/fixtures/repository             "$QUERY"             --offline-decider             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold 0.60             --batch-size "$BATCH_SIZE"             --trace-file artifacts/system-one-code-locator/offline/trace.jsonl             --output-json artifacts/system-one-code-locator/offline/result.json             2>&1 | tee artifacts/system-one-code-locator/offline/run.log
+
+      - name: Save run metadata and summary
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          COMMIT_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("artifacts/system-one-code-locator/offline")
+          result = json.loads((root / "result.json").read_text())
+
+          metadata = {
+              "schema_version": 1,
+              "mode": "offline",
+              "query": os.environ["QUERY"],
+              "model": "offline-lexical-fixture",
+              "thresholds": {
+                  "directory": float(os.environ["DIRECTORY_THRESHOLD"]),
+                  "file": float(os.environ["FILE_THRESHOLD"]),
+                  "line": 0.60,
+              },
+              "batch_size": int(os.environ["BATCH_SIZE"]),
+              "github_run_id": os.environ["RUN_ID"],
+              "github_run_attempt": os.environ["RUN_ATTEMPT"],
+              "commit_sha": os.environ["COMMIT_SHA"],
+              "ref_name": os.environ["REF_NAME"],
+          }
+          (root / "run-manifest.json").write_text(
+              json.dumps(metadata, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          lines = [
+              "# System One Code Locator — offline fixture",
+              "",
+              f"- Query: `{metadata['query']}`",
+              f"- Directories: {len(result.get('directories', []))}",
+              f"- Files: {len(result.get('files', []))}",
+              f"- Snippets: {len(result.get('snippets', []))}",
+              f"- Metrics: `{result.get('metrics', {})}`",
+          ]
+          (root / "summary.md").write_text("\n".join(lines) + "\n")
+          PY
+
+      - name: Publish summary
+        if: always()
+        run: |
+          if test -f artifacts/system-one-code-locator/offline/summary.md; then
+            cat artifacts/system-one-code-locator/offline/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload offline experiment artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-one-code-locator-offline-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/system-one-code-locator/offline/
+          if-no-files-found: error
+          retention-days: 90
+
+  typesafe:
+    name: Real TypeSafe code-locator experiment
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_typesafe }}
+    runs-on: ubuntu-24.04
+    environment: typesafe
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout Narness harness
+        uses: actions/checkout@v4
+        with:
+          path: narness
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout subject repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.subject_repository }}
+          ref: ${{ inputs.subject_ref }}
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Require TypeSafe credentials
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
+        run: |
+          test -n "$TYPESAFE_API_KEY" || {
+            echo "TYPESAFE_API_KEY is required in the typesafe environment." >&2
+            exit 2
+          }
+
+      - name: Prepare artifact directory
+        run: mkdir -p artifacts/system-one-code-locator/typesafe
+
+      - name: Save run manifest
+        env:
+          SUBJECT_REPOSITORY: ${{ inputs.subject_repository }}
+          SUBJECT_REF: ${{ inputs.subject_ref }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          HARNESS_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          def revision(path):
+              return subprocess.check_output(
+                  ["git", "-C", path, "rev-parse", "HEAD"],
+                  text=True,
+              ).strip()
+
+          payload = {
+              "schema_version": 1,
+              "mode": "typesafe",
+              "query": os.environ["QUERY"],
+              "model": os.environ["TYPESAFE_MODEL"],
+              "thresholds": {
+                  "directory": float(os.environ["DIRECTORY_THRESHOLD"]),
+                  "file": float(os.environ["FILE_THRESHOLD"]),
+                  "line": float(os.environ["LINE_THRESHOLD"]),
+              },
+              "batch_size": int(os.environ["BATCH_SIZE"]),
+              "harness": {
+                  "repository": os.environ.get("GITHUB_REPOSITORY"),
+                  "revision": revision("narness"),
+              },
+              "subject": {
+                  "repository": os.environ["SUBJECT_REPOSITORY"],
+                  "requested_ref": os.environ["SUBJECT_REF"],
+                  "revision": revision("subject"),
+              },
+              "github_run_id": os.environ["RUN_ID"],
+              "github_run_attempt": os.environ["RUN_ATTEMPT"],
+          }
+          root = Path("artifacts/system-one-code-locator/typesafe")
+          (root / "run-manifest.json").write_text(
+              json.dumps(payload, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Run real System One code locator
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
+          TYPESAFE_API_URL: ${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 narness/examples/system-one-code-locator/system_one_code_locator.py             subject             "$QUERY"             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold "$LINE_THRESHOLD"             --batch-size "$BATCH_SIZE"             --model "$TYPESAFE_MODEL"             --trace-file artifacts/system-one-code-locator/typesafe/trace.jsonl             --output-json artifacts/system-one-code-locator/typesafe/result.json             2>&1 | tee artifacts/system-one-code-locator/typesafe/run.log
+
+      - name: Build research summary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("artifacts/system-one-code-locator/typesafe")
+          manifest_path = root / "run-manifest.json"
+          result_path = root / "result.json"
+
+          lines = ["# System One Code Locator — TypeSafe run", ""]
+
+          if manifest_path.exists():
+              manifest = json.loads(manifest_path.read_text())
+              lines += [
+                  f"- Subject: `{manifest['subject']['repository']}@{manifest['subject']['revision']}`",
+                  f"- Query: `{manifest['query']}`",
+                  f"- Model: `{manifest['model']}`",
+                  f"- Thresholds: `{manifest['thresholds']}`",
+                  "",
+              ]
+
+          if result_path.exists():
+              result = json.loads(result_path.read_text())
+              lines += [
+                  "## Result",
+                  "",
+                  f"- Directories: {len(result.get('directories', []))}",
+                  f"- Files: {len(result.get('files', []))}",
+                  f"- Snippets: {len(result.get('snippets', []))}",
+                  f"- Metrics: `{result.get('metrics', {})}`",
+                  "",
+                  "### Selected files",
+                  "",
+              ]
+              lines += [
+                  f"- `{item['id']}` ({item['score']:.3f})"
+                  for item in result.get("files", [])
+              ]
+          else:
+              lines += [
+                  "## Result",
+                  "",
+                  "The experiment did not produce result.json. Inspect run.log and trace.jsonl.",
+              ]
+
+          summary = "\n".join(lines) + "\n"
+          (root / "summary.md").write_text(summary)
+          with open(Path(os.environ["GITHUB_STEP_SUMMARY"]), "a") as handle:
+              handle.write(summary)
+          PY
+        env:
+          PYTHONUNBUFFERED: "1"
+
+      - name: Upload TypeSafe experiment artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-one-code-locator-typesafe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/system-one-code-locator/typesafe/
+          if-no-files-found: warn
+          retention-days: 90
