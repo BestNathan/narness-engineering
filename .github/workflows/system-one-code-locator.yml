@@ -272,6 +272,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
 
           root = Path("artifacts/system-one-code-locator/typesafe")
