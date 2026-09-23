@@ -185,9 +185,15 @@ print('fixed-provider gateway, model filter, streaming and credential isolation:
     # confused-deputy boundary for Claude's Bash tool.
     dependency_probe = r'''
 import shutil
-required = ['rg', 'bwrap', 'socat', 'srt']
+import subprocess
+required = ['which', 'rg', 'bwrap', 'socat', 'srt']
 missing = [name for name in required if shutil.which(name) is None]
 assert not missing, f'outer sandbox hides nested dependencies: {missing}'
+for name in ('rg', 'bwrap', 'socat'):
+    resolved = subprocess.run(
+        ['which', name], text=True, capture_output=True, check=False)
+    assert resolved.returncode == 0 and resolved.stdout.strip(), (
+        name, resolved.returncode, resolved.stderr)
 print('outer namespace nested-sandbox dependencies: PASS')
 '''
     p = adapter.sandbox_launch(
