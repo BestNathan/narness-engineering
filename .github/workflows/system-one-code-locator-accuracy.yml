@@ -96,7 +96,8 @@ jobs:
             --observation-threshold 0.65 \
             --model "$TYPESAFE_MODEL" \
             --trace-file artifacts/system-one/trace.jsonl \
-            --output-json artifacts/system-one/result.json
+            --output-json artifacts/system-one/result.json \
+            --output-localization-json artifacts/system-one/localization-result.json
           python3 - <<'PY'
           import json, os
           from pathlib import Path
@@ -194,26 +195,37 @@ jobs:
           Do not modify any file. Do not use git history, GitHub issues, the network, or external context.
           Search and read enough source code to identify the files and exact code regions that materially matter to the task.
 
-          Your final answer MUST be only valid JSON, with no Markdown fences, in this schema:
+          Your final answer MUST be only valid JSON, with no Markdown fences, in this canonical schema:
           {{
+            "schema_version": 1,
+            "kind": "code-localization-result",
             "task": {query!r},
+            "producer": {{
+              "system": "claude_code",
+              "model": "{os.environ['CLAUDE_MODEL']}",
+              "confidence_semantics": "model_self_assessment"
+            }},
             "summary": "short description of the implementation areas that matter",
-            "confidence": "high|medium|low",
-            "relevant_files": [
+            "confidence": 0.0,
+            "files": [
               {{
                 "path": "repository-relative/path",
-                "relevance": "primary|supporting|context",
-                "reason": "why this file matters",
+                "role": "primary|supporting|context",
+                "confidence": 0.0,
+                "reason": "why this file is valuable to the task",
                 "evidence": [
                   {{
                     "start_line": 1,
                     "end_line": 20,
-                    "description": "what relevant implementation is in this range"
+                    "confidence": 0.0,
+                    "reason": "what valuable implementation is in this range"
                   }}
                 ]
               }}
             ]
           }}
+
+          Confidence values must be numbers between 0 and 1. They are your own self-assessment, not calibrated probabilities.
 
           Definitions:
           - primary: directly implements websocket connection lifecycle, connection establishment, reconnect/backoff, websocket server/client behavior, or the core transport path relevant to the task.
@@ -221,7 +233,7 @@ jobs:
           - context: useful surrounding wiring, but not core implementation.
 
           Requirements:
-          - Rank relevant_files from most to least relevant.
+          - Rank files from most to least relevant.
           - Include only repository-relative file paths.
           - Include files only after inspecting their contents.
           - Ground each primary/supporting file with at least one concrete line range.
@@ -265,7 +277,7 @@ jobs:
             --query "$QUERY" \
             --model "$CLAUDE_MODEL" \
             --subject-sha "${{ needs.resolve-subject.outputs.subject_sha }}" \
-            --output-reference artifacts/claude-reference/reference.json \
+            --output-reference artifacts/claude-reference/localization-result.json \
             --output-trace artifacts/claude-reference/execution-path.json \
             --output-manifest artifacts/claude-reference/manifest.json \
             --output-summary artifacts/claude-reference/execution-summary.md
@@ -311,7 +323,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts/comparison
-          python3 research/code-locator/src/compare_claude_reference.py             --system-one artifacts/system-one/result.json             --claude artifacts/claude-reference/reference.json             --output-json artifacts/comparison/comparison.json             --output-markdown artifacts/comparison/summary.md
+          python3 research/code-locator/src/compare_localization_results.py \
+            --left artifacts/system-one/localization-result.json \
+            --right artifacts/claude-reference/localization-result.json \
+            --output-json artifacts/comparison/comparison.json \
+            --output-markdown artifacts/comparison/summary.md
           cat artifacts/comparison/summary.md >> "$GITHUB_STEP_SUMMARY"
           if test -f artifacts/claude-reference/execution-summary.md; then
             printf '\n' >> "$GITHUB_STEP_SUMMARY"
