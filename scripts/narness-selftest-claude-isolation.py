@@ -222,9 +222,19 @@ print('outer namespace nested-sandbox dependencies: PASS')
             'allowWrite': ['.'],
             'denyWrite': [],
         },
+        'credentials': {
+            'envVars': [
+                {'name': 'ANTHROPIC_API_KEY', 'mode': 'deny'},
+                {'name': 'ANTHROPIC_AUTH_TOKEN', 'mode': 'deny'},
+                {'name': 'ANTHROPIC_BASE_URL', 'mode': 'deny'},
+            ],
+        },
     }))
     bash_probe = r'''
-import socket
+import os, socket
+assert 'ANTHROPIC_API_KEY' not in os.environ
+assert 'ANTHROPIC_AUTH_TOKEN' not in os.environ
+assert 'ANTHROPIC_BASE_URL' not in os.environ
 for kind, target in [
     ('tcp', ('127.0.0.1', 18080)),
     ('unix', '/run/provider.sock'),
