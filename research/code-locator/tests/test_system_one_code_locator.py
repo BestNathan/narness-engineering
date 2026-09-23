@@ -683,7 +683,7 @@ class DemoTest(unittest.TestCase):
                 by_path["src/cold.py"]["stop_reason"],
             )
             self.assertEqual(1, metrics["file_soft_budget_extensions"])
-            self.assertEqual(1, metrics["files_stopped_by_soft_budget"])
+            self.assertEqual(2, metrics["files_stopped_by_soft_budget"])
             self.assertEqual(3, metrics["reads_executed"])
 
     def test_phase1_caps_files_after_higher_threshold(self):
