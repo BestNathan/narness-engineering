@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
-"""System One progressive code-localization research demo."""
+"""System One two-phase progressive code-localization research demo."""
 from __future__ import annotations
-import argparse, json, os, re, sys, time, urllib.error, urllib.request
+
+import argparse
+import json
+import os
+import re
+import sys
+import time
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -12,72 +20,109 @@ MAX_REQUEST_ATTEMPTS = 5
 IGNORE = {".git", ".idea", ".vscode", ".venv", "node_modules", "target", "dist", "build", "__pycache__"}
 SUFFIXES = {".py", ".rs", ".go", ".java", ".ts", ".tsx", ".js", ".jsx", ".vue", ".proto", ".sql", ".sh", ".yaml", ".yml", ".toml", ".md"}
 
+DEFAULT_DIRECTORY_THRESHOLD = 0.50
+DEFAULT_FILE_THRESHOLD = 0.65
+DEFAULT_PHASE1_MAX_FILES = 16
+
+DEFAULT_READER_FILE_BATCH_SIZE = 4
+DEFAULT_READER_WINDOW_LINES = 140
+DEFAULT_READER_MAX_ROUNDS = 4
+DEFAULT_READER_ACTION_THRESHOLD = 0.40
+DEFAULT_OBSERVATION_THRESHOLD = 0.65
+MAX_ACTIONS_PER_FILE = 4
+
+
 class Trace:
     def __init__(self, path):
         self.path = Path(path) if path else None
         if self.path:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.path.write_text("")
+
     def emit(self, event, **data):
-        if self.path:
-            record = {"timestamp": datetime.now(timezone.utc).isoformat(), "event": event, **data}
-            with self.path.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+        if not self.path:
+            return
+        record = {"timestamp": datetime.now(timezone.utc).isoformat(), "event": event, **data}
+        with self.path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
 
-def model_projection(stage, payload):
-    """Project raw candidates into a transport-safe semantic view for the model.
 
-    Raw candidates remain in the local evidence trace. Source projections
-    normalize literal values so repository security tests do not look like live
-    attack payloads to an upstream WAF, while identifiers and code structure
-    remain visible to System One.
-    """
-    if stage not in {"line", "region", "symbol"}:
-        return payload
-    projected = dict(payload)
+def empty_usage():
+    return {"model_calls": 0, "input_tokens": 0, "output_tokens": 0}
+
+
+def merge_usage(total, current):
+    for key in total:
+        total[key] += int(current.get(key, 0) or 0)
+
+
+def sanitize_source(value):
+    if not isinstance(value, str):
+        return value
     patterns = [
         (r'"(?:\\.|[^"\\])*"', '"<string>"'),
         (r"'(?:\\.|[^'\\])*'", "'<string>'"),
-        (r'`(?:\\.|[^`\\])*`', '`<string>`'),
     ]
-    for key in ("text", "nearby_lines"):
-        value = projected.get(key)
-        if not isinstance(value, str):
-            continue
-        for pattern, replacement in patterns:
-            value = re.sub(pattern, replacement, value)
-        projected[key] = value
-    declarations = projected.get("declarations")
-    if isinstance(declarations, list):
-        normalized = []
-        for value in declarations:
-            if not isinstance(value, str):
-                continue
-            for pattern, replacement in patterns:
-                value = re.sub(pattern, replacement, value)
-            normalized.append(value)
-        projected["declarations"] = normalized
-    signature = projected.get("signature")
-    if isinstance(signature, str):
-        for pattern, replacement in patterns:
-            signature = re.sub(pattern, replacement, signature)
-        projected["signature"] = signature
-    return projected
+    for pattern, replacement in patterns:
+        value = re.sub(pattern, replacement, value)
+    return value
 
-class SystemOneScorer:
-    def __init__(self, key, trace, endpoint=API_URL, model=MODEL, batch_size=None):
-        self.key, self.trace, self.endpoint, self.model = key, trace, endpoint, model
-        # batch_size is accepted for backward compatibility only. System One
-        # evaluates all independent questions for a stage in one request.
-        self.deprecated_batch_size = batch_size
 
-    def _request(self, payload):
+def reader_model_state(state):
+    return {
+        "goal": state["goal"],
+        "phase": "progressive_reader",
+        "batch_index": state["batch_index"],
+        "round": state["round"],
+        "files": [
+            {
+                "path": item["path"],
+                "phase1_score": item["phase1_score"],
+                "stat": item["stat"],
+                "coverage": item["coverage"],
+                "stopped": item["stopped"],
+                "stop_reason": item.get("stop_reason"),
+            }
+            for item in state["files"]
+        ],
+        "observations": [
+            {
+                "id": item["id"],
+                "path": item["path"],
+                "start_line": item["start_line"],
+                "end_line": item["end_line"],
+                "content": sanitize_source(item["content"]),
+                "relevance": item.get("relevance"),
+                "action_probability": item.get("action_probability"),
+            }
+            for item in state["observations"]
+        ],
+        "policy": (
+            "Read observations are part of state. Use prior content and coverage "
+            "to choose the next information-gathering action."
+        ),
+    }
+
+
+class SystemOneDecider:
+    def __init__(self, key, trace, endpoint=API_URL, model=MODEL):
+        self.key = key
+        self.trace = trace
+        self.endpoint = endpoint
+        self.model = model
+
+    def request(self, payload):
         body = json.dumps(payload).encode()
         for attempt in range(MAX_REQUEST_ATTEMPTS):
-            req = urllib.request.Request(self.endpoint, data=body, method="POST", headers={"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"})
+            request = urllib.request.Request(
+                self.endpoint,
+                data=body,
+                method="POST",
+                headers={"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"},
+            )
             try:
-                with urllib.request.urlopen(req, timeout=60) as resp:
-                    return json.loads(resp.read().decode())
+                with urllib.request.urlopen(request, timeout=60) as response:
+                    return json.loads(response.read().decode())
             except urllib.error.HTTPError as exc:
                 detail = exc.read().decode(errors="replace")
                 retryable = exc.code in TRANSIENT_HTTP_STATUS
@@ -93,742 +138,827 @@ class SystemOneScorer:
                 self.trace.emit("system_one_retry", status="transport", attempt=attempt + 1, delay_seconds=delay)
                 time.sleep(delay)
 
-    def score(self, query, stage, candidates):
-        usage = {"model_calls": 0, "input_tokens": 0, "output_tokens": 0}
-        if not candidates:
-            return [], usage
-
-        questions = {}
-        for i, candidate in enumerate(candidates):
-            questions[f"candidate_{i}"] = {
-                "type": "noul",
-                "instructions": {
-                    "task": query,
-                    "stage": stage,
-                    "candidate": model_projection(
-                        stage,
-                        candidate["payload"],
-                    ),
-                    "question": (
-                        "Would retaining this candidate materially help "
-                        "locate or understand source code relevant to the task?"
-                    ),
-                },
-                "criteria": {
-                    "true": (
-                        "Plausibly relevant; keep it, including indirect "
-                        "supporting code."
-                    ),
-                    "false": (
-                        "Unlikely to help locate or understand the requested "
-                        "implementation."
-                    ),
-                },
-            }
-
-        payload = {
-            "state": {
-                "goal": query,
-                "stage": stage,
-                "candidate_count": len(candidates),
-            },
-            "model": self.model,
-            "questions": questions,
-        }
-        request_bytes = len(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+    def send(self, stage, state, questions):
+        payload = {"state": state, "model": self.model, "questions": questions}
         self.trace.emit(
             "system_one_request",
             stage=stage,
-            request_index=0,
-            candidate_count=len(candidates),
-            candidate_ids=[x["id"] for x in candidates],
-            request_bytes=request_bytes,
+            request_bytes=len(json.dumps(payload, ensure_ascii=False).encode("utf-8")),
+            question_count=len(questions),
             request=payload,
         )
         started = time.perf_counter()
-        response = self._request(payload)
-        latency = round((time.perf_counter() - started) * 1000, 3)
-
-        u = response.get("usage", {})
-        usage["model_calls"] = 1
-        usage["input_tokens"] = int(u.get("input_tokens", 0) or 0)
-        usage["output_tokens"] = int(u.get("output_tokens", 0) or 0)
-
-        out, scores = [], []
-        answers = response.get("answers", {})
-        for i, candidate in enumerate(candidates):
-            answer = answers.get(f"candidate_{i}", {})
-            if answer.get("type") != "noul":
-                raise RuntimeError(f"unexpected answer for candidate_{i}: {answer!r}")
-            item = {**candidate, "score": float(answer["noul"])}
-            out.append(item)
-            scores.append({"id": item["id"], "score": item["score"]})
-
+        response = self.request(payload)
+        latency_ms = round((time.perf_counter() - started) * 1000, 3)
+        raw_usage = response.get("usage", {})
         self.trace.emit(
             "system_one_response",
             stage=stage,
-            request_index=0,
-            candidate_count=len(candidates),
-            latency_ms=latency,
+            latency_ms=latency_ms,
             model=response.get("model"),
-            usage=u,
-            scores=scores,
+            usage=raw_usage,
+            answers=response.get("answers", {}),
         )
-        return sorted(out, key=lambda x: (-x["score"], x["id"])), usage
+        return response, {
+            "model_calls": 1,
+            "input_tokens": int(raw_usage.get("input_tokens", 0) or 0),
+            "output_tokens": int(raw_usage.get("output_tokens", 0) or 0),
+        }
 
-class OfflineScorer:
+    def score_candidates(self, query, stage, candidates):
+        if not candidates:
+            return [], empty_usage()
+        questions = {}
+        for index, candidate in enumerate(candidates):
+            questions[f"candidate_{index}"] = {
+                "type": "noul",
+                "instructions": {
+                    "task": query,
+                    "candidate": candidate["payload"],
+                    "question": (
+                        "Would retaining this candidate materially help locate "
+                        "source code relevant to the task?"
+                    ),
+                },
+                "criteria": {
+                    "true": "Likely to contain or directly lead to implementation evidence.",
+                    "false": "Unlikely to help locate the requested implementation.",
+                },
+            }
+        response, usage = self.send(
+            stage,
+            {"goal": query, "phase": "file_locator", "candidate_count": len(candidates)},
+            questions,
+        )
+        answers = response.get("answers", {})
+        scored = []
+        for index, candidate in enumerate(candidates):
+            answer = answers.get(f"candidate_{index}", {})
+            if answer.get("type") != "noul":
+                raise RuntimeError(f"unexpected candidate answer: {answer!r}")
+            scored.append({**candidate, "score": float(answer["noul"])})
+        scored.sort(key=lambda item: (-item["score"], item["id"]))
+        return scored, usage
+
+    score = score_candidates
+
+    def choose_read_actions(self, query, state, action_sets):
+        """One Choice question per file, all files decided in one request."""
+        if not action_sets:
+            return [], empty_usage()
+
+        questions = {}
+        lookup = {}
+        for file_index, item in enumerate(action_sets):
+            question_id = f"file_{file_index}"
+            criteria = {}
+            option_lookup = {}
+            read_index = 0
+            for action in item["actions"]:
+                if action["kind"] == "stop_file":
+                    option = "stop"
+                    criteria[option] = {
+                        "action": "stop reading this file",
+                        "reason": "Current evidence is sufficient or another read is not justified.",
+                    }
+                else:
+                    option = f"read_{read_index}"
+                    read_index += 1
+                    criteria[option] = {
+                        "action": "read_file",
+                        "path": action["path"],
+                        "start_line": action["start_line"],
+                        "end_line": action["end_line"],
+                        "reason_available": action["reason"],
+                    }
+                option_lookup[option] = action
+
+            questions[question_id] = {
+                "type": "choice",
+                "instructions": {
+                    "task": query,
+                    "file": item["path"],
+                    "question": (
+                        "Choose the single next action most likely to increase useful "
+                        "information about the task. Use observations already in state. "
+                        "Choose stop when another read is not justified."
+                    ),
+                },
+                "criteria": criteria,
+            }
+            lookup[question_id] = option_lookup
+
+        response, usage = self.send("reader_action", reader_model_state(state), questions)
+        answers = response.get("answers", {})
+        decisions = []
+        for question_id, option_lookup in lookup.items():
+            answer = answers.get(question_id, {})
+            if answer.get("type") != "choice":
+                raise RuntimeError(f"unexpected read-action answer: {answer!r}")
+            choice = answer["choice"]
+            action = option_lookup.get(choice)
+            if action is None:
+                raise RuntimeError(f"unknown choice {choice!r} for {question_id}")
+            probabilities = answer.get("probabilities", {})
+            decisions.append({
+                "path": action["path"],
+                "action": action,
+                "choice": choice,
+                "probability": float(probabilities.get(choice, 0.0) or 0.0),
+                "confidence": float(answer.get("confidence", 0.0) or 0.0),
+                "probabilities": probabilities,
+            })
+        return decisions, usage
+
+    def score_observations(self, query, state, observation_ids):
+        """Observations are in state before this relevance request is made."""
+        if not observation_ids:
+            return {}, empty_usage()
+
+        questions = {}
+        for index, observation_id in enumerate(observation_ids):
+            questions[f"observation_{index}"] = {
+                "type": "noul",
+                "instructions": {
+                    "observation_id": observation_id,
+                    "question": (
+                        "In state.observations, find the observation whose id equals "
+                        "observation_id. Does that observed source content materially "
+                        "help answer the task?"
+                    ),
+                },
+                "criteria": {
+                    "true": "Contains relevant implementation evidence, behavior, dependencies, or strong clues.",
+                    "false": "Does not materially help answer the task.",
+                },
+            }
+
+        response, usage = self.send(
+            "observation_relevance",
+            reader_model_state(state),
+            questions,
+        )
+        answers = response.get("answers", {})
+        scores = {}
+        for index, observation_id in enumerate(observation_ids):
+            answer = answers.get(f"observation_{index}", {})
+            if answer.get("type") != "noul":
+                raise RuntimeError(f"unexpected observation answer: {answer!r}")
+            scores[observation_id] = float(answer["noul"])
+        return scores, usage
+
+
+class OfflineDecider:
+    """Deterministic fixture decider; not a model-quality simulation."""
+
     model = "offline-lexical-fixture"
-    def __init__(self, trace): self.trace = trace
-    def score(self, query, stage, candidates):
+
+    def __init__(self, trace):
+        self.trace = trace
+
+    def lexical_score(self, query, value):
         tokens = set(re.findall(r"[a-zA-Z][a-zA-Z0-9_]+", query.lower()))
-        if "websocket" in tokens: tokens |= {"ws", "socket", "connect", "connection", "reconnect"}
-        out = []
-        for c in candidates:
-            text = json.dumps(c["payload"]).lower(); hits = sum(t in text for t in tokens if len(t) >= 2)
-            score = 0.05 if hits == 0 else 0.62 if hits == 1 else 0.84 if hits == 2 else 0.96
-            out.append({**c, "score": score})
-        out.sort(key=lambda x: (-x["score"], x["id"])); self.trace.emit("offline_scores", stage=stage, scores=[{"id":x["id"],"score":x["score"]} for x in out])
-        return out, {"model_calls":0,"input_tokens":0,"output_tokens":0}
+        if "websocket" in tokens:
+            tokens |= {"ws", "socket", "connect", "connection", "reconnect"}
+        text = value.lower()
+        hits = sum(token in text for token in tokens if len(token) >= 2)
+        return 0.05 if hits == 0 else 0.68 if hits == 1 else 0.84 if hits == 2 else 0.96
+
+    def score_candidates(self, query, stage, candidates):
+        scored = [
+            {**candidate, "score": self.lexical_score(query, json.dumps(candidate["payload"]))}
+            for candidate in candidates
+        ]
+        scored.sort(key=lambda item: (-item["score"], item["id"]))
+        self.trace.emit(
+            "offline_scores",
+            stage=stage,
+            scores=[{"id": item["id"], "score": item["score"]} for item in scored],
+        )
+        return scored, empty_usage()
+
+    score = score_candidates
+
+    def choose_read_actions(self, query, state, action_sets):
+        decisions = []
+        for item in action_sets:
+            reads = [action for action in item["actions"] if action["kind"] != "stop_file"]
+            action = reads[0] if reads else item["actions"][-1]
+            probability = 0.95 if reads else 1.0
+            decisions.append({
+                "path": item["path"],
+                "action": action,
+                "choice": "offline",
+                "probability": probability,
+                "confidence": probability,
+                "probabilities": {},
+            })
+        self.trace.emit("offline_read_actions", decisions=decisions)
+        return decisions, empty_usage()
+
+    def score_observations(self, query, state, observation_ids):
+        by_id = {item["id"]: item for item in state["observations"]}
+        scores = {
+            observation_id: self.lexical_score(query, by_id[observation_id]["content"])
+            for observation_id in observation_ids
+        }
+        self.trace.emit("offline_observation_scores", scores=scores)
+        return scores, empty_usage()
+
 
 def directories(root):
-    root = Path(root).resolve(); out = []
-    for current, dirs, files in os.walk(root):
-        dirs[:] = sorted(d for d in dirs if d not in IGNORE and not d.startswith("."))
-        p = Path(current)
-        if p == root: continue
-        rel = p.relative_to(root).as_posix()
-        out.append({"id": rel, "payload": {"path": rel, "name": p.name, "child_directories": dirs[:24], "direct_files": sorted(f for f in files if not f.startswith("."))[:40]}})
+    root = Path(root).resolve()
+    out = []
+    for current, dirs, names in os.walk(root):
+        dirs[:] = sorted(item for item in dirs if item not in IGNORE and not item.startswith("."))
+        path = Path(current)
+        if path == root:
+            continue
+        rel = path.relative_to(root).as_posix()
+        out.append({
+            "id": rel,
+            "payload": {
+                "path": rel,
+                "name": path.name,
+                "child_directories": dirs[:24],
+                "direct_files": sorted(name for name in names if not name.startswith("."))[:40],
+            },
+        })
     return out
 
-def files(root, selected_dirs):
-    """Expose only direct source files from directories retained by stage one.
 
-    The directory stage already enumerates the full repository tree. Walking a
-    retained directory recursively here would re-introduce files that live
-    under child directories rejected by the directory stage and would make the
-    second frontier much larger than the semantic selection implies.
-    """
+def files(root, selected_dirs):
+    """Only direct files: stage-one directory pruning must not be undone."""
     root = Path(root).resolve()
     found = {}
-    for d in selected_dirs:
-        base = root / d["payload"]["path"]
+    for directory in selected_dirs:
+        base = root / directory["payload"]["path"]
         try:
-            entries = sorted(base.iterdir(), key=lambda p: p.name)
+            entries = sorted(base.iterdir(), key=lambda item: item.name)
         except OSError:
             continue
-        for p in entries:
-            if not p.is_file():
+        for path in entries:
+            if not path.is_file():
                 continue
-            name = p.name
-            if name.startswith(".") or p.suffix.lower() not in SUFFIXES:
+            if path.name.startswith(".") or path.suffix.lower() not in SUFFIXES:
                 continue
             try:
-                size = p.stat().st_size
+                size = path.stat().st_size
             except OSError:
                 continue
-            rel = p.relative_to(root).as_posix()
+            rel = path.relative_to(root).as_posix()
             found[rel] = {
                 "id": rel,
                 "payload": {
                     "path": rel,
-                    "directory": d["payload"]["path"],
-                    "filename": name,
-                    "extension": p.suffix.lower(),
+                    "directory": directory["payload"]["path"],
+                    "filename": path.name,
+                    "extension": path.suffix.lower(),
                     "size_bytes": size,
                 },
             }
-    return [found[k] for k in sorted(found)]
+    return [found[key] for key in sorted(found)]
 
-CONTROL_NAMES = {
-    "if", "for", "while", "switch", "catch", "match", "loop", "return",
-}
 
-def _detect_symbol(line, suffix):
-    stripped = line.strip()
-    if not stripped:
-        return None
-
-    patterns = []
-    if suffix == ".py":
-        patterns = [
-            ("class", r"^(?:@[^ ]+\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("function", r"^(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("),
-        ]
-    elif suffix == ".rs":
-        patterns = [
-            ("function", r"^(?:(?:pub(?:\([^)]*\))?|unsafe|async|const|extern(?:\s+\"[^\"]+\")?)\s+)*fn\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("struct", r"^(?:(?:pub(?:\([^)]*\))?)\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("enum", r"^(?:(?:pub(?:\([^)]*\))?)\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("trait", r"^(?:(?:pub(?:\([^)]*\))?)\s+)?trait\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("impl", r"^impl(?:<[^>]+>)?\s+(.+?)(?:\s+where\b|\s*\{)"),
-        ]
-    elif suffix == ".go":
-        patterns = [
-            ("function", r"^func\s+(?:\([^)]*\)\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\("),
-            ("type", r"^type\s+([A-Za-z_][A-Za-z0-9_]*)\s+(?:struct|interface)\b"),
-        ]
-    elif suffix in {".ts", ".tsx", ".js", ".jsx", ".vue"}:
-        patterns = [
-            ("class", r"^(?:(?:export|default|declare|abstract)\s+)*class\s+([A-Za-z_$][A-Za-z0-9_$]*)"),
-            ("interface", r"^(?:(?:export|default|declare)\s+)*interface\s+([A-Za-z_$][A-Za-z0-9_$]*)"),
-            ("type", r"^(?:(?:export|declare)\s+)*type\s+([A-Za-z_$][A-Za-z0-9_$]*)\b"),
-            ("function", r"^(?:(?:export|default)\s+)*(?:async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\("),
-            ("function", r"^(?:(?:export|declare)\s+)*(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=.*=>"),
-            ("method", r"^(?:(?:public|private|protected|static|async|readonly|override|abstract|get|set)\s+)*([A-Za-z_$][A-Za-z0-9_$]*)\s*(?:<[^>{}]+>)?\s*\([^;{}]*\)"),
-        ]
-    elif suffix == ".java":
-        patterns = [
-            ("class", r"^(?:(?:public|private|protected|abstract|final|static)\s+)*(?:class|interface|enum|record)\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("method", r"^(?:(?:public|private|protected|static|final|abstract|synchronized|native|default)\s+)*(?:<[^>]+>\s*)?(?:[A-Za-z_$][A-Za-z0-9_$.<>?, \[\]]+\s+)?([A-Za-z_$][A-Za-z0-9_$]*)\s*\([^;{}]*\)"),
-        ]
-    elif suffix == ".proto":
-        patterns = [
-            ("service", r"^service\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("message", r"^message\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("enum", r"^enum\s+([A-Za-z_][A-Za-z0-9_]*)"),
-            ("rpc", r"^rpc\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("),
-        ]
-    elif suffix == ".sh":
-        patterns = [
-            ("function", r"^(?:function\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(\)\s*\{?"),
-        ]
-    elif suffix == ".md":
-        match = re.match(r"^(#{1,6})\s+(.+?)\s*#*$", stripped)
-        if match:
-            return {
-                "kind": "section",
-                "name": match.group(2)[:120],
-                "heading_level": len(match.group(1)),
-            }
-        return None
-
-    for kind, pattern in patterns:
-        match = re.match(pattern, stripped)
-        if not match:
-            continue
-        name = match.group(1).strip()
-        if name.lower() in CONTROL_NAMES:
-            continue
-        return {"kind": kind, "name": name[:120]}
-    return None
-
-def _normalized_code(line):
-    line = re.sub(r'"(?:\\.|[^"\\])*"', '""', line)
-    line = re.sub(r"'(?:\\.|[^'\\])*'", "''", line)
-    line = re.sub(r"`(?:\\.|[^`\\])*`", "``", line)
-    line = line.split("//", 1)[0]
-    return line
-
-def _brace_symbol_end(source, start0):
-    depth = 0
-    opened = False
-    scan_end = min(len(source), start0 + 800)
-    for index in range(start0, scan_end):
-        code = _normalized_code(source[index])
-        for ch in code:
-            if ch == "{":
-                depth += 1
-                opened = True
-            elif ch == "}" and opened:
-                depth -= 1
-                if depth <= 0:
-                    return index + 1
-        if not opened and index > start0 + 12:
-            break
-    return start0 + 1
-
-def _python_symbol_end(source, start0):
-    line = source[start0]
-    indent = len(line) - len(line.lstrip())
-    end = start0 + 1
-    for index in range(start0 + 1, len(source)):
-        stripped = source[index].strip()
-        if not stripped or stripped.startswith("#"):
-            end = index + 1
-            continue
-        current_indent = len(source[index]) - len(source[index].lstrip())
-        if current_indent <= indent:
-            break
-        end = index + 1
-    return end
-
-def _markdown_symbol_end(source, start0, level):
-    end = len(source)
-    for index in range(start0 + 1, len(source)):
-        match = re.match(r"^\\s*(#{1,6})\\s+", source[index])
-        if match and len(match.group(1)) <= level:
-            return index
-    return end
-
-def _symbol_signature(source, start0, max_lines=6):
-    parts = []
-    for index in range(start0, min(len(source), start0 + max_lines)):
-        stripped = source[index].strip()
-        if stripped:
-            parts.append(stripped)
-        joined = " ".join(parts)
-        if (
-            "{" in stripped
-            or stripped.endswith(":")
-            or stripped.endswith(";")
-            or "=>" in stripped
-        ):
-            break
-    return " ".join(parts)[:420]
-
-def symbols(root, file):
-    """Expose semantic source structure without disclosing function bodies.
-
-    Selected files are scanned locally to build an outline. System One sees
-    only symbol kind/name/signature and source ranges; full source is read into
-    the final result only for symbols retained by the third-stage decision.
-    """
+def source_stat(root, file):
+    """Metadata for action generation. File body is not exposed to the model."""
     path = Path(root).resolve() / file["payload"]["path"]
-    source = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    suffix = path.suffix.lower()
-    out = []
+    try:
+        size_bytes = path.stat().st_size
+        with path.open("rb") as handle:
+            line_count = sum(1 for _ in handle)
+    except OSError:
+        return None
+    return {
+        "size_bytes": size_bytes,
+        "line_count": line_count,
+        "extension": file["payload"]["extension"],
+    }
 
-    for start0, line in enumerate(source):
-        detected = _detect_symbol(line, suffix)
-        if detected is None:
-            continue
 
-        if suffix == ".py":
-            end_line = _python_symbol_end(source, start0)
-        elif suffix == ".md":
-            end_line = _markdown_symbol_end(
-                source,
-                start0,
-                detected.get("heading_level", 6),
-            )
+def merge_ranges(ranges):
+    normalized = sorted(
+        (max(1, int(start)), max(1, int(end)))
+        for start, end in ranges
+        if int(end) >= int(start)
+    )
+    merged = []
+    for start, end in normalized:
+        if merged and start <= merged[-1][1] + 1:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
         else:
-            end_line = _brace_symbol_end(source, start0)
-
-        start_line = start0 + 1
-        if end_line < start_line:
-            end_line = start_line
-
-        payload = {
-            "path": file["payload"]["path"],
-            "kind": detected["kind"],
-            "name": detected["name"],
-            "start_line": start_line,
-            "end_line": end_line,
-            "signature": _symbol_signature(source, start0),
-        }
-        out.append({
-            "id": (
-                f"{file['id']}::{payload['kind']}::{payload['name']}"
-                f"@{start_line}"
-            ),
-            "payload": payload,
-        })
-
-    if out:
-        return out
-
-    # Unsupported or declaration-free files still get a structural fallback.
-    # The model sees metadata only, not the body.
-    return [{
-        "id": f"{file['id']}::file",
-        "payload": {
-            "path": file["payload"]["path"],
-            "kind": "file",
-            "name": file["payload"]["filename"],
-            "start_line": 1,
-            "end_line": max(1, len(source)),
-            "signature": (
-                f"{file['payload']['filename']} "
-                f"({len(source)} lines, {file['payload']['extension']})"
-            ),
-        },
-    }]
-
-FILE_OUTLINE_SYMBOL_LIMIT = 40
-OUTLINE_SYMBOL_LIMIT = 30
-SCOPE_KINDS = {"class", "impl", "trait", "interface", "service"}
-
-def file_outlines(root, selected_files):
-    """Expose one compact structural outline per retained file.
-
-    The harness scans a retained file locally, but System One sees only the
-    file identity plus a bounded list of symbol kind/name pairs. This is the
-    semantic gate between file metadata and internal scopes.
-    """
-    candidates = []
-    symbols_by_path = {}
-
-    for file in selected_files:
-        path = file["payload"]["path"]
-        file_symbols = symbols(root, file)
-        symbols_by_path[path] = file_symbols
-        preview = [
-            {
-                "kind": item["payload"]["kind"],
-                "name": item["payload"]["name"],
-            }
-            for item in file_symbols[:FILE_OUTLINE_SYMBOL_LIMIT]
-        ]
-        candidates.append({
-            "id": f"{file['id']}::file-outline",
-            "payload": {
-                "path": path,
-                "filename": file["payload"]["filename"],
-                "extension": file["payload"]["extension"],
-                "symbol_count": len(file_symbols),
-                "symbols": preview,
-                "truncated": len(file_symbols) > FILE_OUTLINE_SYMBOL_LIMIT,
-            },
-        })
-
-    return candidates, symbols_by_path
+            merged.append((start, end))
+    return merged
 
 
-def _contains_symbol(container, item):
-    c = container["payload"]
-    s = item["payload"]
-    return (
-        c["path"] == s["path"]
-        and c["start_line"] <= s["start_line"]
-        and s["end_line"] <= c["end_line"]
-        and container["id"] != item["id"]
-    )
-
-def outlines(root, selected_files, symbols_by_path=None):
-    """Build semantic scope outlines from retained files.
-
-    A scope outline is a class/impl/trait/interface/service with its direct
-    members. Remaining file-level symbols are grouped into one module scope.
-    System One judges these scopes before individual symbols are disclosed.
-    """
-    candidates = []
-    symbols_by_outline = {}
-    symbols_by_path = symbols_by_path or {}
-
-    for file in selected_files:
-        path = file["payload"]["path"]
-        file_symbols = symbols_by_path.get(path)
-        if file_symbols is None:
-            file_symbols = symbols(root, file)
-        containers = [
-            item for item in file_symbols
-            if item["payload"]["kind"] in SCOPE_KINDS
-            and item["payload"]["end_line"] > item["payload"]["start_line"]
-        ]
-        assigned = set()
-
-        for container in containers:
-            nested_containers = [
-                other for other in containers
-                if other["id"] != container["id"]
-                and _contains_symbol(container, other)
-            ]
-            direct_members = []
-            for item in file_symbols:
-                if not _contains_symbol(container, item):
-                    continue
-                if any(_contains_symbol(nested, item) for nested in nested_containers):
-                    continue
-                direct_members.append(item)
-
-            members = [container, *direct_members]
-            outline_id = f"{container['id']}::outline"
-            preview = [
-                {
-                    "kind": item["payload"]["kind"],
-                    "name": item["payload"]["name"],
-                }
-                for item in members[:OUTLINE_SYMBOL_LIMIT]
-            ]
-            candidates.append({
-                "id": outline_id,
-                "payload": {
-                    "path": path,
-                    "filename": file["payload"]["filename"],
-                    "extension": file["payload"]["extension"],
-                    "scope_kind": container["payload"]["kind"],
-                    "scope_name": container["payload"]["name"],
-                    "start_line": container["payload"]["start_line"],
-                    "end_line": container["payload"]["end_line"],
-                    "member_count": len(members),
-                    "members": preview,
-                    "truncated": len(members) > OUTLINE_SYMBOL_LIMIT,
-                },
-            })
-            symbols_by_outline[outline_id] = members
-            assigned.update(item["id"] for item in members)
-
-        module_members = [
-            item for item in file_symbols
-            if item["id"] not in assigned
-        ]
-        if module_members:
-            outline_id = f"{file['id']}::module::outline"
-            preview = [
-                {
-                    "kind": item["payload"]["kind"],
-                    "name": item["payload"]["name"],
-                }
-                for item in module_members[:OUTLINE_SYMBOL_LIMIT]
-            ]
-            candidates.append({
-                "id": outline_id,
-                "payload": {
-                    "path": path,
-                    "filename": file["payload"]["filename"],
-                    "extension": file["payload"]["extension"],
-                    "scope_kind": "module",
-                    "scope_name": file["payload"]["filename"],
-                    "start_line": min(
-                        item["payload"]["start_line"]
-                        for item in module_members
-                    ),
-                    "end_line": max(
-                        item["payload"]["end_line"]
-                        for item in module_members
-                    ),
-                    "member_count": len(module_members),
-                    "members": preview,
-                    "truncated": len(module_members) > OUTLINE_SYMBOL_LIMIT,
-                },
-            })
-            symbols_by_outline[outline_id] = module_members
-
-    return candidates, symbols_by_outline
+def range_is_covered(start, end, coverage):
+    return any(start >= left and end <= right for left, right in coverage)
 
 
-def symbol_snippets(root, path, scored, threshold):
-    relevant = sorted(
-        (x for x in scored if x["score"] >= threshold),
-        key=lambda x: x["payload"]["start_line"],
-    )
-    if not relevant:
+def unread_gaps(line_count, coverage):
+    if line_count <= 0:
         return []
+    gaps = []
+    cursor = 1
+    for start, end in merge_ranges(coverage):
+        if cursor < start:
+            gaps.append((cursor, start - 1))
+        cursor = max(cursor, end + 1)
+    if cursor <= line_count:
+        gaps.append((cursor, line_count))
+    return gaps
 
-    source = (Path(root).resolve() / path).read_text(
-        encoding="utf-8",
-        errors="replace",
-    ).splitlines()
-    ranges = []
 
-    for item in relevant:
-        start = item["payload"]["start_line"]
-        end = min(item["payload"]["end_line"], len(source))
-        score = item["score"]
-        names = [item["payload"]["name"]]
-        if ranges and start <= ranges[-1]["end_line"] + 1:
-            ranges[-1]["end_line"] = max(ranges[-1]["end_line"], end)
-            ranges[-1]["score"] = max(ranges[-1]["score"], score)
-            ranges[-1]["symbols"].extend(names)
-        else:
-            ranges.append({
-                "start_line": start,
-                "end_line": end,
-                "score": score,
-                "symbols": names,
-            })
+def make_read_action(path, start, end, reason):
+    return {
+        "kind": "read_range",
+        "path": path,
+        "start_line": start,
+        "end_line": end,
+        "reason": reason,
+    }
 
-    return [
-        {
-            "path": path,
-            "start_line": item["start_line"],
-            "end_line": item["end_line"],
-            "score": item["score"],
-            "symbols": item["symbols"],
-            "content": "\\n".join(
-                f"{line_number}: {source[line_number - 1]}"
-                for line_number in range(
-                    item["start_line"],
-                    item["end_line"] + 1,
-                )
-            ),
-        }
-        for item in ranges
+
+def generate_read_actions(file_state, window_lines):
+    """Generate a small dynamic action space from stat, coverage, and scores."""
+    path = file_state["path"]
+    line_count = file_state["stat"]["line_count"]
+    coverage = merge_ranges(file_state["coverage"])
+    if line_count <= 0:
+        return [{"kind": "stop_file", "path": path, "reason": "empty file"}]
+
+    actions = []
+
+    def append(start, end, reason):
+        start = max(1, start)
+        end = min(line_count, end)
+        if start > end or range_is_covered(start, end, coverage):
+            return
+        if any(
+            item.get("start_line") == start and item.get("end_line") == end
+            for item in actions
+        ):
+            return
+        actions.append(make_read_action(path, start, end, reason))
+
+    if not coverage:
+        append(1, min(line_count, window_lines), "initial head probe")
+        if line_count > window_lines:
+            middle_start = max(1, (line_count // 2) - (window_lines // 2))
+            append(middle_start, middle_start + window_lines - 1, "initial middle probe")
+        if line_count > window_lines * 2:
+            append(max(1, line_count - window_lines + 1), line_count, "initial tail probe")
+    else:
+        relevant = [
+            item for item in file_state["observations"]
+            if item.get("relevance") is not None
+        ]
+        anchor = None
+        if relevant:
+            anchor = max(relevant, key=lambda item: (item["relevance"], item["end_line"] - item["start_line"]))
+        elif file_state["observations"]:
+            anchor = file_state["observations"][-1]
+
+        if anchor:
+            append(
+                anchor["end_line"] + 1,
+                anchor["end_line"] + window_lines,
+                "continue after the strongest observed range",
+            )
+            append(
+                anchor["start_line"] - window_lines,
+                anchor["start_line"] - 1,
+                "expand before the strongest observed range",
+            )
+
+        gaps = unread_gaps(line_count, coverage)
+        if gaps:
+            gap_start, gap_end = max(gaps, key=lambda item: item[1] - item[0])
+            if gap_end - gap_start + 1 <= window_lines:
+                append(gap_start, gap_end, "cover the largest unread gap")
+            else:
+                midpoint = (gap_start + gap_end) // 2
+                start = max(gap_start, midpoint - (window_lines // 2))
+                append(start, min(gap_end, start + window_lines - 1), "probe the largest unread gap")
+
+    actions = actions[: MAX_ACTIONS_PER_FILE - 1]
+    actions.append({"kind": "stop_file", "path": path, "reason": "stop reading this file"})
+    return actions
+
+
+def read_range(root, action):
+    path = Path(root).resolve() / action["path"]
+    source = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    start = max(1, action["start_line"])
+    end = min(len(source), action["end_line"])
+    return {
+        "path": action["path"],
+        "start_line": start,
+        "end_line": end,
+        "content": "\n".join(
+            f"{line_number}: {source[line_number - 1]}"
+            for line_number in range(start, end + 1)
+        ),
+    }
+
+
+def new_reader_state(query, batch_index, files_in_batch, root):
+    state_files = []
+    for file in files_in_batch:
+        stat = source_stat(root, file)
+        if stat is None:
+            continue
+        state_files.append({
+            "path": file["payload"]["path"],
+            "phase1_score": file["score"],
+            "stat": stat,
+            "coverage": [],
+            "observations": [],
+            "stopped": False,
+            "stop_reason": None,
+        })
+    return {
+        "goal": query,
+        "batch_index": batch_index,
+        "round": 0,
+        "files": state_files,
+        "observations": [],
+    }
+
+
+def append_observation(state, file_state, observation, action_probability):
+    observation_id = (
+        f"{observation['path']}:{observation['start_line']}-"
+        f"{observation['end_line']}#{len(state['observations']) + 1}"
+    )
+    item = {
+        "id": observation_id,
+        **observation,
+        "action_probability": action_probability,
+        "relevance": None,
+    }
+    state["observations"].append(item)
+    file_state["observations"].append(item)
+    file_state["coverage"] = [
+        list(value)
+        for value in merge_ranges([
+            *file_state["coverage"],
+            (observation["start_line"], observation["end_line"]),
+        ])
     ]
+    return item
 
-def run(root, query, scorer, trace, dt, ft, fot, sct, st):
-    started = time.perf_counter()
-    usage = {"model_calls": 0, "input_tokens": 0, "output_tokens": 0}
 
-    def stage(name, candidates, threshold):
-        trace.emit("candidates_exposed", stage=name, count=len(candidates), candidates=candidates)
-        scored, u = scorer.score(query, name, candidates)
-        for k in usage:
-            usage[k] += u[k]
-        selected = [x for x in scored if x["score"] >= threshold]
+def evidence_snippets(reader_states, threshold):
+    snippets = []
+    for state in reader_states:
+        for observation in state["observations"]:
+            score = observation.get("relevance")
+            if score is None or score < threshold:
+                continue
+            snippets.append({
+                "path": observation["path"],
+                "start_line": observation["start_line"],
+                "end_line": observation["end_line"],
+                "score": score,
+                "action_probability": observation["action_probability"],
+                "content": observation["content"],
+            })
+    snippets.sort(key=lambda item: (-item["score"], item["path"], item["start_line"]))
+    return snippets
+
+
+def progressive_read(
+    root,
+    query,
+    decider,
+    files_to_read,
+    trace,
+    *,
+    file_batch_size,
+    window_lines,
+    max_rounds,
+    action_threshold,
+    observation_threshold,
+):
+    usage = empty_usage()
+    reader_states = []
+    decisions_made = 0
+    reads_executed = 0
+
+    for offset in range(0, len(files_to_read), file_batch_size):
+        batch_index = offset // file_batch_size
+        batch = files_to_read[offset: offset + file_batch_size]
+        state = new_reader_state(query, batch_index, batch, root)
+        reader_states.append(state)
+
         trace.emit(
-            "threshold_applied",
-            stage=name,
-            threshold=threshold,
-            input_count=len(scored),
-            selected_count=len(selected),
-            selected=selected,
+            "reader_batch_started",
+            batch_index=batch_index,
+            files=[
+                {"path": item["path"], "phase1_score": item["phase1_score"], "stat": item["stat"]}
+                for item in state["files"]
+            ],
         )
-        return selected, scored
+
+        for round_index in range(max_rounds):
+            state["round"] = round_index + 1
+            action_sets = []
+            for file_state in state["files"]:
+                if file_state["stopped"]:
+                    continue
+                action_sets.append({
+                    "path": file_state["path"],
+                    "actions": generate_read_actions(file_state, window_lines),
+                })
+            if not action_sets:
+                break
+
+            trace.emit(
+                "read_action_frontier",
+                batch_index=batch_index,
+                round=state["round"],
+                file_count=len(action_sets),
+                action_sets=action_sets,
+            )
+            decisions, current_usage = decider.choose_read_actions(query, state, action_sets)
+            merge_usage(usage, current_usage)
+            decisions_made += len(decisions)
+
+            by_path = {item["path"]: item for item in state["files"]}
+            new_observations = []
+
+            for decision in decisions:
+                file_state = by_path[decision["path"]]
+                action = decision["action"]
+                probability = decision["probability"]
+
+                trace.emit(
+                    "read_action_decision",
+                    batch_index=batch_index,
+                    round=state["round"],
+                    path=decision["path"],
+                    action=action,
+                    probability=probability,
+                    confidence=decision["confidence"],
+                    probabilities=decision["probabilities"],
+                    threshold=action_threshold,
+                )
+
+                if action["kind"] == "stop_file":
+                    file_state["stopped"] = True
+                    file_state["stop_reason"] = "model_stop"
+                    continue
+                if probability < action_threshold:
+                    file_state["stopped"] = True
+                    file_state["stop_reason"] = "action_below_threshold"
+                    trace.emit(
+                        "read_action_rejected",
+                        path=decision["path"],
+                        probability=probability,
+                        threshold=action_threshold,
+                    )
+                    continue
+
+                observation = read_range(root, action)
+                item = append_observation(state, file_state, observation, probability)
+                new_observations.append(item)
+                reads_executed += 1
+                trace.emit("file_observed", batch_index=batch_index, round=state["round"], observation=item)
+
+            if not new_observations:
+                break
+
+            # New content is already loaded into state before its relevance is scored.
+            scores, current_usage = decider.score_observations(
+                query,
+                state,
+                [item["id"] for item in new_observations],
+            )
+            merge_usage(usage, current_usage)
+
+            for item in new_observations:
+                item["relevance"] = scores[item["id"]]
+                trace.emit(
+                    "observation_scored",
+                    observation_id=item["id"],
+                    path=item["path"],
+                    start_line=item["start_line"],
+                    end_line=item["end_line"],
+                    relevance=item["relevance"],
+                    evidence=item["relevance"] >= observation_threshold,
+                    threshold=observation_threshold,
+                )
+
+        trace.emit(
+            "reader_batch_completed",
+            batch_index=batch_index,
+            rounds=state["round"],
+            observations=len(state["observations"]),
+            evidence=sum(
+                1
+                for item in state["observations"]
+                if item.get("relevance") is not None and item["relevance"] >= observation_threshold
+            ),
+        )
+
+    return reader_states, evidence_snippets(reader_states, observation_threshold), {
+        **usage,
+        "reader_batches": len(reader_states),
+        "reader_decisions": decisions_made,
+        "reads_executed": reads_executed,
+    }
+
+
+def run(
+    root,
+    query,
+    decider,
+    trace,
+    directory_threshold=DEFAULT_DIRECTORY_THRESHOLD,
+    file_threshold=DEFAULT_FILE_THRESHOLD,
+    phase1_max_files=DEFAULT_PHASE1_MAX_FILES,
+    reader_file_batch_size=DEFAULT_READER_FILE_BATCH_SIZE,
+    reader_window_lines=DEFAULT_READER_WINDOW_LINES,
+    reader_max_rounds=DEFAULT_READER_MAX_ROUNDS,
+    reader_action_threshold=DEFAULT_READER_ACTION_THRESHOLD,
+    observation_threshold=DEFAULT_OBSERVATION_THRESHOLD,
+):
+    started = time.perf_counter()
+    usage = empty_usage()
 
     trace.emit(
         "search_started",
         root=str(Path(root).resolve()),
         query=query,
-        model=scorer.model,
+        model=decider.model,
+        architecture="two_phase_file_locator_plus_progressive_reader",
         thresholds={
-            "directory": dt,
-            "file": ft,
-            "file_outline": fot,
-            "scope": sct,
-            "symbol": st,
+            "directory": directory_threshold,
+            "file": file_threshold,
+            "reader_action": reader_action_threshold,
+            "observation": observation_threshold,
         },
-        request_strategy="one_request_per_stage",
+        reader={
+            "file_batch_size": reader_file_batch_size,
+            "window_lines": reader_window_lines,
+            "max_rounds": reader_max_rounds,
+            "phase1_max_files": phase1_max_files,
+        },
     )
 
+    # Phase 1: locate plausible files without exposing their source bodies.
     directory_candidates = directories(root)
-    ds, _ = stage("directory", directory_candidates, dt)
-
-    file_candidates = files(root, ds)
-    fs, _ = stage("file", file_candidates, ft)
-
-    file_outline_candidates, symbols_by_path = file_outlines(root, fs)
-    fos, _ = stage("file_outline", file_outline_candidates, fot)
-    selected_file_paths = {
-        item["payload"]["path"]
-        for item in fos
-    }
-    scope_files = [
-        file for file in fs
-        if file["payload"]["path"] in selected_file_paths
+    scored_directories, current_usage = decider.score_candidates(query, "directory", directory_candidates)
+    merge_usage(usage, current_usage)
+    selected_directories = [
+        item for item in scored_directories
+        if item["score"] >= directory_threshold
     ]
-
-    scope_candidates, symbols_by_scope = outlines(
-        root,
-        scope_files,
-        symbols_by_path,
-    )
-    scopes, _ = stage("scope", scope_candidates, sct)
-
-    symbol_candidates = []
-    symbol_counts_by_scope = {}
-    seen_symbol_ids = set()
-    for scope in scopes:
-        current = symbols_by_scope.get(scope["id"], [])
-        symbol_counts_by_scope[scope["id"]] = len(current)
-        for item in current:
-            if item["id"] in seen_symbol_ids:
-                continue
-            seen_symbol_ids.add(item["id"])
-            symbol_candidates.append(item)
-
     trace.emit(
-        "symbol_frontier_built",
-        file_outline_count=len(fos),
-        scope_count=len(scopes),
-        symbol_count=len(symbol_candidates),
-        symbols_by_scope=symbol_counts_by_scope,
+        "phase1_directory_selected",
+        exposed=len(directory_candidates),
+        selected=len(selected_directories),
+        threshold=directory_threshold,
+        candidates=selected_directories,
     )
 
-    kept_symbols, scored_symbols = stage("symbol", symbol_candidates, st)
+    file_candidates = files(root, selected_directories)
+    scored_files, current_usage = decider.score_candidates(query, "file", file_candidates)
+    merge_usage(usage, current_usage)
+    selected_files = [
+        item for item in scored_files
+        if item["score"] >= file_threshold
+    ][:phase1_max_files]
+    trace.emit(
+        "phase1_completed",
+        exposed=len(file_candidates),
+        selected=len(selected_files),
+        threshold=file_threshold,
+        max_files=phase1_max_files,
+        files=selected_files,
+    )
 
-    scored_by_path = {}
-    for item in scored_symbols:
-        scored_by_path.setdefault(item["payload"]["path"], []).append(item)
+    # Phase 2: stat -> dynamic actions -> Choice -> read -> observation -> Noul.
+    reader_states, snippets, reader_metrics = progressive_read(
+        root,
+        query,
+        decider,
+        selected_files,
+        trace,
+        file_batch_size=reader_file_batch_size,
+        window_lines=reader_window_lines,
+        max_rounds=reader_max_rounds,
+        action_threshold=reader_action_threshold,
+        observation_threshold=observation_threshold,
+    )
+    merge_usage(usage, reader_metrics)
 
-    ss = []
-    for f in fs:
-        path = f["payload"]["path"]
-        ss += symbol_snippets(root, path, scored_by_path.get(path, []), st)
-
-    ss.sort(key=lambda x: (-x["score"], x["path"], x["start_line"]))
     result = {
         "query": query,
         "root": str(Path(root).resolve()),
-        "model": scorer.model,
+        "model": decider.model,
+        "architecture": "two_phase_file_locator_plus_progressive_reader",
         "thresholds": {
-            "directory": dt,
-            "file": ft,
-            "file_outline": fot,
-            "scope": sct,
-            "symbol": st,
+            "directory": directory_threshold,
+            "file": file_threshold,
+            "reader_action": reader_action_threshold,
+            "observation": observation_threshold,
         },
-        "directories": ds,
-        "files": fs,
-        "snippets": ss,
+        "directories": selected_directories,
+        "files": selected_files,
+        "reader_states": reader_states,
+        "snippets": snippets,
         "metrics": {
             **usage,
-            "request_strategy": "one_request_per_stage",
             "directories_exposed": len(directory_candidates),
-            "directories_selected": len(ds),
+            "directories_selected": len(selected_directories),
             "files_exposed": len(file_candidates),
-            "files_selected": len(fs),
-            "file_outlines_exposed": len(file_outline_candidates),
-            "file_outlines_selected": len(fos),
-            "scopes_exposed": len(scope_candidates),
-            "scopes_selected": len(scopes),
-            "symbols_exposed": len(symbol_candidates),
-            "symbols_selected": len(kept_symbols),
-            "files_scanned_for_outline": len(fs),
-            "file_outline_symbol_limit": FILE_OUTLINE_SYMBOL_LIMIT,
-            "scope_member_limit": OUTLINE_SYMBOL_LIMIT,
-            "snippets": len(ss),
+            "files_selected": len(selected_files),
+            "phase1_max_files": phase1_max_files,
+            "reader_file_batch_size": reader_file_batch_size,
+            "reader_window_lines": reader_window_lines,
+            "reader_max_rounds": reader_max_rounds,
+            "reader_batches": reader_metrics["reader_batches"],
+            "reader_decisions": reader_metrics["reader_decisions"],
+            "reads_executed": reader_metrics["reads_executed"],
+            "observations": sum(len(state["observations"]) for state in reader_states),
+            "evidence_observations": len(snippets),
             "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
         },
     }
     trace.emit("search_completed", result=result)
     return result
 
+
 def main(argv=None):
-    p=argparse.ArgumentParser()
-    p.add_argument("root")
-    p.add_argument("query")
-    p.add_argument("--directory-threshold",type=float,default=.35)
-    p.add_argument("--file-threshold",type=float,default=.50)
-    p.add_argument("--file-outline-threshold",type=float,default=.50)
-    p.add_argument("--scope-threshold",type=float,default=.50)
-    p.add_argument("--outline-threshold",dest="scope_threshold",type=float,help=argparse.SUPPRESS)
-    p.add_argument("--symbol-threshold",type=float,default=.70)
-    p.add_argument("--line-threshold",dest="symbol_threshold",type=float,help=argparse.SUPPRESS)
-    p.add_argument("--batch-size",type=int,default=None,help=argparse.SUPPRESS)
-    p.add_argument("--offline-decider",action="store_true")
-    p.add_argument("--trace-file")
-    p.add_argument("--output-json")
-    p.add_argument("--json",action="store_true")
-    p.add_argument("--typesafe-endpoint",default=os.getenv("TYPESAFE_API_URL",API_URL))
-    p.add_argument("--model",default=os.getenv("TYPESAFE_MODEL",MODEL))
-    a=p.parse_args(argv)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("root")
+    parser.add_argument("query")
+    parser.add_argument("--directory-threshold", type=float, default=DEFAULT_DIRECTORY_THRESHOLD)
+    parser.add_argument("--file-threshold", type=float, default=DEFAULT_FILE_THRESHOLD)
+    parser.add_argument("--phase1-max-files", type=int, default=DEFAULT_PHASE1_MAX_FILES)
+    parser.add_argument("--reader-file-batch-size", type=int, default=DEFAULT_READER_FILE_BATCH_SIZE)
+    parser.add_argument("--reader-window-lines", type=int, default=DEFAULT_READER_WINDOW_LINES)
+    parser.add_argument("--reader-max-rounds", type=int, default=DEFAULT_READER_MAX_ROUNDS)
+    parser.add_argument("--reader-action-threshold", type=float, default=DEFAULT_READER_ACTION_THRESHOLD)
+    parser.add_argument("--observation-threshold", type=float, default=DEFAULT_OBSERVATION_THRESHOLD)
+    parser.add_argument("--offline-decider", action="store_true")
+    parser.add_argument("--trace-file")
+    parser.add_argument("--output-json")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--typesafe-endpoint", default=os.getenv("TYPESAFE_API_URL", API_URL))
+    parser.add_argument("--model", default=os.getenv("TYPESAFE_MODEL", MODEL))
+    args = parser.parse_args(argv)
 
-    trace=Trace(a.trace_file)
-    if a.offline_decider:
-        scorer=OfflineScorer(trace)
+    for name in ("phase1_max_files", "reader_file_batch_size", "reader_window_lines", "reader_max_rounds"):
+        if getattr(args, name) < 1:
+            parser.error(f"--{name.replace('_', '-')} must be >= 1")
+
+    trace = Trace(args.trace_file)
+    if args.offline_decider:
+        decider = OfflineDecider(trace)
     else:
-        key=os.getenv("TYPESAFE_API_KEY","")
+        key = os.getenv("TYPESAFE_API_KEY", "")
         if not key:
-            print("TYPESAFE_API_KEY is required unless --offline-decider is used.",file=sys.stderr)
+            print("TYPESAFE_API_KEY is required unless --offline-decider is used.", file=sys.stderr)
             return 2
-        scorer=SystemOneScorer(key,trace,a.typesafe_endpoint,a.model,a.batch_size)
+        decider = SystemOneDecider(key, trace, args.typesafe_endpoint, args.model)
 
-    result=run(
-        a.root,
-        a.query,
-        scorer,
+    result = run(
+        args.root,
+        args.query,
+        decider,
         trace,
-        a.directory_threshold,
-        a.file_threshold,
-        a.file_outline_threshold,
-        a.scope_threshold,
-        a.symbol_threshold,
+        directory_threshold=args.directory_threshold,
+        file_threshold=args.file_threshold,
+        phase1_max_files=args.phase1_max_files,
+        reader_file_batch_size=args.reader_file_batch_size,
+        reader_window_lines=args.reader_window_lines,
+        reader_max_rounds=args.reader_max_rounds,
+        reader_action_threshold=args.reader_action_threshold,
+        observation_threshold=args.observation_threshold,
     )
-    payload=json.dumps(result,indent=2,ensure_ascii=False)
-    if a.output_json:
-        Path(a.output_json).write_text(payload+"\n",encoding="utf-8")
-    if a.json:
+
+    payload = json.dumps(result, indent=2, ensure_ascii=False)
+    if args.output_json:
+        Path(args.output_json).write_text(payload + "\n", encoding="utf-8")
+    if args.json:
         print(payload)
     else:
-        print("relevant directories:")
-        [print(f"  {x['score']:.3f} {x['id']}") for x in result["directories"]]
-        print("relevant files:")
-        [print(f"  {x['score']:.3f} {x['id']}") for x in result["files"]]
-        print("relevant snippets:")
-        [print(f"  {x['score']:.3f} {x['path']}:{x['start_line']}-{x['end_line']}\n{x['content']}") for x in result["snippets"]]
-        print("metrics:",json.dumps(result["metrics"],ensure_ascii=False))
+        print("potential files:")
+        for item in result["files"]:
+            print(f"  {item['score']:.3f} {item['id']}")
+        print("evidence:")
+        for item in result["snippets"]:
+            print(
+                f"  {item['score']:.3f} {item['path']}:"
+                f"{item['start_line']}-{item['end_line']}\n{item['content']}"
+            )
+        print("metrics:", json.dumps(result["metrics"], ensure_ascii=False))
+
     return 0 if result["files"] and result["snippets"] else 1
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
