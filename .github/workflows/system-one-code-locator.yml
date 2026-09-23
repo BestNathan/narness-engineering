@@ -389,26 +389,26 @@ jobs:
             cp -a .experiment-record/typesafe/. "$record/typesafe/"
           fi
 
-          cat > "$record/README.md" <<EOF
-          # System One Code Locator experiment
-
-          - Recorded at: `${stamp}` (UTC+8)
-          - GitHub run: [${GITHUB_RUN_ID}](${RUN_URL})
-          - Run attempt: `${GITHUB_RUN_ATTEMPT}`
-          - Event: `${GITHUB_EVENT_NAME}`
-          - Repository: `${GITHUB_REPOSITORY}`
-          - Ref: `${GITHUB_REF_NAME}`
-          - Trigger SHA: `${GITHUB_SHA}`
-          - Offline job: `${OFFLINE_RESULT}`
-          - TypeSafe job: `${TYPESAFE_RESULT}`
-
-          ## Evidence
-
-          - [Offline evidence](offline/) when the offline validation produced an artifact.
-          - [TypeSafe evidence](typesafe/) when a real TypeSafe experiment was requested.
-
-          The files in this directory are an immutable snapshot of the evidence produced by this workflow run.
-          EOF
+          {
+            echo "# System One Code Locator experiment"
+            echo
+            printf -- '- Recorded at: `%s` (UTC+8)\n' "$stamp"
+            printf -- '- GitHub run: [%s](%s)\n' "$GITHUB_RUN_ID" "$RUN_URL"
+            printf -- '- Run attempt: `%s`\n' "$GITHUB_RUN_ATTEMPT"
+            printf -- '- Event: `%s`\n' "$GITHUB_EVENT_NAME"
+            printf -- '- Repository: `%s`\n' "$GITHUB_REPOSITORY"
+            printf -- '- Ref: `%s`\n' "$GITHUB_REF_NAME"
+            printf -- '- Trigger SHA: `%s`\n' "$GITHUB_SHA"
+            printf -- '- Offline job: `%s`\n' "$OFFLINE_RESULT"
+            printf -- '- TypeSafe job: `%s`\n' "$TYPESAFE_RESULT"
+            echo
+            echo "## Evidence"
+            echo
+            echo "- [Offline evidence](offline/) when the offline validation produced an artifact."
+            echo "- [TypeSafe evidence](typesafe/) when a real TypeSafe experiment was requested."
+            echo
+            echo "The files in this directory are an immutable snapshot of the evidence produced by this workflow run."
+          } > "$record/README.md"
 
           echo "RECORD_DIR=$record" >> "$GITHUB_ENV"
 
@@ -427,4 +427,5 @@ jobs:
           fi
 
           git commit -m "research: record code locator run ${GITHUB_RUN_ID}"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
