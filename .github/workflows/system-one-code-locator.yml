@@ -44,6 +44,11 @@ on:
         required: true
         default: "0.50"
         type: string
+      outline_threshold:
+        description: File-outline Noul threshold
+        required: true
+        default: "0.50"
+        type: string
       symbol_threshold:
         description: "Symbol Noul threshold"
         required: true
@@ -71,6 +76,7 @@ env:
   QUERY: ${{ inputs.query || 'Help me optimize the websocket connection implementation' }}
   DIRECTORY_THRESHOLD: ${{ inputs.directory_threshold || '0.35' }}
   FILE_THRESHOLD: ${{ inputs.file_threshold || '0.50' }}
+  OUTLINE_THRESHOLD: ${{ inputs.outline_threshold || '0.50' }}
   SYMBOL_THRESHOLD: ${{ inputs.symbol_threshold || '0.70' }}
   TYPESAFE_MODEL: ${{ inputs.model || vars.TYPESAFE_MODEL || 'jev-latest' }}
 
@@ -100,7 +106,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python3 research/code-locator/src/system_one_code_locator.py             research/code-locator/fixtures/repository             "$QUERY"             --offline-decider             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --symbol-threshold 0.60             --trace-file artifacts/system-one-code-locator/offline/trace.jsonl             --output-json artifacts/system-one-code-locator/offline/result.json             2>&1 | tee artifacts/system-one-code-locator/offline/run.log
+          python3 research/code-locator/src/system_one_code_locator.py             research/code-locator/fixtures/repository             "$QUERY"             --offline-decider             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --outline-threshold "$OUTLINE_THRESHOLD"             --symbol-threshold 0.60             --trace-file artifacts/system-one-code-locator/offline/trace.jsonl             --output-json artifacts/system-one-code-locator/offline/result.json             2>&1 | tee artifacts/system-one-code-locator/offline/run.log
 
       - name: Save run metadata and summary
         env:
@@ -125,6 +131,7 @@ jobs:
               "thresholds": {
                   "directory": float(os.environ["DIRECTORY_THRESHOLD"]),
                   "file": float(os.environ["FILE_THRESHOLD"]),
+                  "outline": float(os.environ["OUTLINE_THRESHOLD"]),
                   "symbol": 0.60,
               },
               "github_run_id": os.environ["RUN_ID"],
@@ -233,6 +240,7 @@ jobs:
               "thresholds": {
                   "directory": float(os.environ["DIRECTORY_THRESHOLD"]),
                   "file": float(os.environ["FILE_THRESHOLD"]),
+                  "outline": float(os.environ["OUTLINE_THRESHOLD"]),
                   "symbol": float(os.environ["SYMBOL_THRESHOLD"]),
               },
               "harness": {
@@ -261,7 +269,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python3 narness/research/code-locator/src/system_one_code_locator.py             subject             "$QUERY"             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --symbol-threshold "$SYMBOL_THRESHOLD"             --model "$TYPESAFE_MODEL"             --trace-file artifacts/system-one-code-locator/typesafe/trace.jsonl             --output-json artifacts/system-one-code-locator/typesafe/result.json             2>&1 | tee artifacts/system-one-code-locator/typesafe/run.log
+          python3 narness/research/code-locator/src/system_one_code_locator.py             subject             "$QUERY"             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --outline-threshold "$OUTLINE_THRESHOLD"             --symbol-threshold "$SYMBOL_THRESHOLD"             --model "$TYPESAFE_MODEL"             --trace-file artifacts/system-one-code-locator/typesafe/trace.jsonl             --output-json artifacts/system-one-code-locator/typesafe/result.json             2>&1 | tee artifacts/system-one-code-locator/typesafe/run.log
 
       - name: Build research summary
         if: always()
