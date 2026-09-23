@@ -49,11 +49,6 @@ on:
         required: true
         default: "0.70"
         type: string
-      batch_size:
-        description: Noul questions per TypeSafe request
-        required: true
-        default: "48"
-        type: string
       model:
         description: TypeSafe model alias
         required: true
@@ -77,7 +72,6 @@ env:
   DIRECTORY_THRESHOLD: ${{ inputs.directory_threshold || '0.35' }}
   FILE_THRESHOLD: ${{ inputs.file_threshold || '0.50' }}
   LINE_THRESHOLD: ${{ inputs.line_threshold || '0.70' }}
-  BATCH_SIZE: ${{ inputs.batch_size || '48' }}
   TYPESAFE_MODEL: ${{ inputs.model || vars.TYPESAFE_MODEL || 'jev-latest' }}
 
 jobs:
@@ -106,7 +100,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python3 research/code-locator/src/system_one_code_locator.py             research/code-locator/fixtures/repository             "$QUERY"             --offline-decider             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold 0.60             --batch-size "$BATCH_SIZE"             --trace-file artifacts/system-one-code-locator/offline/trace.jsonl             --output-json artifacts/system-one-code-locator/offline/result.json             2>&1 | tee artifacts/system-one-code-locator/offline/run.log
+          python3 research/code-locator/src/system_one_code_locator.py             research/code-locator/fixtures/repository             "$QUERY"             --offline-decider             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold 0.60             --trace-file artifacts/system-one-code-locator/offline/trace.jsonl             --output-json artifacts/system-one-code-locator/offline/result.json             2>&1 | tee artifacts/system-one-code-locator/offline/run.log
 
       - name: Save run metadata and summary
         env:
@@ -133,7 +127,6 @@ jobs:
                   "file": float(os.environ["FILE_THRESHOLD"]),
                   "line": 0.60,
               },
-              "batch_size": int(os.environ["BATCH_SIZE"]),
               "github_run_id": os.environ["RUN_ID"],
               "github_run_attempt": os.environ["RUN_ATTEMPT"],
               "commit_sha": os.environ["COMMIT_SHA"],
@@ -242,7 +235,6 @@ jobs:
                   "file": float(os.environ["FILE_THRESHOLD"]),
                   "line": float(os.environ["LINE_THRESHOLD"]),
               },
-              "batch_size": int(os.environ["BATCH_SIZE"]),
               "harness": {
                   "repository": os.environ.get("GITHUB_REPOSITORY"),
                   "revision": revision("narness"),
@@ -269,7 +261,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python3 narness/research/code-locator/src/system_one_code_locator.py             subject             "$QUERY"             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold "$LINE_THRESHOLD"             --batch-size "$BATCH_SIZE"             --model "$TYPESAFE_MODEL"             --trace-file artifacts/system-one-code-locator/typesafe/trace.jsonl             --output-json artifacts/system-one-code-locator/typesafe/result.json             2>&1 | tee artifacts/system-one-code-locator/typesafe/run.log
+          python3 narness/research/code-locator/src/system_one_code_locator.py             subject             "$QUERY"             --directory-threshold "$DIRECTORY_THRESHOLD"             --file-threshold "$FILE_THRESHOLD"             --line-threshold "$LINE_THRESHOLD"             --model "$TYPESAFE_MODEL"             --trace-file artifacts/system-one-code-locator/typesafe/trace.jsonl             --output-json artifacts/system-one-code-locator/typesafe/result.json             2>&1 | tee artifacts/system-one-code-locator/typesafe/run.log
 
       - name: Build research summary
         if: always()
