@@ -270,6 +270,7 @@ def main() -> int:
 
     tmp_root = Path(tempfile.mkdtemp(prefix=f"narness-{run_id}-"))
     worktree = tmp_root / "worktree"
+    record["worktree"] = str(worktree)
     values = {
         "source_repo": str(source_repo),
         "worktree": str(worktree),

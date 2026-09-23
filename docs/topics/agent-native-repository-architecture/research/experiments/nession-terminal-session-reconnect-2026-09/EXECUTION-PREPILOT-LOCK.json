@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "execution_prepilot_revision": 8,
+  "execution_prepilot_revision": 9,
   "status": "frozen-before-real-pilots",
-  "branch": "main",
-  "repository_sha": "bb402f208c73ada458ddc36da73f3e59dca2a7d7",
-  "benchmark_revision": 2,
-  "benchmark_definition_sha": "194bf5dc1a28f4e4c10491d7326891ba157d325b",
+  "branch": "research/ai-native-execution-prepilot-r9",
+  "repository_sha": "1633e9433b897903077f8c4813dc8d5a9821f9fb",
+  "benchmark_revision": 3,
+  "benchmark_definition_sha": "bb56a330c90755d9c149bff64aaeb3a841d8015c",
   "analysis_revision": 2,
   "analysis_definition_sha": "357c38c9b10a3eb668b15aead703a5f5200b2858",
   "expected_pilots": [
@@ -29,16 +29,15 @@
     }
   ],
   "integrity": {
-    "local_validation": "passed",
-    "github_ci": "pending-publication",
+    "github_ci": "pending-PR-checks",
     "real_pilots": "not-executed"
   },
   "supersedes": {
-    "execution_prepilot_revision": 7,
-    "repository_sha": "57b18760bed46feff4b4061488522321a6cc5030",
-    "reason": "R7 fixed npm lock compatibility. Its hosted T08 pilot then showed that Claude Code emits a tool_progress heartbeat for an active root Bash call with parent_tool_use_id; the adapter incorrectly classified every parent-linked event as a subagent and stopped before the final usage event. R8 ignores only heartbeats matching an active allowed root tool call and continues to reject actual subagent events. Benchmark revision 2, analysis revision 2, task manifests, fixtures, oracle, and A/B/C treatment commits remain unchanged."
+    "execution_prepilot_revision": 8,
+    "repository_sha": "bb402f208c73ada458ddc36da73f3e59dca2a7d7",
+    "reason": "R8/R1 formal collection exposed absolute checkout path misclassification. R9 records the checkout root and uses Benchmark Revision 3 scoring. Fresh pilots must generate R2 freeze metadata; R1 evidence cannot authorize the new collection."
   },
-  "promotion_rule": "Only real direct Claude Code T05/A, T08/B, T20/C evidence from repository_sha bb402f208c73ada458ddc36da73f3e59dca2a7d7 may freeze the claude-code-r8-r1 profile. Require isolated subject checkout, registered agent policy, exact installed CLI/model/base URL, exact tool hashes, and profile/schedule/formal-plan identity. Synthetic replay evidence cannot be promoted.",
+  "promotion_rule": "Only fresh real direct Claude Code T05/A, T08/B and T20/C evidence from repository_sha 1633e9433b897903077f8c4813dc8d5a9821f9fb may freeze claude-code-r9-r2. Require isolated subject checkout, registered agent policy, exact installed CLI/model/base URL, exact tool hashes, and R2 profile/schedule/formal-plan identity. Synthetic replay and prior R1 evidence cannot be promoted.",
   "required_agent_config": {
     "agent": "claude-code",
     "network": "provider-direct",

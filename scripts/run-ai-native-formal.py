@@ -58,7 +58,7 @@ def main() -> int:
     ap.add_argument(
         "--formal-plan-lock",
         type=Path,
-        default=EXPERIMENT / "runner" / "formal-plan-r1.lock.json",
+        default=EXPERIMENT / "runner" / "formal-plan-r2.lock.json",
     )
     ap.add_argument("--runs-root", required=True, type=Path)
     ap.add_argument("--start-sequence", type=int)

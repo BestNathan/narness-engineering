@@ -47,11 +47,11 @@ for pair in T05:A T08:B T20:C; do
 done
 python3 "$ROOT/scripts/freeze-ai-native-execution-profile.py" \
   --pilot "$OUTPUT_DIR/T05-A-01" --pilot "$OUTPUT_DIR/T08-B-01" --pilot "$OUTPUT_DIR/T20-C-01" \
-  --profile-id claude-code-r8-r1 --output "$EXP/runner/execution-profile-r1.json"
+  --profile-id claude-code-r9-r2 --output "$EXP/runner/execution-profile-r2.json"
 python3 "$ROOT/scripts/generate-ai-native-formal-schedule.py" --replications 3 \
-  --profile-id claude-code-r8-r1 --output "$EXP/runner/formal-schedule-r1.json"
+  --profile-id claude-code-r9-r2 --output "$EXP/runner/formal-schedule-r2.json"
 python3 "$ROOT/scripts/freeze-ai-native-formal-plan.py" \
-  --execution-profile "$EXP/runner/execution-profile-r1.json" \
-  --schedule "$EXP/runner/formal-schedule-r1.json" --benchmark-lock "$EXP/BENCHMARK-LOCK.json" \
-  --analysis-lock "$EXP/ANALYSIS-LOCK.json" --output "$EXP/runner/formal-plan-r1.lock.json"
+  --execution-profile "$EXP/runner/execution-profile-r2.json" \
+  --schedule "$EXP/runner/formal-schedule-r2.json" --benchmark-lock "$EXP/BENCHMARK-LOCK.json" \
+  --analysis-lock "$EXP/ANALYSIS-LOCK.json" --plan-id formal-plan-r2 --output "$EXP/runner/formal-plan-r2.lock.json"
 echo 'Review and promote the real pilot handoff before formal collection.'

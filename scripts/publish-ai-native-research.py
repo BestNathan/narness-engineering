@@ -141,14 +141,14 @@ def main() -> int:
         "construction-cost-r1.json": (
             EXPERIMENT / "treatments" / "construction-cost-r1.json"
         ),
-        "execution-profile-r1.json": (
-            EXPERIMENT / "runner" / "execution-profile-r1.json"
+        "execution-profile-r2.json": (
+            EXPERIMENT / "runner" / "execution-profile-r2.json"
         ),
-        "formal-schedule-r1.json": (
-            EXPERIMENT / "runner" / "formal-schedule-r1.json"
+        "formal-schedule-r2.json": (
+            EXPERIMENT / "runner" / "formal-schedule-r2.json"
         ),
-        "formal-plan-r1.lock.json": (
-            EXPERIMENT / "runner" / "formal-plan-r1.lock.json"
+        "formal-plan-r2.lock.json": (
+            EXPERIMENT / "runner" / "formal-plan-r2.lock.json"
         ),
     }
     for name, source in frozen_inputs.items():

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 from pathlib import Path
 import subprocess
 import sys
@@ -25,6 +26,21 @@ def sh(cmd: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedPro
 
 
 def main() -> int:
+    spec = importlib.util.spec_from_file_location("scorer", ROOT / "scripts/score-ai-native-run.py")
+    scorer_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(scorer_module)
+    root = "/tmp/narness-T15-B-01-example/worktree"
+    target = "web/src/platform/session-runtime/SessionRuntime.ts"
+    assert scorer_module.normalize_path(root + "/" + target, root) == target
+    assert scorer_module.matches("./" + target, [target])
+    assert not scorer_module.matches("../" + target, [target])
+    assert not scorer_module.matches("." + target, [target])
+    assert not scorer_module.matches(
+        scorer_module.normalize_path(root + "-other/" + target, root), [target]
+    )
+    events = [{"type": "search", "results": [root + "/" + target, {"path": root + "/" + target}]}]
+    scorer_module.normalize_trace_paths(events, root)
+    assert events[0]["results"] == [target, {"path": target}]
     with tempfile.TemporaryDirectory(prefix="narness-runner-selftest-") as tmp:
         root = Path(tmp)
         source = root / "subject"
@@ -108,8 +124,8 @@ Path('changed.txt').write_text('agent-created\\n', encoding='utf-8')
 Path('new_test.txt').write_text('new-file\\n', encoding='utf-8')
 trace = Path(os.environ['NARNESS_TRACE_FILE'])
 events = [
-    {'type': 'read', 'ts_ms': 10, 'path': 'README.md'},
-    {'type': 'edit', 'ts_ms': 20, 'paths': ['changed.txt', 'new_test.txt'], 'operation': 'selftest'},
+    {'type': 'read', 'ts_ms': 10, 'path': str(Path.cwd() / 'README.md')},
+    {'type': 'edit', 'ts_ms': 20, 'paths': [str(Path.cwd() / 'changed.txt'), 'new_test.txt'], 'operation': 'selftest'},
     {'type': 'usage', 'ts_ms': 30, 'input_tokens': 100, 'cached_tokens': 0, 'output_tokens': 20, 'reasoning_tokens': 5},
 ]
 trace.write_text(''.join(json.dumps(x) + '\\n' for x in events), encoding='utf-8')
@@ -175,6 +191,8 @@ trace.write_text(''.join(json.dumps(x) + '\\n' for x in events), encoding='utf-8
             raise RuntimeError("scorer selftest failed")
 
         score = json.loads((run_dir / "score.json").read_text(encoding="utf-8"))
+        assert score["metrics"]["primary_reads"] == 1
+        assert score["metrics"]["time_to_first_relevant_artifact_ms"] == 0
         assert score["metrics"]["files_read"] == 1
         assert score["metrics"]["navigation_events_before_first_edit"] == 1
         assert score["metrics"]["files_read_before_first_edit"] == 1

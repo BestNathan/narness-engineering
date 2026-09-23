@@ -1,21 +1,23 @@
 # Experiment Runbook
 
-> Active execution: direct Claude Code pre-pilot R6. Follow
-> [EXECUTION-PREPILOT-R6.md](EXECUTION-PREPILOT-R6.md) for client installation,
+> Active execution: direct Claude Code pre-pilot R9. Follow
+> [EXECUTION-PREPILOT-R9.md](EXECUTION-PREPILOT-R9.md) for client installation,
 > environment variables, pilots, isolation, and promotion. The Codex R4 and
 > containerized Claude R5 instructions below are historical and must not be used
 > for the new execution profile. Formal collection, analysis, and publication
-> procedures still apply after R6 freeze.
+> procedures still apply after R9 freeze.
 
 This is the operational path from the frozen benchmark to the final research report.
 
+The previous R1 formal artifact is incident evidence only. Do not pass it as a recovery artifact for the new R2 plan. After fresh R9 pilots and promotion, dispatch sequences 1–216 with the previous-artifact inputs empty.
+
 ## 1. Run the three non-reportable pilots on GitHub-hosted Actions
 
-The active R6 path is `.github/workflows/ai-native-claude-pilots.yml`. It uses a
+The active R9 path is `.github/workflows/ai-native-claude-pilots.yml`. It uses a
 GitHub-hosted `ubuntu-24.04` machine, checks out the exact execution SHA recorded
 in `EXECUTION-PREPILOT-LOCK.json`, installs the pinned Claude Code CLI, and runs
 T05/A, T08/B, and T20/C in fresh isolated subject checkouts. There is no active
-self-hosted-runner or local execution path for R6; the old Codex workflows remain
+self-hosted-runner or local execution path for R9; the old Codex workflows remain
 disabled historical records only.
 
 Configure the repository once:
@@ -28,18 +30,18 @@ Actions variable: ANTHROPIC_BASE_URL (optional; defaults to https://api.anthropi
 
 Dispatch **AI Native Claude Code Pilots** from the Actions tab. The workflow
 retains a non-reportable handoff artifact containing the three traces and the
-generated `execution-profile-r1.json`, `formal-schedule-r1.json`, and
-`formal-plan-r1.lock.json`. It validates the handoff against the registered R6
+generated `execution-profile-r2.json`, `formal-schedule-r2.json`, and
+`formal-plan-r2.lock.json`. It validates the handoff against the registered R9
 controller before the job can succeed.
 
 After reviewing the artifact, dispatch **AI Native Claude Pilot Promotion** with
 the source run ID and exact artifact name. That hosted workflow validates the
-handoff, writes `PILOT-FREEZE.json`, and opens a draft pull request containing
+handoff, writes `PILOT-FREEZE-r2.json`, and opens a draft pull request containing
 the four required freeze files. Merge that pull request before formal collection;
 no local checkout is needed for promotion.
 
 The active formal path is `.github/workflows/ai-native-claude-formal.yml`. It is
-manual, requires the committed R6 profile/schedule/formal-plan lock, installs the
+manual, requires the committed R9 profile/schedule/formal-plan lock, installs the
 same pinned client on `ubuntu-24.04`, runs the registered schedule, verifies run
 seals, and uploads the formal collection artifact. The default dispatch covers all
 216 entries; sequence inputs allow a documented partial/recovery run.
@@ -50,17 +52,17 @@ evidence. Keep the source pilot artifact in Actions retention until the formal
 plan has been reviewed.
 
 The command-level details, isolation policy, and promotion checks are specified
-in [EXECUTION-PREPILOT-R6.md](EXECUTION-PREPILOT-R6.md). The pilot workflow
+in [EXECUTION-PREPILOT-R9.md](EXECUTION-PREPILOT-R9.md). The pilot workflow
 writes:
 
 ```text
-runner/execution-profile-r1.json
-runner/formal-schedule-r1.json
-runner/formal-plan-r1.lock.json
+runner/execution-profile-r2.json
+runner/formal-schedule-r2.json
+runner/formal-plan-r2.lock.json
 ```
 
 Review and merge the hosted promotion pull request before formal collection.
-`formal-plan-r1.lock.json` freezes the exact profile and schedule bytes.
+`formal-plan-r2.lock.json` freezes the exact profile and schedule bytes.
 
 The execution profile embeds a `pilot_set_digest_sha256` plus per-pilot artifact
 hashes. Keep the pilot directories until the profile has been reviewed; afterward
@@ -95,10 +97,10 @@ Inspect a long-running collection without mutating it:
 ```bash
 python3 scripts/inspect-ai-native-formal-progress.py \
   --runs-root /path/to/formal-runs \
-  --schedule docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-schedule-r1.json \
-  --execution-profile docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/execution-profile-r1.json \
+  --schedule docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-schedule-r2.json \
+  --execution-profile docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/execution-profile-r2.json \
   --benchmark-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/BENCHMARK-LOCK.json \
-  --formal-plan-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-plan-r1.lock.json
+  --formal-plan-lock docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/runner/formal-plan-r2.lock.json
 ```
 
 The inspector distinguishes `sealed`, `pending`, `incomplete`, and `tampered` entries. A tampered sealed run is always a hard error.
@@ -145,7 +147,7 @@ This produces raw run data, treatment summaries, paired effects, failure taxonom
 Copy:
 
 ```text
-conclusion-r2.template.json
+conclusion-r3.template.json
 ```
 
 to a working conclusion file. Fill exactly one classification for H1–H5:
@@ -163,7 +165,7 @@ Validate it:
 
 ```bash
 python3 scripts/validate-ai-native-conclusion.py \
-  --conclusions /path/to/conclusion-r2.json
+  --conclusions /path/to/conclusion-r3.json
 ```
 
 ## 6. Finalize the research artifact
@@ -172,7 +174,7 @@ python3 scripts/validate-ai-native-conclusion.py \
 python3 scripts/finalize-ai-native-research.py \
   --runs-root /path/to/formal-runs \
   --output-dir /path/to/research-results \
-  --conclusions /path/to/conclusion-r2.json
+  --conclusions /path/to/conclusion-r3.json
 ```
 
 Without `--allow-incomplete`, finalization fails when the pre-registered formal schedule is missing/incomplete, a treatment lacks all 24 tasks, any failed admissible run lacks taxonomy review, or H1–H5 conclusions are not supplied.
@@ -199,9 +201,9 @@ research-artifact-manifest.json
 ```text
 benchmark semantics  -> BENCHMARK-LOCK.json
 analysis semantics   -> ANALYSIS-LOCK.json
-execution mechanics  -> execution-profile-r1.json (after pilots)
-formal order         -> formal-schedule-r1.json (after pilots)
-execution + order    -> formal-plan-r1.lock.json (after pilots)
+execution mechanics  -> execution-profile-r2.json (after pilots)
+formal order         -> formal-schedule-r2.json (after pilots)
+execution + order    -> formal-plan-r2.lock.json (after pilots)
 ```
 
 Do not change a frozen boundary after observing reportable outcomes. Create a new revision instead.
@@ -235,7 +237,7 @@ After strict finalization succeeds:
 python3 scripts/archive-ai-native-raw-runs.py \
   --runs-root /path/to/formal-runs \
   --collection-manifest /path/to/research-results/collection-manifest.json \
-  --output /path/to/archives/nession-ai-native-r2.zip
+  --output /path/to/archives/nession-ai-native-r3.zip
 ```
 
 Retain both the archive and its generated `.manifest.json` sidecar in durable
@@ -247,14 +249,14 @@ storage. See `DATA-RETENTION.md`.
 python3 scripts/publish-ai-native-research.py \
   --runs-root /path/to/formal-runs \
   --results-dir /path/to/research-results \
-  --conclusions /path/to/conclusion-r2.json \
-  --raw-archive-manifest /path/to/archives/nession-ai-native-r2.zip.manifest.json
+  --conclusions /path/to/conclusion-r3.json \
+  --raw-archive-manifest /path/to/archives/nession-ai-native-r3.zip.manifest.json
 ```
 
 The default destination is:
 
 ```text
-docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/published/benchmark-r2-analysis-r2/
+docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/published/benchmark-r3-analysis-r2/
 ```
 
 Publication refuses incomplete results. It copies the reviewed report, raw tabular
