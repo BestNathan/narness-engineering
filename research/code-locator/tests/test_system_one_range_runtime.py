@@ -22,12 +22,12 @@ class RangeActionSpaceTest(unittest.TestCase):
             "path": "docs/guide.md",
             "line_count": 1000,
             "coverage": [],
-            "latest_range": None,
+            "last_selected_ranges": [],
         }
         actions = MODULE.generate_file_actions(
             file_state,
             window_lines=100,
-            max_jumps_per_file=2,
+            max_jumps=2,
         )
         self.assertEqual(
             ["seed_head", "seed_middle", "seed_tail"],
@@ -43,12 +43,12 @@ class RangeActionSpaceTest(unittest.TestCase):
             "path": "src/large.txt",
             "line_count": 1000,
             "coverage": [[1, 100]],
-            "latest_range": [1, 100],
+            "last_selected_ranges": [[1, 100]],
         }
         actions = MODULE.generate_file_actions(
             file_state,
             window_lines=100,
-            max_jumps_per_file=2,
+            max_jumps=2,
         )
         by_navigation = {}
         for item in actions:
@@ -79,7 +79,7 @@ class RangeActionSpaceTest(unittest.TestCase):
                 "path": "README.md",
                 "line_count": 20,
                 "coverage": [],
-                "latest_range": None,
+                "last_selected_ranges": [],
             }],
         }
         actions = MODULE.generate_action_space(
@@ -95,9 +95,9 @@ class SelectorTest(unittest.TestCase):
             {"id": "a", "kind": "read_range", "score": 0.91},
             {"id": "b", "kind": "read_range", "score": 0.72},
             {"id": "c", "kind": "read_range", "score": 0.50},
-            {"id": "stop_task", "kind": "stop_task", "score": 0.40},
+            {"id": "stop", "kind": "stop_file", "score": 0.40},
         ]
-        selected, mode = MODULE.select_actions(scored, 0.65)
+        selected, mode = MODULE.select_file_actions(scored, 0.65)
         self.assertEqual(["a", "b"], [item["id"] for item in selected])
         self.assertEqual("parallel_above_threshold", mode)
 
@@ -105,35 +105,35 @@ class SelectorTest(unittest.TestCase):
         scored = [
             {"id": "a", "kind": "read_range", "score": 0.58},
             {"id": "b", "kind": "read_range", "score": 0.40},
-            {"id": "stop_task", "kind": "stop_task", "score": 0.20},
+            {"id": "stop", "kind": "stop_file", "score": 0.20},
         ]
-        selected, mode = MODULE.select_actions(scored, 0.65)
+        selected, mode = MODULE.select_file_actions(scored, 0.65)
         self.assertEqual(["a"], [item["id"] for item in selected])
         self.assertEqual("fallback_top1", mode)
 
     def test_stop_must_be_high_and_best(self):
         scored = [
             {"id": "read", "kind": "read_range", "score": 0.70},
-            {"id": "stop_task", "kind": "stop_task", "score": 0.76},
+            {"id": "stop", "kind": "stop_file", "score": 0.76},
         ]
-        selected, mode = MODULE.select_actions(scored, 0.65)
-        self.assertEqual(["stop_task"], [item["id"] for item in selected])
+        selected, mode = MODULE.select_file_actions(scored, 0.65)
+        self.assertEqual(["stop"], [item["id"] for item in selected])
         self.assertEqual("model_stop", mode)
 
         scored = [
             {"id": "read", "kind": "read_range", "score": 0.83},
-            {"id": "stop_task", "kind": "stop_task", "score": 0.76},
+            {"id": "stop", "kind": "stop_file", "score": 0.76},
         ]
-        selected, mode = MODULE.select_actions(scored, 0.65)
+        selected, mode = MODULE.select_file_actions(scored, 0.65)
         self.assertEqual(["read"], [item["id"] for item in selected])
         self.assertEqual("parallel_above_threshold", mode)
 
     def test_low_stop_never_terminates_when_read_exists(self):
         scored = [
             {"id": "read", "kind": "read_range", "score": 0.31},
-            {"id": "stop_task", "kind": "stop_task", "score": 0.29},
+            {"id": "stop", "kind": "stop_file", "score": 0.29},
         ]
-        selected, mode = MODULE.select_actions(scored, 0.65)
+        selected, mode = MODULE.select_file_actions(scored, 0.65)
         self.assertEqual(["read"], [item["id"] for item in selected])
         self.assertEqual("fallback_top1", mode)
 
