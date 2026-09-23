@@ -98,3 +98,9 @@ The 29 calls should not be treated as an optimization target by itself. The rese
 3. Compare file batch sizes 1, 2, 4, and 8.
 4. Compare current stat/range actions with richer observation-driven actions.
 5. Evaluate against a small gold set of expected relevant files/ranges.
+
+## Trace analysis
+
+A full decision-path analysis is preserved in [nession-websocket-two-phase-trace-analysis-2026-09-23.md](nession-websocket-two-phase-trace-analysis-2026-09-23.md).
+
+The main harness defect discovered by that analysis was strongest-hotspot collapse: a file could contain multiple disconnected high-relevance regions, while the action generator only expanded around the single highest-scoring one. The next baseline changes only that variable by retaining a bounded `RelevantRegion[]` frontier.
