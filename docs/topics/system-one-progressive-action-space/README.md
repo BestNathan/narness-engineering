@@ -623,18 +623,19 @@ The decision primitive can therefore vary by state:
 
 See [Hierarchical Code Localization with System One](research/code-localization.md) for the hypotheses, threshold/recall analysis, evidence contract, and experiment plan.
 
-## 19. Research evidence workflow
+## 19. Research evidence workflows
 
-The repository includes a dedicated workflow for these prototypes: [System One Research Demos](../../../.github/workflows/system-one-research.yml).
+The experiments use separate workflows because they exercise different decision primitives, inputs, costs, and failure modes.
 
-It has two layers:
+- [System One Kubernetes experiment](../../../.github/workflows/system-one-k8s-experiment.yml) owns only the Kubernetes state-machine demo.
+- [System One Code Locator experiment](../../../.github/workflows/system-one-code-locator.yml) owns only hierarchical code localization.
 
-1. deterministic fixture runs on relevant pushes and pull requests, requiring no external model service;
-2. manually dispatched real-System-One collection against the Kubernetes fixture and a configurable subject repository.
+The Code Locator workflow has two layers:
 
-Each run preserves machine-readable artifacts instead of treating console output as the research record. The code-localization trace records exposed candidates, model requests without credentials, relevance scores, thresholds, latency, token usage, and final grounded snippets.
+1. deterministic fixture validation on Code Locator changes, requiring no external model service;
+2. manually dispatched real-System-One localization against a configurable subject repository.
 
-This makes repeated runs comparable by repository revision, subject revision, query, thresholds, batch size, model, and workflow identity.
+Its artifact contains only Code Locator evidence: run metadata, execution log, `trace.jsonl`, `result.json`, and `summary.md`. This keeps repository-localization research independent from Kubernetes results and makes failures, costs, and parameter sweeps attributable to one experiment.
 
 ## 20. Relationship to Narness
 
@@ -653,7 +654,8 @@ If the conclusions stabilize, some of them may graduate into Narness concepts ar
 - [System One Kubernetes Command Generator](../../../examples/system-one-k8s/README.md)
 - [System One Code Locator](../../../examples/system-one-code-locator/README.md)
 - [Code localization research note](research/code-localization.md)
-- [System One research workflow](../../../.github/workflows/system-one-research.yml)
+- [System One Kubernetes experiment workflow](../../../.github/workflows/system-one-k8s-experiment.yml)
+- [System One Code Locator experiment workflow](../../../.github/workflows/system-one-code-locator.yml)
 
 ## Related Narness topics
 
