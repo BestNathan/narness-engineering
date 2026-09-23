@@ -50,8 +50,12 @@ def model_projection(stage, payload):
     return projected
 
 class SystemOneScorer:
-    def __init__(self, key, trace, endpoint=API_URL, model=MODEL, batch_size=48):
-        self.key, self.trace, self.endpoint, self.model, self.batch_size = key, trace, endpoint, model, batch_size
+    def __init__(self, key, trace, endpoint=API_URL, model=MODEL, batch_size=None):
+        self.key, self.trace, self.endpoint, self.model = key, trace, endpoint, model
+        # batch_size is accepted for backward compatibility only. System One
+        # evaluates all independent questions for a stage in one request.
+        self.deprecated_batch_size = batch_size
+
     def _request(self, payload):
         body = json.dumps(payload).encode()
         for attempt in range(MAX_REQUEST_ATTEMPTS):
@@ -73,28 +77,76 @@ class SystemOneScorer:
                 delay = 2 ** attempt
                 self.trace.emit("system_one_retry", status="transport", attempt=attempt + 1, delay_seconds=delay)
                 time.sleep(delay)
+
     def score(self, query, stage, candidates):
-        out, usage = [], {"model_calls": 0, "input_tokens": 0, "output_tokens": 0}
-        for offset in range(0, len(candidates), self.batch_size):
-            batch = candidates[offset:offset+self.batch_size]
-            questions = {}
-            for i, candidate in enumerate(batch):
-                questions[f"candidate_{i}"] = {
-                    "type": "noul",
-                    "instructions": {"task": query, "stage": stage, "candidate": model_projection(stage, candidate["payload"]), "question": "Would retaining this candidate materially help locate or understand source code relevant to the task?"},
-                    "criteria": {"true": "Plausibly relevant; keep it, including indirect supporting code.", "false": "Unlikely to help locate or understand the requested implementation."},
-                }
-            payload = {"state": {"goal": query, "stage": stage, "candidate_count": len(batch)}, "model": self.model, "questions": questions}
-            self.trace.emit("system_one_request", stage=stage, batch=offset//self.batch_size, candidate_ids=[x["id"] for x in batch], request=payload)
-            started = time.perf_counter(); response = self._request(payload); latency = round((time.perf_counter()-started)*1000, 3)
-            u = response.get("usage", {}); usage["model_calls"] += 1
-            usage["input_tokens"] += int(u.get("input_tokens", 0) or 0); usage["output_tokens"] += int(u.get("output_tokens", 0) or 0)
-            scores = []
-            for i, candidate in enumerate(batch):
-                answer = response.get("answers", {}).get(f"candidate_{i}", {})
-                if answer.get("type") != "noul": raise RuntimeError(f"unexpected answer: {answer!r}")
-                item = {**candidate, "score": float(answer["noul"])}; out.append(item); scores.append({"id": item["id"], "score": item["score"]})
-            self.trace.emit("system_one_response", stage=stage, batch=offset//self.batch_size, latency_ms=latency, model=response.get("model"), usage=u, scores=scores)
+        usage = {"model_calls": 0, "input_tokens": 0, "output_tokens": 0}
+        if not candidates:
+            return [], usage
+
+        questions = {}
+        for i, candidate in enumerate(candidates):
+            questions[f"candidate_{i}"] = {
+                "type": "noul",
+                "instructions": {
+                    "task": query,
+                    "stage": stage,
+                    "candidate": model_projection(stage, candidate["payload"]),
+                    "question": "Would retaining this candidate materially help locate or understand source code relevant to the task?",
+                },
+                "criteria": {
+                    "true": "Plausibly relevant; keep it, including indirect supporting code.",
+                    "false": "Unlikely to help locate or understand the requested implementation.",
+                },
+            }
+
+        payload = {
+            "state": {
+                "goal": query,
+                "stage": stage,
+                "candidate_count": len(candidates),
+            },
+            "model": self.model,
+            "questions": questions,
+        }
+        request_bytes = len(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+        self.trace.emit(
+            "system_one_request",
+            stage=stage,
+            request_index=0,
+            candidate_count=len(candidates),
+            candidate_ids=[x["id"] for x in candidates],
+            request_bytes=request_bytes,
+            request=payload,
+        )
+        started = time.perf_counter()
+        response = self._request(payload)
+        latency = round((time.perf_counter() - started) * 1000, 3)
+
+        u = response.get("usage", {})
+        usage["model_calls"] = 1
+        usage["input_tokens"] = int(u.get("input_tokens", 0) or 0)
+        usage["output_tokens"] = int(u.get("output_tokens", 0) or 0)
+
+        out, scores = [], []
+        answers = response.get("answers", {})
+        for i, candidate in enumerate(candidates):
+            answer = answers.get(f"candidate_{i}", {})
+            if answer.get("type") != "noul":
+                raise RuntimeError(f"unexpected answer for candidate_{i}: {answer!r}")
+            item = {**candidate, "score": float(answer["noul"])}
+            out.append(item)
+            scores.append({"id": item["id"], "score": item["score"]})
+
+        self.trace.emit(
+            "system_one_response",
+            stage=stage,
+            request_index=0,
+            candidate_count=len(candidates),
+            latency_ms=latency,
+            model=response.get("model"),
+            usage=u,
+            scores=scores,
+        )
         return sorted(out, key=lambda x: (-x["score"], x["id"])), usage
 
 class OfflineScorer:
@@ -157,44 +209,130 @@ def snippets(root, path, scored, threshold, radius=2):
     return [{"path":path,"start_line":s,"end_line":e,"score":score,"content":"\n".join(f"{n}: {source[n-1]}" for n in range(s,e+1))} for s,e,score in ranges]
 
 def run(root, query, scorer, trace, dt, ft, lt):
-    started=time.perf_counter(); usage={"model_calls":0,"input_tokens":0,"output_tokens":0}
+    started = time.perf_counter()
+    usage = {"model_calls": 0, "input_tokens": 0, "output_tokens": 0}
+
     def stage(name, candidates, threshold):
         trace.emit("candidates_exposed", stage=name, count=len(candidates), candidates=candidates)
-        scored,u=scorer.score(query,name,candidates)
-        for k in usage: usage[k]+=u[k]
-        selected=[x for x in scored if x["score"]>=threshold]
-        trace.emit("threshold_applied", stage=name, threshold=threshold, input_count=len(scored), selected_count=len(selected), selected=selected)
-        return selected
-    trace.emit("search_started", root=str(Path(root).resolve()), query=query, model=scorer.model, thresholds={"directory":dt,"file":ft,"line":lt})
-    directory_candidates=directories(root); ds=stage("directory", directory_candidates, dt)
-    file_candidates=files(root,ds); fs=stage("file", file_candidates, ft); ss=[]; line_count=0; line_kept=0
+        scored, u = scorer.score(query, name, candidates)
+        for k in usage:
+            usage[k] += u[k]
+        selected = [x for x in scored if x["score"] >= threshold]
+        trace.emit(
+            "threshold_applied",
+            stage=name,
+            threshold=threshold,
+            input_count=len(scored),
+            selected_count=len(selected),
+            selected=selected,
+        )
+        return selected, scored
+
+    trace.emit(
+        "search_started",
+        root=str(Path(root).resolve()),
+        query=query,
+        model=scorer.model,
+        thresholds={"directory": dt, "file": ft, "line": lt},
+        request_strategy="one_request_per_stage",
+    )
+
+    directory_candidates = directories(root)
+    ds, _ = stage("directory", directory_candidates, dt)
+
+    file_candidates = files(root, ds)
+    fs, _ = stage("file", file_candidates, ft)
+
+    line_candidates = []
+    line_counts_by_file = {}
     for f in fs:
-        lc=lines(root,f); line_count += len(lc)
-        trace.emit("candidates_exposed", stage="line", parent=f["id"], count=len(lc), candidates=lc)
-        scored,u=scorer.score(query,"line",lc)
-        for k in usage: usage[k]+=u[k]
-        kept=[x for x in scored if x["score"]>=lt]; line_kept += len(kept)
-        trace.emit("threshold_applied", stage="line", parent=f["id"], threshold=lt, input_count=len(scored), selected_count=len(kept), selected=kept)
-        ss += snippets(root,f["payload"]["path"],scored,lt)
-    ss.sort(key=lambda x:(-x["score"],x["path"],x["start_line"]))
-    result={"query":query,"root":str(Path(root).resolve()),"model":scorer.model,"thresholds":{"directory":dt,"file":ft,"line":lt},"directories":ds,"files":fs,"snippets":ss,"metrics":{**usage,"directories_exposed":len(directory_candidates),"directories_selected":len(ds),"files_exposed":len(file_candidates),"files_selected":len(fs),"lines_exposed":line_count,"lines_selected":line_kept,"snippets":len(ss),"elapsed_ms":round((time.perf_counter()-started)*1000,3)}}
-    trace.emit("search_completed", result=result); return result
+        current = lines(root, f)
+        line_candidates.extend(current)
+        line_counts_by_file[f["id"]] = len(current)
+    trace.emit(
+        "line_frontier_built",
+        file_count=len(fs),
+        line_count=len(line_candidates),
+        lines_by_file=line_counts_by_file,
+    )
+
+    kept_lines, scored_lines = stage("line", line_candidates, lt)
+
+    scored_by_path = {}
+    for item in scored_lines:
+        scored_by_path.setdefault(item["payload"]["path"], []).append(item)
+
+    ss = []
+    for f in fs:
+        path = f["payload"]["path"]
+        ss += snippets(root, path, scored_by_path.get(path, []), lt)
+
+    ss.sort(key=lambda x: (-x["score"], x["path"], x["start_line"]))
+    result = {
+        "query": query,
+        "root": str(Path(root).resolve()),
+        "model": scorer.model,
+        "thresholds": {"directory": dt, "file": ft, "line": lt},
+        "directories": ds,
+        "files": fs,
+        "snippets": ss,
+        "metrics": {
+            **usage,
+            "request_strategy": "one_request_per_stage",
+            "directories_exposed": len(directory_candidates),
+            "directories_selected": len(ds),
+            "files_exposed": len(file_candidates),
+            "files_selected": len(fs),
+            "lines_exposed": len(line_candidates),
+            "lines_selected": len(kept_lines),
+            "snippets": len(ss),
+            "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
+        },
+    }
+    trace.emit("search_completed", result=result)
+    return result
 
 def main(argv=None):
-    p=argparse.ArgumentParser(); p.add_argument("root"); p.add_argument("query"); p.add_argument("--directory-threshold",type=float,default=.35); p.add_argument("--file-threshold",type=float,default=.50); p.add_argument("--line-threshold",type=float,default=.70); p.add_argument("--batch-size",type=int,default=48); p.add_argument("--offline-decider",action="store_true"); p.add_argument("--trace-file"); p.add_argument("--output-json"); p.add_argument("--json",action="store_true"); p.add_argument("--typesafe-endpoint",default=os.getenv("TYPESAFE_API_URL",API_URL)); p.add_argument("--model",default=os.getenv("TYPESAFE_MODEL",MODEL)); a=p.parse_args(argv)
+    p=argparse.ArgumentParser()
+    p.add_argument("root")
+    p.add_argument("query")
+    p.add_argument("--directory-threshold",type=float,default=.35)
+    p.add_argument("--file-threshold",type=float,default=.50)
+    p.add_argument("--line-threshold",type=float,default=.70)
+    p.add_argument("--batch-size",type=int,default=None,help=argparse.SUPPRESS)
+    p.add_argument("--offline-decider",action="store_true")
+    p.add_argument("--trace-file")
+    p.add_argument("--output-json")
+    p.add_argument("--json",action="store_true")
+    p.add_argument("--typesafe-endpoint",default=os.getenv("TYPESAFE_API_URL",API_URL))
+    p.add_argument("--model",default=os.getenv("TYPESAFE_MODEL",MODEL))
+    a=p.parse_args(argv)
+
     trace=Trace(a.trace_file)
-    if a.offline_decider: scorer=OfflineScorer(trace)
+    if a.offline_decider:
+        scorer=OfflineScorer(trace)
     else:
         key=os.getenv("TYPESAFE_API_KEY","")
-        if not key: print("TYPESAFE_API_KEY is required unless --offline-decider is used.",file=sys.stderr); return 2
+        if not key:
+            print("TYPESAFE_API_KEY is required unless --offline-decider is used.",file=sys.stderr)
+            return 2
         scorer=SystemOneScorer(key,trace,a.typesafe_endpoint,a.model,a.batch_size)
-    result=run(a.root,a.query,scorer,trace,a.directory_threshold,a.file_threshold,a.line_threshold); payload=json.dumps(result,indent=2,ensure_ascii=False)
-    if a.output_json: Path(a.output_json).write_text(payload+"\n",encoding="utf-8")
-    if a.json: print(payload)
+
+    result=run(a.root,a.query,scorer,trace,a.directory_threshold,a.file_threshold,a.line_threshold)
+    payload=json.dumps(result,indent=2,ensure_ascii=False)
+    if a.output_json:
+        Path(a.output_json).write_text(payload+"\n",encoding="utf-8")
+    if a.json:
+        print(payload)
     else:
-        print("relevant directories:"); [print(f"  {x['score']:.3f} {x['id']}") for x in result["directories"]]
-        print("relevant files:"); [print(f"  {x['score']:.3f} {x['id']}") for x in result["files"]]
-        print("relevant snippets:"); [print(f"  {x['score']:.3f} {x['path']}:{x['start_line']}-{x['end_line']}\n{x['content']}") for x in result["snippets"]]
+        print("relevant directories:")
+        [print(f"  {x['score']:.3f} {x['id']}") for x in result["directories"]]
+        print("relevant files:")
+        [print(f"  {x['score']:.3f} {x['id']}") for x in result["files"]]
+        print("relevant snippets:")
+        [print(f"  {x['score']:.3f} {x['path']}:{x['start_line']}-{x['end_line']}\n{x['content']}") for x in result["snippets"]]
         print("metrics:",json.dumps(result["metrics"],ensure_ascii=False))
     return 0 if result["files"] and result["snippets"] else 1
-if __name__ == "__main__": raise SystemExit(main())
+
+if __name__ == "__main__":
+    raise SystemExit(main())
