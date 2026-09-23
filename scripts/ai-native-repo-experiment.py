@@ -240,7 +240,13 @@ def safe_write_beneath(root: Path, relative: str, content: str) -> Path:
             dir_fd=fd,
         )
         try:
-            os.write(out, content.encode("utf-8"))
+            remaining = memoryview(content.encode("utf-8"))
+            while remaining:
+                written = os.write(out, remaining)
+                if written <= 0:
+                    throw = RuntimeError("short write while installing controller file")
+                    raise throw
+                remaining = remaining[written:]
         finally:
             os.close(out)
     finally:
