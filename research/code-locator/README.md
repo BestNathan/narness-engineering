@@ -1,232 +1,130 @@
 # System One Code Locator
 
-> Experimental research project. This is a localization harness, not a code-changing agent and not part of the canonical Narness runtime.
+> Experimental research project. This is a localization harness, not a code-changing agent.
 
-This directory is the complete Code Locator research unit: implementation, fixtures, tests, design notes, pilot analyses, and immutable run records live together here.
+Code Locator now uses a two-phase architecture.
 
-## Project layout
+## Phase 1 — File Locator
 
-```text
-research/code-locator/
-├── README.md
-├── src/
-│   └── system_one_code_locator.py
-├── tests/
-│   └── test_system_one_code_locator.py
-├── fixtures/
-│   └── repository/
-├── docs/
-│   ├── design.md
-│   └── pilots/
-│       ├── nession-websocket-2026-09-23.md
-│       └── nession-websocket-three-stage-baseline-2026-09-23.md
-└── runs/
-    └── <time>-run-<run_id>-attempt-<n>/
-```
+Phase 1 scores repository structure and file metadata without exposing source bodies:
 
-The `src/`, `tests/`, and `fixtures/` directories define the experiment. `docs/` contains evolving research reasoning. `runs/` is append-only evidence produced by GitHub Actions.
+~~~text
+repository -> directory Noul -> direct files -> file Noul -> PotentialFile[]
+~~~
 
-See [design.md](docs/design.md) for the hypotheses and experiment design. The original Nession pilot is preserved as historical evidence, while [the stable three-stage Nession WebSocket baseline](docs/pilots/nession-websocket-three-stage-baseline-2026-09-23.md) is the reference point for new controlled experiments.
+Current baseline controls:
 
-This project explores whether a fast System One model can localize code by repeatedly judging a progressively disclosed search space rather than driving repository browsing through a ReAct loop.
+~~~text
+directory threshold = 0.50
+file threshold      = 0.65
+max files           = 16
+~~~
 
-Given a request such as:
+The directory stage enumerates the repository tree once. The file stage only exposes direct files of retained directories; it never recursively walks selected directories again.
 
-> Help me optimize the websocket connection implementation.
+## Phase 2 — Progressive Reader
 
-and a repository root, the harness performs:
+Potential files are not pre-expanded into lines, regions, outlines, or symbols. The harness first reads file stat, generates a bounded read-action space, and lets System One decide where to read.
 
-```text
-repository
-  -> enumerate directory candidates
-  -> System One relevance scores
-  -> keep directories above threshold
-  -> enumerate files under retained directories
-  -> System One relevance scores
-  -> keep files above threshold
-  -> split retained files into compact deterministic code regions
-  -> System One relevance scores
-  -> materialize selected regions as grounded snippets
-```
+~~~text
+PotentialFile[]
+  -> stat
+  -> dynamic ReadRange actions
+  -> Choice
+  -> read_file
+  -> Observation enters ReaderState
+  -> Noul observation relevance
+  -> update coverage and scores
+  -> generate next action frontier
+  -> repeat
+~~~
 
-The model never chooses filesystem tools, constructs paths, or controls traversal. The harness owns state expansion, thresholds, IO, provenance, stage-level fan-out, and result assembly.
+A source range is therefore an information-gathering action, not a precomputed semantic candidate.
 
-## Why Noul instead of Choice
+## Multi-file reader batches
 
-Directory, file, and region relevance are independent judgments: several candidates may all be relevant. The TypeSafe System One API's `noul` primitive returns a yes-probability for each question, so the runtime can retain every candidate whose score crosses the stage threshold.
+The reader processes multiple files concurrently. The default batch size is four. In one reader round, the harness creates one Choice question per active file and sends all questions in one System One request. Each file chooses one grounded next action while sharing the batch ReaderState.
 
-`choice` would instead normalize probability across candidates and force one winner, which is appropriate for the Kubernetes action-frontier demo but not for multi-hit code localization.
+Default reader controls:
 
-## Request topology
+~~~text
+file batch size          = 4
+read window              = 140 lines
+max rounds per batch     = 4
+read action threshold    = 0.40
+observation threshold    = 0.65
+~~~
 
-The three semantic stages are also the three System One round trips:
+The action threshold applies to the probability of the selected Choice option. A read below the threshold is not executed. The observation threshold decides whether read content becomes retained final evidence.
 
-```text
-1. directory candidates -> one System One request
-2. file candidates      -> one System One request
-3. region candidates    -> one System One request
-```
+## ReaderState
 
-A stage can contain many independent Noul questions, but the harness does not split them into network batches. TypeSafe evaluates those questions together and returns one answer per candidate. This keeps model-call count tied to semantic depth rather than repository size. Retries after transient transport/API failures are the only reason a successful stage may perform more than one HTTP attempt.
+~~~text
+ReaderState
+  goal
+  batch_index / round
+  files[]
+    path
+    Phase-1 score
+    stat { line_count, size_bytes, extension }
+    coverage[]
+    stopped / stop_reason
+  observations[]
+    path / line range
+    content
+    action probability
+    relevance score
+~~~
 
-## State progression
+After read_file returns, the content is appended to ReaderState before System One is asked to score the observation. The next action decision sees the updated observations and coverage.
 
-```text
-RepositoryState
-  |
-  | deterministic enumeration
-  v
-DirectoryCandidate[]
-  |
-  | Noul relevance + low threshold
-  v
-RelevantDirectory[]
-  |
-  | deterministic enumeration
-  v
-FileCandidate[]
-  |
-  | Noul relevance + medium threshold
-  v
-RelevantFile[]
-  |
-  | read source + compact into bounded regions
-  v
-CodeRegionCandidate[]
-  |
-  | Noul relevance + higher threshold
-  v
-RelevantCodeRegion[]
-  |
-  | deterministic source materialization
-  v
-CodeSnippet[]
-```
+## Dynamic actions
 
-The defaults intentionally become stricter as the search gets deeper:
+An unread file starts with a coarse action frontier such as head, middle, tail, and stop. After observations exist, the harness generates actions around the strongest observation and the largest unread gap. Relevant content therefore increases local reading resolution without requiring the whole file to be expanded up front.
 
-```text
-directory >= 0.35
-file      >= 0.50
-region    >= 0.70
-```
+## Decision primitives
 
-These are experiment parameters, not claimed optimal values. Early false negatives are especially expensive because pruning a directory removes its entire subtree. A future experiment should compare simple thresholds against threshold-plus-beam retention.
+~~~text
+Phase-1 candidate relevance -> Noul
+Next read action           -> Choice
+Observed-content relevance -> Noul
+~~~
 
-## Run the deterministic fixture
+The primitive is selected by decision semantics rather than globally choosing Noul or Choice for the whole locator.
 
-No API key is required:
+## Run
 
-```bash
+Offline fixture:
+
+~~~bash
 python3 research/code-locator/src/system_one_code_locator.py \
   research/code-locator/fixtures/repository \
   "Help me optimize the websocket connection implementation" \
-  --offline-decider \
-  --line-threshold 0.60
-```
+  --offline-decider
+~~~
 
-The offline scorer is only a deterministic fixture implementation. It is not intended to emulate System One quality.
+Important controls:
 
-## Run with TypeSafe System One
+~~~text
+--directory-threshold
+--file-threshold
+--phase1-max-files
+--reader-file-batch-size
+--reader-window-lines
+--reader-max-rounds
+--reader-action-threshold
+--observation-threshold
+~~~
 
-```bash
-export TYPESAFE_API_KEY=...
+## Research directions
 
-python3 research/code-locator/src/system_one_code_locator.py \
-  /path/to/repository \
-  "Help me optimize the websocket connection implementation"
-```
+1. Phase-1 threshold versus relevant-file recall, precision, and downstream reader cost.
+2. Reader-action threshold versus exploratory IO and discovery failure.
+3. Observation threshold versus evidence precision and recall.
+4. File batch sizes 1, 2, 4, and 8.
+5. Noul versus Choice only where the semantic decision can reasonably use either primitive.
+6. Richer dynamic action generators based on clues discovered in observations.
+7. Reader stopping / sufficiency policies.
+8. System One progressive reading versus System Two ReAct under the same read budget.
 
-Optional environment variables:
-
-```bash
-export TYPESAFE_API_URL=https://api.typesafe.ai/v1/systemone
-export TYPESAFE_MODEL=jev-latest
-```
-
-## Research trace
-
-Use `--trace-file` to create an append-only JSONL trace and `--output-json` to persist the final result:
-
-```bash
-python3 research/code-locator/src/system_one_code_locator.py \
-  /path/to/repository \
-  "Help me optimize the websocket connection implementation" \
-  --trace-file evidence/code-locator.trace.jsonl \
-  --output-json evidence/code-locator.result.json
-```
-
-The trace records:
-
-- the query, model, root, and thresholds;
-- every directory/file/region candidate disclosed by the harness;
-- every TypeSafe request body without credentials;
-- model responses reduced to candidate scores, latency, and token usage;
-- every threshold application and retained candidate set;
-- the final result and aggregate metrics.
-
-This makes a workflow run useful as research evidence rather than only as a pass/fail CI event.
-
-## Output contract
-
-The final result contains three provenance-preserving layers:
-
-```text
-relevant directories
-relevant files
-relevant snippets { path, start_line, end_line, score, content }
-```
-
-It also reports exposed/selected counts, model calls, token usage, and elapsed time.
-
-## Tests
-
-```bash
-python3 -m unittest discover \
-  -s research/code-locator/tests \
-  -p 'test_*.py' \
-  -v
-```
-
-The tests verify that the deterministic fixture finds the websocket client, that file expansion is direct-only, that source is compacted into bounded regions, that each stage fans out independent Noul questions in one request, and that a normal run makes exactly three model calls: directory, file, and region.
-
-## Dedicated research workflow
-
-Code Locator has its own GitHub Actions workflow:
-
-```text
-.github/workflows/system-one-code-locator.yml
-```
-
-It does not run the Kubernetes experiment.
-
-On relevant pushes and pull requests it runs only the deterministic Code Locator fixture and uploads:
-
-```text
-system-one-code-locator-offline-<run>-<attempt>/
-  run-manifest.json
-  tests.log
-  run.log
-  result.json
-  trace.jsonl
-  summary.md
-```
-
-A manual `workflow_dispatch` can additionally run the real TypeSafe experiment against a configurable subject repository. That job uses the `typesafe` environment and uploads a separate `system-one-code-locator-typesafe-*` artifact.
-
-Feature-branch pushes and pull requests only upload Actions artifacts. Immutable repository records under `runs/<time>-run-<run_id>-attempt-<n>/` are written only for manual research runs or pushes to `main`, preventing experiment branches from being polluted by validation snapshots.
-
-## Research limitations
-
-The current prototype intentionally leaves several questions open:
-
-- whether whole-tree directory enumeration is better than recursive frontier expansion;
-- threshold calibration and compounding false-negative risk;
-- threshold-only pruning versus keeping a minimum semantic beam;
-- fixed-size region scoring versus syntax-aware symbol/block scoring;
-- caching repeated judgments across nearby queries;
-- comparison against ripgrep, embeddings, language-server indexes, and System Two browsing;
-- evaluation against gold relevant-file and relevant-range labels;
-- escalation when no candidate survives a stage.
-
-See the [System One Progressive Action Spaces topic](../../docs/topics/system-one-progressive-action-space/README.md) for the shared model behind this demo and the Kubernetes command generator.
+See docs/design.md for the detailed research model.
