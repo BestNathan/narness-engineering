@@ -1,0 +1,145 @@
+{
+  "query": "Help me optimize the websocket connection implementation",
+  "root": "/home/runner/work/narness-engineering/narness-engineering/research/code-locator/fixtures/repository",
+  "model": "offline-lexical-fixture",
+  "thresholds": {
+    "directory": 0.35,
+    "file": 0.5,
+    "line": 0.6
+  },
+  "directories": [
+    {
+      "id": "web/src",
+      "payload": {
+        "path": "web/src",
+        "name": "src",
+        "child_directories": [
+          "api",
+          "ws"
+        ],
+        "direct_files": []
+      },
+      "score": 0.84
+    },
+    {
+      "id": "web/src/ws",
+      "payload": {
+        "path": "web/src/ws",
+        "name": "ws",
+        "child_directories": [],
+        "direct_files": [
+          "client.ts"
+        ]
+      },
+      "score": 0.84
+    },
+    {
+      "id": "server",
+      "payload": {
+        "path": "server",
+        "name": "server",
+        "child_directories": [
+          "src"
+        ],
+        "direct_files": []
+      },
+      "score": 0.62
+    },
+    {
+      "id": "server/src",
+      "payload": {
+        "path": "server/src",
+        "name": "src",
+        "child_directories": [],
+        "direct_files": [
+          "http.ts"
+        ]
+      },
+      "score": 0.62
+    },
+    {
+      "id": "web",
+      "payload": {
+        "path": "web",
+        "name": "web",
+        "child_directories": [
+          "src"
+        ],
+        "direct_files": []
+      },
+      "score": 0.62
+    },
+    {
+      "id": "web/src/api",
+      "payload": {
+        "path": "web/src/api",
+        "name": "api",
+        "child_directories": [],
+        "direct_files": [
+          "user.ts"
+        ]
+      },
+      "score": 0.62
+    }
+  ],
+  "files": [
+    {
+      "id": "web/src/ws/client.ts",
+      "payload": {
+        "path": "web/src/ws/client.ts",
+        "directory": "web/src/ws",
+        "filename": "client.ts",
+        "extension": ".ts",
+        "size_bytes": 573
+      },
+      "score": 0.84
+    },
+    {
+      "id": "server/src/http.ts",
+      "payload": {
+        "path": "server/src/http.ts",
+        "directory": "server/src",
+        "filename": "http.ts",
+        "extension": ".ts",
+        "size_bytes": 76
+      },
+      "score": 0.62
+    },
+    {
+      "id": "web/src/api/user.ts",
+      "payload": {
+        "path": "web/src/api/user.ts",
+        "directory": "web/src/api",
+        "filename": "user.ts",
+        "extension": ".ts",
+        "size_bytes": 125
+      },
+      "score": 0.62
+    }
+  ],
+  "snippets": [
+    {
+      "path": "web/src/ws/client.ts",
+      "start_line": 1,
+      "end_line": 19,
+      "score": 0.96,
+      "content": "1: export class WebSocketClient {\\n2:   private socket?: WebSocket;\\n3:   private reconnectTimer?: ReturnType<typeof setTimeout>;\\n4: \\n5:   connect(url: string) {\\n6:     this.socket = new WebSocket(url);\\n7:     this.socket.onopen = () => this.clearReconnect();\\n8:     this.socket.onclose = () => this.scheduleReconnect(url);\\n9:     this.socket.onerror = () => this.socket?.close();\\n10:   }\\n11: \\n12:   private scheduleReconnect(url: string) {\\n13:     this.reconnectTimer = setTimeout(() => this.connect(url), 1000);\\n14:   }\\n15: \\n16:   private clearReconnect() {\\n17:     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);\\n18:   }\\n19: }"
+    }
+  ],
+  "metrics": {
+    "model_calls": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "request_strategy": "one_request_per_stage",
+    "directories_exposed": 6,
+    "directories_selected": 6,
+    "files_exposed": 3,
+    "files_selected": 3,
+    "regions_exposed": 3,
+    "regions_selected": 1,
+    "region_span": 60,
+    "physical_lines_considered": 26,
+    "snippets": 1,
+    "elapsed_ms": 2.488
+  }
+}
