@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "mode": "offline",
+  "query": "Help me optimize the websocket connection implementation",
+  "model": "offline-lexical-fixture",
+  "thresholds": {
+    "directory": 0.35,
+    "file": 0.5,
+    "line": 0.6
+  },
+  "github_run_id": "35822641633",
+  "github_run_attempt": "1",
+  "commit_sha": "28d8f5ca98449999f673b5d678415297659919de",
+  "ref_name": "fix/code-locator-three-stage-requests"
+}
