@@ -212,25 +212,116 @@ def files(root, selected_dirs):
             }
     return [found[k] for k in sorted(found)]
 
-def lines(root, file, radius=2):
+REGION_SPAN = 60
+IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{2,}")
+DECLARATION_RE = re.compile(
+    r"\\b(?:fn|function|def|func|class|struct|enum|trait|impl|interface|type|"
+    r"const|static|pub|export|async)\\b"
+)
+IDENTIFIER_STOPWORDS = {
+    "and", "async", "await", "break", "case", "class", "const", "continue",
+    "def", "else", "enum", "export", "false", "for", "from", "func", "function",
+    "impl", "import", "interface", "let", "match", "mod", "none", "null", "pub",
+    "return", "self", "static", "struct", "super", "this", "trait", "true", "type",
+    "use", "var", "where", "while",
+}
+
+def regions(root, file, span=REGION_SPAN):
+    """Build a compact, deterministic third-stage decision frontier.
+
+    The model does not need every source line plus overlapping context in order
+    to decide which parts of already-selected files deserve expansion. Each
+    region therefore exposes provenance plus a structural lexical outline.
+    The full source remains local and is materialized only after selection.
+    """
     path = Path(root).resolve() / file["payload"]["path"]
-    source = path.read_text(encoding="utf-8", errors="replace").splitlines(); out = []
-    for i, line in enumerate(source):
-        if not line.strip(): continue
-        start, end = max(0, i-radius), min(len(source), i+radius+1)
-        context = "\n".join(f"{n+1}: {source[n]}" for n in range(start, end))
-        out.append({"id": f"{file['id']}:{i+1}", "payload": {"path": file["payload"]["path"], "line": i+1, "text": line[:1200], "nearby_lines": context[:6000]}})
+    source = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    out = []
+
+    for start0 in range(0, len(source), span):
+        end0 = min(len(source), start0 + span)
+        chunk = source[start0:end0]
+        if not any(line.strip() for line in chunk):
+            continue
+
+        declarations = []
+        identifiers = []
+        seen_identifiers = set()
+
+        for line in chunk:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if DECLARATION_RE.search(stripped) and len(declarations) < 5:
+                declarations.append(stripped[:120])
+
+            for identifier in IDENTIFIER_RE.findall(stripped):
+                key = identifier.lower()
+                if key in IDENTIFIER_STOPWORDS or key in seen_identifiers:
+                    continue
+                seen_identifiers.add(key)
+                identifiers.append(identifier[:80])
+                if len(identifiers) >= 20:
+                    break
+            if len(identifiers) >= 20 and len(declarations) >= 5:
+                break
+
+        start_line = start0 + 1
+        end_line = end0
+        rel = file["payload"]["path"]
+        out.append({
+            "id": f"{file['id']}:{start_line}-{end_line}",
+            "payload": {
+                "path": rel,
+                "start_line": start_line,
+                "end_line": end_line,
+                "declarations": declarations,
+                "identifiers": identifiers,
+            },
+        })
+
     return out
 
-def snippets(root, path, scored, threshold, radius=2):
-    relevant = sorted((x for x in scored if x["score"] >= threshold), key=lambda x: x["payload"]["line"])
-    if not relevant: return []
-    source = (Path(root).resolve()/path).read_text(encoding="utf-8", errors="replace").splitlines(); ranges=[]
+def region_snippets(root, path, scored, threshold):
+    relevant = sorted(
+        (x for x in scored if x["score"] >= threshold),
+        key=lambda x: x["payload"]["start_line"],
+    )
+    if not relevant:
+        return []
+
+    source = (Path(root).resolve() / path).read_text(
+        encoding="utf-8",
+        errors="replace",
+    ).splitlines()
+    ranges = []
+
     for item in relevant:
-        line=item["payload"]["line"]; start=max(1,line-radius); end=min(len(source),line+radius)
-        if ranges and start <= ranges[-1][1]+1: ranges[-1]=(ranges[-1][0], max(ranges[-1][1],end), max(ranges[-1][2],item["score"]))
-        else: ranges.append((start,end,item["score"]))
-    return [{"path":path,"start_line":s,"end_line":e,"score":score,"content":"\n".join(f"{n}: {source[n-1]}" for n in range(s,e+1))} for s,e,score in ranges]
+        start = item["payload"]["start_line"]
+        end = item["payload"]["end_line"]
+        score = item["score"]
+        if ranges and start <= ranges[-1][1] + 1:
+            ranges[-1] = (
+                ranges[-1][0],
+                max(ranges[-1][1], end),
+                max(ranges[-1][2], score),
+            )
+        else:
+            ranges.append((start, end, score))
+
+    return [
+        {
+            "path": path,
+            "start_line": start,
+            "end_line": end,
+            "score": score,
+            "content": "\\n".join(
+                f"{line_number}: {source[line_number - 1]}"
+                for line_number in range(start, end + 1)
+            ),
+        }
+        for start, end, score in ranges
+    ]
 
 def run(root, query, scorer, trace, dt, ft, lt):
     started = time.perf_counter()
@@ -267,29 +358,36 @@ def run(root, query, scorer, trace, dt, ft, lt):
     file_candidates = files(root, ds)
     fs, _ = stage("file", file_candidates, ft)
 
-    line_candidates = []
-    line_counts_by_file = {}
+    region_candidates = []
+    region_counts_by_file = {}
+    physical_lines = 0
     for f in fs:
-        current = lines(root, f)
-        line_candidates.extend(current)
-        line_counts_by_file[f["id"]] = len(current)
+        source_path = Path(root).resolve() / f["payload"]["path"]
+        physical_lines += len(
+            source_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        )
+        current = regions(root, f)
+        region_candidates.extend(current)
+        region_counts_by_file[f["id"]] = len(current)
     trace.emit(
-        "line_frontier_built",
+        "region_frontier_built",
         file_count=len(fs),
-        line_count=len(line_candidates),
-        lines_by_file=line_counts_by_file,
+        region_count=len(region_candidates),
+        physical_lines=physical_lines,
+        regions_by_file=region_counts_by_file,
+        region_span=REGION_SPAN,
     )
 
-    kept_lines, scored_lines = stage("line", line_candidates, lt)
+    kept_regions, scored_regions = stage("region", region_candidates, lt)
 
     scored_by_path = {}
-    for item in scored_lines:
+    for item in scored_regions:
         scored_by_path.setdefault(item["payload"]["path"], []).append(item)
 
     ss = []
     for f in fs:
         path = f["payload"]["path"]
-        ss += snippets(root, path, scored_by_path.get(path, []), lt)
+        ss += region_snippets(root, path, scored_by_path.get(path, []), lt)
 
     ss.sort(key=lambda x: (-x["score"], x["path"], x["start_line"]))
     result = {
@@ -307,8 +405,10 @@ def run(root, query, scorer, trace, dt, ft, lt):
             "directories_selected": len(ds),
             "files_exposed": len(file_candidates),
             "files_selected": len(fs),
-            "lines_exposed": len(line_candidates),
-            "lines_selected": len(kept_lines),
+            "regions_exposed": len(region_candidates),
+            "regions_selected": len(kept_regions),
+            "region_span": REGION_SPAN,
+            "physical_lines_considered": physical_lines,
             "snippets": len(ss),
             "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
         },
