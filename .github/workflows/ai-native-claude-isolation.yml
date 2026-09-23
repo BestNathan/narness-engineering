@@ -27,7 +27,7 @@ jobs:
       - name: Install namespace sandbox and pinned client
         run: |
           sudo apt-get update
-          sudo apt-get install -y bubblewrap socat ripgrep libseccomp-dev
+          sudo apt-get install -y bubblewrap socat ripgrep libseccomp-dev debianutils
           # Scope the user-namespace exception to the sandbox executable.
           sudo apparmor_parser -r research/claude-runtime/bwrap.apparmor
           npm install --global --no-fund --no-audit \
