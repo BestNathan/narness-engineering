@@ -1107,7 +1107,6 @@ def run(
             "directory": directory_threshold,
             "file": file_threshold,
             "reader_file_activation": reader_file_activation_threshold,
-            "reader_file_activation": reader_file_activation_threshold,
             "reader_action": reader_action_threshold,
             "observation": observation_threshold,
         },
@@ -1174,6 +1173,7 @@ def run(
         "thresholds": {
             "directory": directory_threshold,
             "file": file_threshold,
+            "reader_file_activation": reader_file_activation_threshold,
             "reader_action": reader_action_threshold,
             "observation": observation_threshold,
         },
