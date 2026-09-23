@@ -74,235 +74,374 @@ There is no Phase-1 max-files cap. Every file above the file threshold becomes p
 
 Phase 1 is therefore a coarse state-space boundary, not a ranking that dictates read order.
 
-## Phase 2 — Global Progressive Reader
+## Phase 2 — Independent File Range Runtime
 
-All retained Phase-1 files are stat'ed locally and placed in one shared ReaderState.
+The current Phase-2 baseline intentionally avoids a shared multi-file state.
+
+Two observations drive this design:
+
+1. System One requests have a bounded state context.
+2. Once Phase 1 has selected plausible files, one file does not need another
+   file's raw observations to decide which ranges inside itself should be read.
+
+Therefore:
 
 ~~~text
 PotentialFile[]
-  -> stat
-  -> ReaderState.files[]
-~~~
-
-A scheduler epoch begins by exposing the complete eligible file frontier to System One.
-
-~~~text
-ReaderState
-  -> Noul(file A: read now?)
-  -> Noul(file B: read now?)
-  -> Noul(file C: read now?)
+  -> FileRuntime(file A)
+  -> FileRuntime(file B)
+  -> FileRuntime(file C)
   -> ...
-  -> activated file subset
 ~~~
 
-All file questions are sent in one System One request and share the same state.
+The user goal is shared. Runtime state is not.
 
-The activation score answers a relative temporal question:
-
-> Is reading this file now likely to add useful information, given the complete current state?
-
-It is intentionally distinct from the Phase-1 file score.
-
-An unselected file is deferred, not rejected. It remains in ReaderState and can be rescored after other reads add observations.
-
-## Local file action space
-
-Only globally activated files receive local read-action choices.
-
-For an unread file:
+## FileRuntime state
 
 ~~~text
-ReadRange(head)
-ReadRange(middle)
-ReadRange(tail)
-StopFile
-~~~
+FileState
+  path
+  phase1_score
+  line_count
+  size_bytes
+  extension
 
-After observations exist, high-relevance observations are merged into disconnected `RelevantRegion[]` hotspots.
-
-~~~text
-RelevantRegion #1 -> before / after
-RelevantRegion #2 -> before / after
-RelevantRegion #3 -> before / after
-largest unread gap
-StopFile
-~~~
-
-The frontier is bounded to at most eight actions per file.
-
-System One chooses one next action per activated file through Choice. Multiple activated files can therefore be read in the same scheduler epoch without the harness deciding a fixed batch membership.
-
-## ReaderState
-
-~~~text
-ReaderState
-  goal
-  scheduler_round
-
-  files[]
-    path
-    phase1_score
-    stat
-      line_count
-      size_bytes
-      extension
-    coverage[]
-    read_count
-    activation_count
-    last_activation_score
-    stopped
-    stop_reason
-
+  epoch
+  coverage[]
   observations[]
-    id
-    path
-    start_line
-    end_line
-    content
-    action_probability
-    relevance
+  last_selected_ranges[]
+  read_count
+  termination
+  action_history[]
 ~~~
 
-A read observation is appended before its relevance question is evaluated. The next file-scheduling request sees the updated observations and coverage.
+A FileRuntime owns complete durable state for exactly one file.
 
-## File-owned read budget
-
-A scheduler epoch is not a read budget unit. A file can be deferred for several epochs without consuming budget.
-
-Current per-file budget:
+The model request receives a bounded DecisionView rather than the entire
+durable object:
 
 ~~~text
-soft reads = 4
-hard reads = 8
+goal
+
+file
+  path
+  phase1_score
+  line_count
+  coverage
+  read_count
+  epoch
+
+recent raw observations
+  bounded mechanically by context size
 ~~~
 
-At or beyond four reads:
+The projection does not summarize or interpret text. Older observations may be
+omitted from the request by a mechanical recency/size policy while remaining
+in durable FileState.
+
+## Content-agnostic action space
+
+The v0 Harness does not parse source contents at all.
+
+It has no language-specific concepts:
 
 ~~~text
-new observation >= observation threshold
-  -> file remains eligible
-
-new observation < observation threshold
-  -> stop that file
+no AST
+no LSP
+no symbols
+no imports
+no keyword extraction
+no semantic chunking
 ~~~
 
-At eight reads the file stops unconditionally.
+This means Rust, TypeScript, Markdown, YAML, SQL, logs, and plain text use the
+same runtime.
 
-This preserves the earlier file-scoped continuation finding while removing batch ownership completely.
-
-## Decision primitives
+The only effect primitive is:
 
 ~~~text
-Phase-1 directory relevance  -> Noul
-Phase-1 file relevance       -> Noul
-Phase-2 file activation      -> Noul
-Per-file next read action    -> Choice
-Observation relevance        -> Noul
+ReadRange(path, start_line, end_line)
 ~~~
 
-Each threshold controls a different failure mode:
+plus the control action:
 
 ~~~text
-directory relevance       0.50
-Phase-1 file relevance    0.65
-file activation           0.65
-read-action probability   0.40
-observation relevance     0.65
+StopFile
 ~~~
 
-These are research parameters rather than claimed optima.
+Navigation labels only describe how a grounded range was generated.
 
-## Request topology
-
-Phase 1:
+### Unread file
 
 ~~~text
-1. directory Noul
-2. file Noul
+seed_head
+seed_middle
+seed_tail
+StopFile
 ~~~
 
-Each Phase-2 scheduler epoch can then use:
+### Partially-read file
+
+The Harness uses coverage geometry and previous selected ranges to generate:
 
 ~~~text
-3. global file-priority Noul
-4. local read-action Choice for activated files
-5. observation-relevance Noul for produced observations
+expand_before
+expand_after
+jump
+StopFile
 ~~~
 
-There is no fixed total call count. Calls follow state transitions rather than candidate-array transport batching.
+`expand_before/after` are adjacent to ranges selected in the previous epoch.
 
-## Real global-scheduler trace
+`jump` is a midpoint window from one of the largest unread gaps.
 
-Run `35839323377` used the same Nession revision and websocket task as the earlier experiments.
+No text is inspected when these actions are generated.
 
-Phase 1 retained 18 files — all files above threshold, with no top-k truncation.
+## Action scoring
 
-The first Phase-2 global scheduling request selected only:
+All actions in one FileRuntime are independently Noul-scored against:
 
 ~~~text
-0.86 crates/nession-server/src/server/websocket.rs
-0.81 web/src/platform/socket/WebSocketService.ts
-0.78 crates/nession-agent/src/server/websocket.rs
+goal + this file's DecisionView
 ~~~
 
-The other 15 files remained in state but were deferred.
+The model decides semantic value.
 
-Epoch 2 selected the same three. Epoch 3 selected only `WebSocketService.ts` and the agent websocket file. Epoch 4 selected none and the scheduler stopped.
+The Harness only applies a deterministic selector.
+
+Current threshold:
+
+~~~text
+parallel_action_threshold = 0.65
+~~~
+
+The threshold is not a stop threshold.
+
+Selection policy:
+
+~~~text
+if StopFile >= threshold
+   and StopFile >= best ReadRange:
+    terminate with model_stop
+
+else:
+    select all ReadRange actions >= threshold
+    remove overlapping effects by keeping higher-scored ranges
+
+if no ReadRange reaches threshold:
+    execute the highest-scored ReadRange
+~~~
+
+Therefore:
+
+~~~text
+low action confidence
+  != stop
+
+low action confidence
+  -> continue with top-1
+~~~
+
+The threshold controls concurrent exploration width only.
+
+## Stop strategy
+
+There is no Harness rule such as:
+
+~~~text
+best score < threshold
+  -> stop
+~~~
+
+`StopFile` must win as an explicit model decision.
+
+Its meaning is:
+
+> Current observations are sufficient to judge this file for the user goal,
+> and further reads are unlikely to materially improve localization.
+
+Mechanical terminal conditions are recorded separately:
+
+~~~text
+model_stop
+action_space_exhausted
+budget_exhausted
+error
+cancelled
+~~~
+
+`action_space_exhausted` means every line range has been covered. It is not
+reported as model confidence.
+
+A safety epoch budget may still exist to bound experiments, but
+`budget_exhausted` is likewise not a semantic stop.
+
+## Loop
+
+The core runtime is deliberately small:
+
+~~~text
+FileState
+  -> generate range actions
+  -> System One scores actions
+  -> deterministic selection
+  -> execute ReadRange effects
+  -> append raw observations
+  -> new FileState
+  -> repeat
+~~~
+
+Equivalent pseudocode:
+
+~~~python
+state = initial_file_state(file)
+
+while True:
+    actions = generate_actions(state)
+    scores = system_one.score(goal, decision_view(state), actions)
+    selected = select(scores, parallel_threshold)
+
+    if selected == StopFile:
+        break
+
+    observations = execute(selected)
+    state = reduce(state, selected, observations)
+~~~
+
+No observation relevance score is used to decide whether future actions exist.
+
+## Post-loop result scoring
+
+Navigation and final evidence classification are separate.
+
+After FileRuntime termination, each observed range is Noul-scored for result
+relevance.
+
+Those post-loop scores:
+
+~~~text
+do determine final evidence
+do NOT affect navigation
+do NOT affect StopFile
+do NOT prune the action space
+~~~
+
+Evidence questions are transport-batched to remain within request context
+limits.
+
+## Phase-2 coordination
+
+The current prototype executes FileRuntime instances sequentially for easy
+trace inspection.
+
+This is not a semantic requirement.
+
+Because FileRuntime A and FileRuntime B share only the immutable goal, the
+coordinator can later run them concurrently without changing the state-machine
+model.
+
+## Real per-file runtime trace
+
+Run `35857120750`:
+
+~~~text
+subject:
+BestNathan/nession@b76fe4921a63023a69ce91399328ab53d3526664
+
+goal:
+Help me optimize the websocket connection implementation
+~~~
+
+Phase 1 selected 17 files.
+
+All 17 entered independent FileRuntime instances.
 
 Aggregate:
 
 ~~~text
-18 Phase-1 files in initial ReaderState
-4 scheduler epochs
-72 file-priority decisions
-8 file activations
-8 reads
-3 unique files read
-12 model calls
-195,977 input tokens
-3.78s elapsed
+model_stop                  0
+action_space_exhausted     16
+budget_exhausted            1
+
+reads executed            138
+valuable files             11
+evidence regions           46
+
+model calls               145
+input tokens        1,316,145
+output tokens          19,858
+elapsed               33.243 s
 ~~~
 
-This trace demonstrates that fixed file batches are unnecessary for the model to form a narrower read frontier.
+The 16 `action_space_exhausted` files all reached 100% coverage.
 
-It does not establish that the three-file trajectory is correct.
-
-## Activation versus sufficiency
-
-The current baseline stops when no file activation score meets the activation threshold.
-
-That means one threshold currently answers two distinct questions:
+The only safety-budget case was:
 
 ~~~text
-FilePriority(path):
-  should this file be read now?
-
-TaskSufficiency(state):
-  is there enough evidence to stop exploring?
+server/handler.rs
+6617 lines
+50 reads
+32 epochs
+94.2% coverage
 ~~~
 
-Those are not obviously equivalent.
-
-A future experiment should separate them. For example, a scheduler could defer all current files yet still decide that exploration should continue via a different action, dependency discovery, or another frontier.
-
-This question should be evaluated independently rather than tuning activation because another agent explored more files.
-
-## Observation-driven cross-file discovery
-
-Phase 1 remains a static frontier. Observations can reveal imports, identifiers, types, modules, or runtime relationships that point to files outside that frontier.
-
-Potential grounded actions include:
+Action selection across all FileRuntime epochs:
 
 ~~~text
-InspectDependency(path)
-InspectDefinition(identifier)
-FindReferences(identifier)
-SwitchToDiscoveredFile(path)
+parallel_above_threshold  42
+fallback_top1             41
+action_space_exhausted    16
 ~~~
 
-The harness should derive valid actions from observed repository facts; System One should choose among those actions.
+Selected read actions:
 
-This preserves a high-confidence Phase 1 while allowing the state space to grow from real evidence.
+~~~text
+jump           77
+expand_after   21
+expand_before  11
+seed_head      17
+seed_middle     6
+seed_tail       6
+~~~
+
+This confirms the core policy:
+
+- the parallel threshold controls concurrency;
+- low scores still advance through top-1;
+- no low-score Harness stop exists;
+- file-local state stays within the bounded request model.
+
+The main unresolved behavior is `StopFile`: no file chose an early
+`model_stop`. The current model is conservative and generally explores until
+the file is exhausted.
+
+The next stop experiment should change only StopFile semantics/prompting. It
+should explicitly state that full-file coverage is not required once enough
+evidence exists to judge the file.
+
+See:
+
+~~~text
+pilots/nession-websocket-per-file-range-runtime-v0-2026-09-23.md
+~~~
+
+## Historical global-scheduler experiment
+
+The previous baseline placed all Phase-1 files into one shared ReaderState and
+used a global file-activation request before local reads.
+
+That experiment demonstrated that fixed batches were unnecessary, but it is no
+longer the current Phase-2 architecture.
+
+Its main findings remain useful historical evidence:
+
+- global scheduling reduced reads aggressively;
+- activation thresholds could accidentally become an implicit stop rule;
+- one shared state grows poorly as observations accumulate;
+- request-context limits make a multi-file raw-observation state undesirable.
+
+The per-file runtime keeps the useful idea of model-directed range exploration
+while removing cross-file Phase-2 scheduling.
 
 ## Claude Code cross-trace methodology
 
@@ -387,16 +526,16 @@ A hard four-round loop could stop immediately after discovering a new hotspot. R
 
 One high-signal file could previously keep low-value sibling files alive. Continuation ownership was moved to the file.
 
-These findings remain valid under the global scheduler; only the batch concept itself has now been removed.
+These findings remain historical inputs. The current v0 no longer uses a global scheduler, relevance-gated expansion, or file activation.
 
 ## Research studies
 
-1. File activation versus explicit task sufficiency / stop.
-2. Observation-driven cross-file discovery.
-3. Phase-1 and activation threshold replay on frozen score snapshots.
-4. ReaderState compaction as raw observations accumulate.
-5. Noul versus Choice for semantically equivalent decision points.
-6. Multi-task cross-traces between System One and System 2 agents.
+1. StopFile semantics: encourage sufficiency without Harness-driven stopping.
+2. Range frontier geometry: seed / expand / jump density and redundancy.
+3. Concurrent coordination of independent FileRuntime instances.
+4. Mechanical DecisionView context budgeting for very large files.
+5. Phase-1 threshold replay on frozen score snapshots.
+6. Multi-task cross-traces using the per-file runtime baseline.
 7. Human-reviewed gold datasets only when an absolute accuracy claim is required.
 
 ## Shared harness model
