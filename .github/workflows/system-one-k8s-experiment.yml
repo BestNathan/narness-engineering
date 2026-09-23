@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - "examples/system-one-k8s/**"
-      - ".github/workflows/system-one-k8s-experiment.yml"
   pull_request:
     paths:
       - "examples/system-one-k8s/**"
