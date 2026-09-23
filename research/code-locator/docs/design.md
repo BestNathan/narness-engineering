@@ -316,17 +316,41 @@ The manual workflow:
 
 uses the historical filename but now records a cross-trace.
 
-For Claude it saves:
+Claude is intentionally split into two fresh sessions:
 
 ~~~text
-claude.raw.jsonl
+Session A — localization
+  repository tools enabled
+  decides files / roles / reasons / evidence ranges
+  confidence is forbidden
+
+Session B — confidence assessment
+  new session
+  repository tools disabled
+  receives the immutable Session-A draft plus materialized evidence source
+  assigns overall / file / evidence confidence only
+~~~
+
+Session B cannot change file paths, ordering, evidence counts, or evidence ranges. The finalizer validates those invariants before producing the canonical result.
+
+Artifacts include:
+
+~~~text
+localization.raw.jsonl
+localization-draft.json
+localization-manifest.json
 execution-path.json
 execution-summary.md
-reference.json
+
+confidence.raw.jsonl
+confidence-manifest.json
+confidence-summary.md
+
+localization-result.json
 manifest.json
 ~~~
 
-The raw stream preserves every Claude Code event. The normalized execution path records ordered Read / Grep / Glob / Bash calls, inputs, errors, and result-size/preview metadata.
+The localization raw stream preserves every repository-search event. The normalized execution path records ordered Read / Grep / Glob / Bash calls, inputs, errors, and result-size/preview metadata.
 
 Run `35839323377` recorded:
 
@@ -408,3 +432,28 @@ Both System One and Claude Code now emit the same `code-localization-result` sch
 File and evidence confidence explicitly retain their semantics (`noul_relevance`, `derived_max_evidence_relevance`, or `model_self_assessment`) because these numbers are not assumed to be calibrated against each other.
 
 See [localization-result.md](localization-result.md).
+
+
+### Cost as part of the result
+
+Localization quality and execution cost are both result dimensions. The canonical result therefore carries:
+
+~~~text
+elapsed_ms
+api_elapsed_ms
+model_calls
+turns
+tool_calls
+
+tokens
+  input
+  output
+  cache_read_input
+  cache_creation_input
+  thinking
+
+provider_cost_usd
+stages[]
+~~~
+
+System One currently has one localization stage. Claude has two independent stages, localization and confidence assessment, and the final cost is their sum. Missing provider metrics remain null rather than being estimated.
