@@ -27,12 +27,12 @@ class Trace:
 def model_projection(stage, payload):
     """Project raw candidates into a transport-safe semantic view for the model.
 
-    Raw candidates remain in the local evidence trace. Source-line projections
+    Raw candidates remain in the local evidence trace. Source projections
     normalize literal values so repository security tests do not look like live
     attack payloads to an upstream WAF, while identifiers and code structure
     remain visible to System One.
     """
-    if stage not in {"line", "region"}:
+    if stage not in {"line", "region", "symbol"}:
         return payload
     projected = dict(payload)
     patterns = [
@@ -57,6 +57,11 @@ def model_projection(stage, payload):
                 value = re.sub(pattern, replacement, value)
             normalized.append(value)
         projected["declarations"] = normalized
+    signature = projected.get("signature")
+    if isinstance(signature, str):
+        for pattern, replacement in patterns:
+            signature = re.sub(pattern, replacement, signature)
+        projected["signature"] = signature
     return projected
 
 class SystemOneScorer:
