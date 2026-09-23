@@ -18,14 +18,15 @@ research/code-locator/
 ├── docs/
 │   ├── design.md
 │   └── pilots/
-│       └── nession-websocket-2026-09-23.md
+│       ├── nession-websocket-2026-09-23.md
+│       └── nession-websocket-three-stage-baseline-2026-09-23.md
 └── runs/
     └── <time>-run-<run_id>-attempt-<n>/
 ```
 
 The `src/`, `tests/`, and `fixtures/` directories define the experiment. `docs/` contains evolving research reasoning. `runs/` is append-only evidence produced by GitHub Actions.
 
-See [design.md](docs/design.md) for the hypotheses and experiment design, and [the first Nession pilot](docs/pilots/nession-websocket-2026-09-23.md) for the first real TypeSafe baseline.
+See [design.md](docs/design.md) for the hypotheses and experiment design. The original Nession pilot is preserved as historical evidence, while [the stable three-stage Nession WebSocket baseline](docs/pilots/nession-websocket-three-stage-baseline-2026-09-23.md) is the reference point for new controlled experiments.
 
 This project explores whether a fast System One model can localize code by repeatedly judging a progressively disclosed search space rather than driving repository browsing through a ReAct loop.
 
@@ -43,16 +44,16 @@ repository
   -> enumerate files under retained directories
   -> System One relevance scores
   -> keep files above threshold
-  -> split retained files into source lines with small local context
+  -> split retained files into compact deterministic code regions
   -> System One relevance scores
-  -> merge adjacent relevant lines into snippets
+  -> materialize selected regions as grounded snippets
 ```
 
 The model never chooses filesystem tools, constructs paths, or controls traversal. The harness owns state expansion, thresholds, IO, provenance, stage-level fan-out, and result assembly.
 
 ## Why Noul instead of Choice
 
-Directory, file, and line relevance are independent judgments: several candidates may all be relevant. The TypeSafe System One API's `noul` primitive returns a yes-probability for each question, so the runtime can retain every candidate whose score crosses the stage threshold.
+Directory, file, and region relevance are independent judgments: several candidates may all be relevant. The TypeSafe System One API's `noul` primitive returns a yes-probability for each question, so the runtime can retain every candidate whose score crosses the stage threshold.
 
 `choice` would instead normalize probability across candidates and force one winner, which is appropriate for the Kubernetes action-frontier demo but not for multi-hit code localization.
 
@@ -63,7 +64,7 @@ The three semantic stages are also the three System One round trips:
 ```text
 1. directory candidates -> one System One request
 2. file candidates      -> one System One request
-3. line candidates      -> one System One request
+3. region candidates    -> one System One request
 ```
 
 A stage can contain many independent Noul questions, but the harness does not split them into network batches. TypeSafe evaluates those questions together and returns one answer per candidate. This keeps model-call count tied to semantic depth rather than repository size. Retries after transient transport/API failures are the only reason a successful stage may perform more than one HTTP attempt.
@@ -89,15 +90,15 @@ FileCandidate[]
   v
 RelevantFile[]
   |
-  | read source + split on newlines
+  | read source + compact into bounded regions
   v
-LineCandidate[]
+CodeRegionCandidate[]
   |
   | Noul relevance + higher threshold
   v
-RelevantLine[]
+RelevantCodeRegion[]
   |
-  | deterministic range merge
+  | deterministic source materialization
   v
 CodeSnippet[]
 ```
@@ -107,7 +108,7 @@ The defaults intentionally become stricter as the search gets deeper:
 ```text
 directory >= 0.35
 file      >= 0.50
-line      >= 0.70
+region    >= 0.70
 ```
 
 These are experiment parameters, not claimed optimal values. Early false negatives are especially expensive because pruning a directory removes its entire subtree. A future experiment should compare simple thresholds against threshold-plus-beam retention.
@@ -158,7 +159,7 @@ python3 research/code-locator/src/system_one_code_locator.py \
 The trace records:
 
 - the query, model, root, and thresholds;
-- every directory/file/line candidate disclosed by the harness;
+- every directory/file/region candidate disclosed by the harness;
 - every TypeSafe request body without credentials;
 - model responses reduced to candidate scores, latency, and token usage;
 - every threshold application and retained candidate set;
@@ -187,7 +188,7 @@ python3 -m unittest discover \
   -v
 ```
 
-The tests verify that the deterministic fixture finds the websocket client, that each stage fans out independent Noul questions in one request, and that a normal run makes exactly three model calls: directory, file, and line.
+The tests verify that the deterministic fixture finds the websocket client, that file expansion is direct-only, that source is compacted into bounded regions, that each stage fans out independent Noul questions in one request, and that a normal run makes exactly three model calls: directory, file, and region.
 
 ## Dedicated research workflow
 
@@ -213,7 +214,7 @@ system-one-code-locator-offline-<run>-<attempt>/
 
 A manual `workflow_dispatch` can additionally run the real TypeSafe experiment against a configurable subject repository. That job uses the `typesafe` environment and uploads a separate `system-one-code-locator-typesafe-*` artifact.
 
-After push or manual runs complete, a persist job writes the evidence permanently under `runs/<time>-run-<run_id>-attempt-<n>/`. Pull-request validation never writes back to the repository.
+Feature-branch pushes and pull requests only upload Actions artifacts. Immutable repository records under `runs/<time>-run-<run_id>-attempt-<n>/` are written only for manual research runs or pushes to `main`, preventing experiment branches from being polluted by validation snapshots.
 
 ## Research limitations
 
@@ -222,7 +223,7 @@ The current prototype intentionally leaves several questions open:
 - whether whole-tree directory enumeration is better than recursive frontier expansion;
 - threshold calibration and compounding false-negative risk;
 - threshold-only pruning versus keeping a minimum semantic beam;
-- line-level scoring versus symbol/block/chunk-level scoring;
+- fixed-size region scoring versus syntax-aware symbol/block scoring;
 - caching repeated judgments across nearby queries;
 - comparison against ripgrep, embeddings, language-server indexes, and System Two browsing;
 - evaluation against gold relevant-file and relevant-range labels;
