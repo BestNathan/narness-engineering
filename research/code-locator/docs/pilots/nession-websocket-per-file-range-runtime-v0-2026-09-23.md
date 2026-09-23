@@ -423,3 +423,150 @@ StopFile is a model action, not a Harness heuristic.
 
 This structure is language-agnostic and works equally for source code,
 Markdown, YAML, SQL, logs, and plain text.
+
+
+## StopFile control experiment
+
+The initial v0 represented both ReadRange and StopFile as independently scored
+Noul actions. This produced almost no early stopping. The core issue is that
+the two decisions do not have the same semantics:
+
+~~~text
+ReadRange score
+  = expected information-gathering utility
+
+StopFile
+  = control-flow sufficiency decision
+~~~
+
+Comparing those values directly biased the runtime toward continuing.
+
+Several prompt-only experiments confirmed that wording alone was insufficient.
+Even when StopFile was described as result sufficiency or marginal utility,
+the model usually raised its stop score only near complete coverage.
+
+### Revised primitive
+
+StopFile is now a binary control decision using Choice:
+
+~~~text
+Choice:
+  stop
+  continue
+
+Noul:
+  one score per ReadRange
+~~~
+
+Both question types are sent in the same System One request and share the same
+file-local DecisionView.
+
+The runtime policy is:
+
+~~~text
+if Choice == stop:
+    model_stop
+
+if Choice == continue:
+    execute all non-overlapping ReadRanges >= 0.65
+
+if no ReadRange >= 0.65:
+    execute top-1 ReadRange
+~~~
+
+The 0.65 threshold therefore controls ReadRange concurrency only. It is not a
+StopFile threshold.
+
+The StopFile prompt also makes the output objective explicit: localization
+needs representative, useful evidence, not an exhaustive catalog of every
+relevant range in the file.
+
+### Clean real validation
+
+Run:
+
+~~~text
+35864316780
+~~~
+
+completed with:
+
+~~~text
+Phase-1 files             17
+FileRuntime instances     17
+
+model_stop                 4
+action_space_exhausted    12
+budget_exhausted           1
+
+reads                    134
+valuable files            10
+evidence regions          40
+
+model calls              130
+input tokens        1,272,639
+output tokens          20,362
+elapsed               25.952 s
+~~~
+
+The four genuine model stops all occurred while unread ranges remained:
+
+~~~text
+server/websocket.rs
+  coverage 91.3%
+  reads 5
+  Stop choice at epoch 3
+  P(stop) 0.50
+
+WebSocketService.ts
+  coverage 77.5%
+  reads 3
+  Stop choice at epoch 2
+  P(stop) 0.62
+
+CLI connection.rs
+  coverage 86.0%
+  reads 7
+  Stop choice at epoch 4
+  P(stop) 0.60
+
+web_client_registry.rs
+  coverage 99.3%
+  reads 2
+  Stop choice at epoch 2
+  P(stop) 0.87
+~~~
+
+The runtime first checks whether any ReadRange remains. If none remains, it
+terminates mechanically as action_space_exhausted without asking the model for
+a redundant Stop/Continue decision.
+
+### Evidence trade-off
+
+The original per-file baseline run 35857120750 had no early model stops.
+
+For the four common files that now stopped early:
+
+~~~text
+                                      reads      evidence-line Jaccard
+server/websocket.rs                    8 -> 5          0.913
+WebSocketService.ts                    5 -> 3          0.775
+CLI connection.rs                      8 -> 7          0.878
+web_client_registry.rs                 3 -> 2          1.000
+~~~
+
+These numbers compare two stochastic System One runs, so they are observations,
+not a controlled accuracy measurement.
+
+They still illustrate the intended trade-off clearly:
+
+- stopping can avoid redundant tail exploration;
+- stopping can also omit ranges that another run later retained as relevant;
+- representative localization and exhaustive localization are different
+  objectives.
+
+The biggest unresolved files remain the multi-thousand-line agent websocket,
+server_client, and handler. System One still chose continue until full coverage
+or the safety budget for those files. Further stopping work should therefore
+focus on explicit exploration cost / diminishing-return state rather than
+reintroducing Harness-driven low-score termination.
