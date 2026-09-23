@@ -172,6 +172,8 @@ def sandbox_command(subject, command, environment, gateway_socket=None):
              'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
              'CLAUDE_CODE_SUBPROCESS_ENV_SCRUB': '1'}
     if gateway_socket is not None:
+        if shutil.which('socat') is None:
+            raise RuntimeError('socat is required for the provider bridge')
         argv += ['--ro-bind', str(gateway_socket), '/run/provider.sock']
         clean['ANTHROPIC_BASE_URL'] = 'http://127.0.0.1:18080'
         clean['ANTHROPIC_API_KEY'] = 'sandbox-placeholder'
