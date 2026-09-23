@@ -25,6 +25,7 @@ from system_one_range_runtime import (
     OfflineFileDecider,
     SystemOneFileDecider,
     decision_view,
+    observation_view,
     run,
     sanitize_source,
 )
@@ -176,13 +177,26 @@ class EvidenceGuidedDecider(SystemOneFileDecider):
         }
         return stop_decision, scored, usage
 
-    def score_file_evidence(self, goal, file_state, batch_size=4):
+    def score_file_evidence(self, goal, file_state, batch_size=2):
         observations = file_state["observations"]
         if not observations:
             return [], empty_usage()
 
         total_usage = empty_usage()
         scored = []
+        context = {
+            "goal": goal,
+            "file": file_state["path"],
+            "existing_observations": observation_view(
+                file_state,
+                char_budget=24000,
+            ),
+            "instruction": (
+                "Use existing observations only to judge whether each "
+                "candidate adds a DISTINCT material fact. Do not reward "
+                "repetition of evidence already established."
+            ),
+        }
 
         def score_batch(batch):
             questions = {}
@@ -196,12 +210,11 @@ class EvidenceGuidedDecider(SystemOneFileDecider):
                         "end_line": item["end_line"],
                         "content": sanitize_source(item["content"]),
                         "question": (
-                            "Does this range contribute MATERIAL EVIDENCE that "
-                            "should survive into the minimal final evidence set? "
-                            "Score high only when it contributes a distinct fact "
-                            "or concrete grounding needed for the downstream "
-                            "answer. Penalize redundancy with evidence already "
-                            "collected from this file."
+                            "Does this range contribute NEW MATERIAL EVIDENCE "
+                            "that should survive into the minimal final evidence "
+                            "set? Score high only when it adds a distinct fact or "
+                            "concrete grounding needed for the downstream answer. "
+                            "Penalize redundancy with existing observations."
                         ),
                     },
                     "criteria": {
@@ -217,23 +230,24 @@ class EvidenceGuidedDecider(SystemOneFileDecider):
                     },
                 }
 
-            response, usage = self.send(
-                "evidence_guided_result_filter",
-                {
-                    "goal": goal,
-                    "file": file_state["path"],
-                    "evidence_set": [
-                        {
-                            "path": item["path"],
-                            "start_line": item["start_line"],
-                            "end_line": item["end_line"],
-                            "content": sanitize_source(item["content"]),
-                        }
-                        for item in observations
-                    ],
-                },
-                questions,
-            )
+            try:
+                response, usage = self.send(
+                    "evidence_guided_result_filter",
+                    context,
+                    questions,
+                )
+            except RuntimeError as exc:
+                if (
+                    "max_tokens_exceeded" in str(exc)
+                    and len(batch) > 1
+                ):
+                    midpoint = len(batch) // 2
+                    left, left_usage = score_batch(batch[:midpoint])
+                    right, right_usage = score_batch(batch[midpoint:])
+                    merge_usage(left_usage, right_usage)
+                    return left + right, left_usage
+                raise
+
             answers = response.get("answers", {})
             out = []
             for local_index, item in enumerate(batch):
@@ -257,6 +271,7 @@ class EvidenceGuidedDecider(SystemOneFileDecider):
             merge_usage(total_usage, usage)
 
         return scored, total_usage
+
 
 
 class OfflineEvidenceGuidedDecider(OfflineFileDecider):
