@@ -96,9 +96,27 @@ class RangeActionSpaceTest(unittest.TestCase):
 class SelectorTest(unittest.TestCase):
     def test_threshold_controls_parallelism(self):
         scored = [
-            {"id": "a", "kind": "read_range", "score": 0.91},
-            {"id": "b", "kind": "read_range", "score": 0.72},
-            {"id": "c", "kind": "read_range", "score": 0.50},
+            {
+                "id": "a",
+                "kind": "read_range",
+                "start_line": 1,
+                "end_line": 100,
+                "score": 0.91,
+            },
+            {
+                "id": "b",
+                "kind": "read_range",
+                "start_line": 201,
+                "end_line": 300,
+                "score": 0.72,
+            },
+            {
+                "id": "c",
+                "kind": "read_range",
+                "start_line": 401,
+                "end_line": 500,
+                "score": 0.50,
+            },
             {"id": "stop", "kind": "stop_file", "score": 0.40},
         ]
         selected, mode = MODULE.select_file_actions(scored, 0.65)
