@@ -270,6 +270,48 @@ The tests prove:
 - a multi-container pod renders an explicit container flag;
 - the TypeSafe request is a Choice question whose criteria exactly match the grounded local frontier.
 
+## Hosted workflow and experiment artifacts
+
+The repository includes [system-one-k8s-experiment.yml](../../.github/workflows/system-one-k8s-experiment.yml).
+
+Pushes and pull requests that change this experiment automatically run the deterministic fixture path. The workflow can also be started manually with a custom goal.
+
+The offline job saves a 30-day artifact containing:
+
+~~~text
+tests.log
+run.log
+analyze.log
+metadata.json
+state.json
+trace.jsonl
+analysis.json
+analysis.md
+~~~
+
+The trace is event-oriented and preserves:
+
+- each compiled local action frontier;
+- deterministic short-circuits;
+- selected actions;
+- namespace and pod observations;
+- the final deterministically lowered command.
+
+Manual workflow runs can set run_typesafe=true. That path requires the repository Actions secret TYPESAFE_API_KEY and saves the same artifact family. Real System One traces additionally preserve the request body, response body, probability distribution, confidence, returned model version, token usage, and request latency. Authorization headers and API keys are never written to artifacts.
+
+The workflow publishes analysis.md into the GitHub job summary so a run can be inspected without downloading the artifact. analysis.json is intended for longitudinal comparison across runs.
+
+Example questions that can be measured from the artifacts include:
+
+- how quickly the frontier grows and narrows;
+- how many steps bypass the model because only one action is legal;
+- how many System One judgments are required;
+- which candidates received probability mass;
+- latency and token cost per judgment;
+- whether the selected action chain reaches the expected grounded command.
+
+The current hosted fixture experiment intentionally validates state-space expansion without requiring access to a real Kubernetes cluster. The live CLI mode remains available for controlled environments, but cluster observations should not be uploaded from a public repository workflow without an explicit data-handling decision.
+
 ## What this prototype intentionally does not solve
 
 - durable persistence and replay;
