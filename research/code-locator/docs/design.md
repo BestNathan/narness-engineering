@@ -210,3 +210,31 @@ The action space is progressively disclosed by real observations rather than enu
 The first real two-phase trace showed why a single strongest anchor is insufficient. In `crates/nession-agent/src/server/websocket.rs`, the reader found one relevant region at lines 1-140 (0.87), lost local relevance at 141-280 (0.60), then discovered a second relevant region at 1585-1724 (0.74). A strongest-only generator could not expose neighbors of the second hotspot because the first hotspot still had the higher score.
 
 The current baseline therefore treats disconnected high-relevance regions as separate action-space anchors. See [the trace analysis](pilots/nession-websocket-two-phase-trace-analysis-2026-09-23.md).
+
+## Evidence-driven round budget
+
+The fixed four-round baseline can terminate immediately after discovering a useful new hotspot. The reader therefore distinguishes a soft interaction budget from an absolute hard cap:
+
+~~~text
+soft rounds = 4
+hard rounds = 8
+~~~
+
+At or beyond the soft limit, the batch continues only when the just-completed round produced at least one new observation whose relevance is at or above the observation threshold. Each extra round must earn the next one again. The hard limit is unconditional.
+
+~~~text
+round < soft limit
+  -> continue normally
+
+round >= soft limit
+  -> new high-relevance observation?
+       yes -> grant one more round
+       no  -> stop batch
+
+round == hard limit
+  -> stop regardless of score
+~~~
+
+This makes continuation a consequence of newly observed state rather than a fixed loop counter while preserving a deterministic upper bound on cost.
+
+The first experiment should hold thresholds, window size, file batch size, and multi-hotspot logic constant. The target trace case is `server/handler.rs`, where the previous run discovered a new relevant region on round four but could not expose a follow-up action because the hard `max_rounds=4` loop ended.
