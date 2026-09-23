@@ -29,9 +29,13 @@ class RangeActionSpaceTest(unittest.TestCase):
             window_lines=100,
             max_jumps=2,
         )
+        read_actions = [
+            item for item in actions
+            if item["kind"] == "read_range"
+        ]
         self.assertEqual(
             ["seed_head", "seed_middle", "seed_tail"],
-            [item["navigation"] for item in actions],
+            [item["navigation"] for item in read_actions],
         )
         self.assertEqual((1, 100), (
             actions[0]["start_line"],
@@ -52,6 +56,8 @@ class RangeActionSpaceTest(unittest.TestCase):
         )
         by_navigation = {}
         for item in actions:
+            if item["kind"] != "read_range":
+                continue
             by_navigation.setdefault(item["navigation"], []).append(item)
 
         self.assertNotIn("expand_before", by_navigation)
@@ -73,20 +79,18 @@ class RangeActionSpaceTest(unittest.TestCase):
             )
         )
 
-    def test_dynamic_space_always_contains_stop(self):
-        state = {
-            "files": [{
-                "path": "README.md",
-                "line_count": 20,
-                "coverage": [],
-                "last_selected_ranges": [],
-            }],
+    def test_file_space_always_contains_stop(self):
+        file_state = {
+            "path": "README.md",
+            "line_count": 20,
+            "coverage": [],
+            "last_selected_ranges": [],
         }
-        actions = MODULE.generate_action_space(
-            state,
+        actions = MODULE.generate_file_actions(
+            file_state,
             window_lines=140,
         )
-        self.assertEqual("stop_task", actions[-1]["kind"])
+        self.assertEqual("stop_file", actions[-1]["kind"])
 
 
 class SelectorTest(unittest.TestCase):
