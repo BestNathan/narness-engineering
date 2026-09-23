@@ -34,6 +34,40 @@ class DemoTest(unittest.TestCase):
             self.assertIn('threshold_applied',events)
             self.assertIn('search_completed',events)
 
+    def test_file_frontier_uses_direct_files_only(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)/'repo'
+            parent=root/'src'
+            child=parent/'nested'
+            child.mkdir(parents=True)
+
+            (parent/'direct.py').write_text('DIRECT = True\n',encoding='utf-8')
+            (child/'nested.py').write_text('NESTED = True\n',encoding='utf-8')
+
+            selected_parent=[{
+                'id':'src',
+                'payload':{'path':'src'},
+                'score':0.9,
+            }]
+            parent_files=MODULE.files(root,selected_parent)
+
+            self.assertEqual(['src/direct.py'],[x['id'] for x in parent_files])
+
+            selected_both=[
+                *selected_parent,
+                {
+                    'id':'src/nested',
+                    'payload':{'path':'src/nested'},
+                    'score':0.9,
+                },
+            ]
+            both_files=MODULE.files(root,selected_both)
+
+            self.assertEqual(
+                ['src/direct.py','src/nested/nested.py'],
+                [x['id'] for x in both_files],
+            )
+
     def test_request_uses_noul(self):
         with tempfile.TemporaryDirectory() as temp:
             trace=MODULE.Trace(pathlib.Path(temp)/'trace.jsonl')
