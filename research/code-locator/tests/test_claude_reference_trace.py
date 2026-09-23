@@ -7,6 +7,7 @@ import unittest
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 MODULE_PATH = PROJECT_ROOT / "src" / "claude_reference_trace.py"
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 SPEC = importlib.util.spec_from_file_location("claude_reference_trace", MODULE_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
