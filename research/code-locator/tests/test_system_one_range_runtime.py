@@ -179,12 +179,12 @@ class SelectorTest(unittest.TestCase):
         self.assertEqual(["a", "c"], [item["id"] for item in selected])
         self.assertEqual("parallel_above_threshold", mode)
 
-    def test_control_choice_stops_when_probability_crosses_threshold(self):
+    def test_control_choice_stop_is_terminal_without_threshold_gate(self):
         stop = {
             "id": "stop",
             "kind": "stop_file",
             "choice": "stop",
-            "stop_probability": 0.72,
+            "stop_probability": 0.58,
         }
         reads = [
             {
@@ -203,11 +203,11 @@ class SelectorTest(unittest.TestCase):
         self.assertEqual(["stop"], [item["id"] for item in selected])
         self.assertEqual("model_stop", mode)
 
-    def test_control_choice_below_threshold_continues_with_read_policy(self):
+    def test_control_choice_continue_uses_read_policy(self):
         stop = {
             "id": "stop",
             "kind": "stop_file",
-            "choice": "stop",
+            "choice": "continue",
             "stop_probability": 0.61,
         }
         reads = [
