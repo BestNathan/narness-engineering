@@ -183,6 +183,25 @@ print('fixed-provider gateway, model filter, streaming and credential isolation:
     # Prove the nested sandbox runtime can run inside the outer namespace and
     # blocks both the provider TCP bridge and its Unix socket. This is the
     # confused-deputy boundary for Claude's Bash tool.
+    dependency_probe = r'''
+import shutil
+required = ['rg', 'bwrap', 'socat', 'srt']
+missing = [name for name in required if shutil.which(name) is None]
+assert not missing, f'outer sandbox hides nested dependencies: {missing}'
+print('outer namespace nested-sandbox dependencies: PASS')
+'''
+    p = adapter.sandbox_launch(
+        subject,
+        ['/usr/bin/python3', '-c', dependency_probe],
+        {},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    stdout, stderr = p.communicate(timeout=30)
+    assert p.returncode == 0, stderr
+    print(stdout.strip())
+
     srt_settings = subject / 'srt-settings.json'
     srt_settings.write_text(json.dumps({
         'network': {
