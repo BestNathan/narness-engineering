@@ -96,19 +96,17 @@ class DemoTest(unittest.TestCase):
             self.assertTrue(all(
                 q['type']=='noul' for q in request['questions'].values()
             ))
-            self.assertEqual(2,len(request['state']['candidates']))
+            self.assertNotIn('candidates',request['state'])
+            instructions=request['questions']['candidate_0']['instructions']
             self.assertEqual(
                 {'path':'web/src/ws'},
-                request['state']['candidates'][0],
+                instructions['candidate'],
             )
             self.assertEqual(
-                'Should `candidates[0]` be retained for `goal` under `policy`?',
-                request['questions']['candidate_0']['instructions'],
+                'Should `candidate` be retained for `goal` under `policy`?',
+                instructions['question'],
             )
-            self.assertNotIn(
-                'candidate',
-                request['questions']['candidate_0'],
-            )
+            self.assertIn('policy',request['state'])
 
     def test_system_one_scores_large_stage_in_one_request(self):
         with tempfile.TemporaryDirectory() as temp:
