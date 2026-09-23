@@ -17,6 +17,7 @@ import os
 import shlex
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass, field
@@ -83,6 +84,11 @@ class Decision:
     source: str
     confidence: float | None = None
     probabilities: dict[str, float] | None = None
+    model: str | None = None
+    usage: dict[str, int] | None = None
+    latency_ms: int | None = None
+    request: dict[str, Any] | None = None
+    response: dict[str, Any] | None = None
 
 
 @dataclass
@@ -94,6 +100,7 @@ class RuntimeState:
     selected_namespace: str | None = None
     pods: list[Pod] = field(default_factory=list)
     decisions: list[Decision] = field(default_factory=list)
+    trace: list[dict[str, Any]] = field(default_factory=list)
     final_command: list[str] | None = None
     blocked_reason: str | None = None
 
@@ -401,24 +408,43 @@ class TypeSafeSystemOneDecider:
 
     def choose(self, state: RuntimeState, actions: list[Action]) -> Decision:
         payload = self.build_request(state, actions)
-        request = urllib.request.Request(
-            self.endpoint,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"TypeSafe HTTP {exc.code}: {detail}") from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"TypeSafe request failed: {exc}") from exc
+        encoded_payload = json.dumps(payload).encode("utf-8")
+        started = time.perf_counter()
+        body: dict[str, Any] | None = None
+        retry_delays = [0.5, 1.0, 2.0]
 
+        for attempt in range(len(retry_delays) + 1):
+            request = urllib.request.Request(
+                self.endpoint,
+                data=encoded_payload,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(
+                    request, timeout=self.timeout_seconds
+                ) as response:
+                    body = json.loads(response.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="replace")
+                if exc.code in {429, 529} and attempt < len(retry_delays):
+                    time.sleep(retry_delays[attempt])
+                    continue
+                raise RuntimeError(f"TypeSafe HTTP {exc.code}: {detail}") from exc
+            except urllib.error.URLError as exc:
+                if attempt < len(retry_delays):
+                    time.sleep(retry_delays[attempt])
+                    continue
+                raise RuntimeError(f"TypeSafe request failed: {exc}") from exc
+
+        if body is None:
+            raise RuntimeError("TypeSafe request completed without a response body")
+
+        latency_ms = round((time.perf_counter() - started) * 1000)
         answer = body.get("answers", {}).get("next_action")
         if not answer or answer.get("type") != "choice":
             raise RuntimeError(f"unexpected TypeSafe response: {body}")
@@ -436,6 +462,11 @@ class TypeSafeSystemOneDecider:
             source="typesafe-system-one",
             confidence=answer.get("confidence"),
             probabilities=answer.get("probabilities"),
+            model=body.get("model", self.model),
+            usage=body.get("usage"),
+            latency_ms=latency_ms,
+            request=payload,
+            response=body,
         )
 
 
@@ -492,8 +523,16 @@ class SystemOneKubernetesRuntime:
 
     def run(self, goal: str, max_steps: int = 12) -> RuntimeState:
         state = RuntimeState(goal=goal)
+        self._record(
+            state,
+            "runtime_started",
+            {
+                "goal": goal,
+                "max_steps": max_steps,
+            },
+        )
 
-        for _ in range(max_steps):
+        for step in range(1, max_steps + 1):
             if state.phase in {Phase.DONE, Phase.BLOCKED}:
                 return state
 
@@ -507,8 +546,52 @@ class SystemOneKubernetesRuntime:
                 self._block(state, f"no actions available in phase {state.phase.value}")
                 return state
 
+            self._record(
+                state,
+                "frontier_compiled",
+                {
+                    "step": step,
+                    "size": len(actions),
+                    "actions": [
+                        {
+                            "id": action.id,
+                            "kind": action.kind.value,
+                            "description": action.description,
+                            "params": action.params,
+                        }
+                        for action in actions
+                    ],
+                },
+            )
+
             decision = self._choose(state, actions)
             state.decisions.append(decision)
+            self._record(
+                state,
+                "action_selected",
+                {
+                    "step": step,
+                    "action_id": decision.action_id,
+                    "source": decision.source,
+                    "confidence": decision.confidence,
+                    "probabilities": decision.probabilities,
+                    "model": decision.model,
+                    "usage": decision.usage,
+                    "latency_ms": decision.latency_ms,
+                },
+            )
+            if decision.request is not None or decision.response is not None:
+                self._record(
+                    state,
+                    "model_exchange",
+                    {
+                        "step": step,
+                        "request": decision.request,
+                        "response": decision.response,
+                        "latency_ms": decision.latency_ms,
+                    },
+                )
+
             action = next(action for action in actions if action.id == decision.action_id)
 
             try:
@@ -529,6 +612,15 @@ class SystemOneKubernetesRuntime:
         if action.kind == ActionKind.DISCOVER_NAMESPACES:
             state.context = self.environment.current_context()
             state.namespaces = self.environment.discover_namespaces()
+            self._record(
+                state,
+                "observation_recorded",
+                {
+                    "kind": "namespaces",
+                    "context": state.context,
+                    "namespaces": state.namespaces,
+                },
+            )
             if not state.namespaces:
                 self._block(state, "no Kubernetes namespaces were discovered")
                 return
@@ -540,6 +632,14 @@ class SystemOneKubernetesRuntime:
             if namespace not in state.namespaces:
                 raise RuntimeError(f"action referenced undiscovered namespace {namespace!r}")
             state.selected_namespace = namespace
+            self._record(
+                state,
+                "state_bound",
+                {
+                    "entity_type": "namespace",
+                    "value": namespace,
+                },
+            )
             state.phase = Phase.DISCOVER_PODS
             return
 
@@ -548,6 +648,15 @@ class SystemOneKubernetesRuntime:
             if namespace != state.selected_namespace:
                 raise RuntimeError("pod discovery namespace does not match selected namespace")
             state.pods = self.environment.discover_pods(namespace)
+            self._record(
+                state,
+                "observation_recorded",
+                {
+                    "kind": "pods",
+                    "namespace": namespace,
+                    "pods": [pod.to_state() for pod in state.pods],
+                },
+            )
             if not state.pods:
                 self._block(state, f"no pods discovered in namespace {namespace!r}")
                 return
@@ -571,15 +680,42 @@ class SystemOneKubernetesRuntime:
                 pod=pod_name,
                 container=container if len(pod.containers) > 1 else None,
             )
+            self._record(
+                state,
+                "command_rendered",
+                {
+                    "argv": state.final_command,
+                    "namespace": namespace,
+                    "pod": pod_name,
+                    "container": container if len(pod.containers) > 1 else None,
+                },
+            )
             state.phase = Phase.DONE
+            self._record(state, "runtime_completed", {"result": "done"})
             return
 
         raise RuntimeError(f"unsupported action kind: {action.kind}")
 
     @staticmethod
+    def _record(state: RuntimeState, event: str, data: dict[str, Any]) -> None:
+        state.trace.append(
+            {
+                "sequence": len(state.trace) + 1,
+                "event": event,
+                "phase": state.phase.value,
+                "data": data,
+            }
+        )
+
+    @staticmethod
     def _block(state: RuntimeState, reason: str) -> None:
         state.phase = Phase.BLOCKED
         state.blocked_reason = reason
+        SystemOneKubernetesRuntime._record(
+            state,
+            "runtime_blocked",
+            {"reason": reason},
+        )
 
 
 def print_trace(state: RuntimeState) -> None:
@@ -643,6 +779,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default=os.getenv("TYPESAFE_MODEL", DEFAULT_MODEL),
     )
     parser.add_argument("--json", action="store_true", help="Print the final state as JSON.")
+    parser.add_argument(
+        "--state-output",
+        help="Write the complete final runtime state to this JSON file.",
+    )
+    parser.add_argument(
+        "--trace-output",
+        help="Write append-only runtime events to this JSONL file.",
+    )
     return parser.parse_args(argv)
 
 
@@ -675,6 +819,21 @@ def main(argv: list[str] | None = None) -> int:
 
     runtime = SystemOneKubernetesRuntime(environment=environment, decider=decider)
     state = runtime.run(args.goal)
+
+    if args.state_output:
+        state_path = Path(args.state_output)
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(
+            json.dumps(asdict(state), indent=2, default=str) + "\n",
+            encoding="utf-8",
+        )
+
+    if args.trace_output:
+        trace_path = Path(args.trace_output)
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        with trace_path.open("w", encoding="utf-8") as handle:
+            for event in state.trace:
+                handle.write(json.dumps(event, default=str) + "\n")
 
     if args.json:
         print(json.dumps(asdict(state), indent=2, default=str))
