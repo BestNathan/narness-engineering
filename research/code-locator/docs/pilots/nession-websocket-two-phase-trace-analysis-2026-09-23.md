@@ -177,3 +177,29 @@ Action
 ~~~
 
 The next implementation change is narrowly scoped: preserve multiple disconnected high-relevance regions when constructing the next read-action frontier. Thresholds, batch size, read window, and round budget should remain unchanged so the next real run isolates this one harness variable.
+
+## Implementation result
+
+The multi-hotspot change described above was implemented and validated in real TypeSafe run 35831659317.
+
+The motivating `crates/nession-agent/src/server/websocket.rs` trace changed from:
+
+~~~text
+second hotspot 1585-1724
+  -> no local neighbor actions
+  -> unrelated gap probe
+~~~
+
+to:
+
+~~~text
+second hotspot 1585-1724
+  -> before 1445-1584
+  -> after 1725-1864
+  -> exploration gap
+  -> stop
+~~~
+
+System One selected the before-hotspot action at probability 0.62, and the resulting observation scored 0.78 relevance.
+
+This directly closes the strongest-hotspot action-space defect identified by this analysis. The controlled follow-up is documented in [nession-websocket-multi-hotspot-reader-2026-09-23.md](nession-websocket-multi-hotspot-reader-2026-09-23.md).
