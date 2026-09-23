@@ -241,3 +241,117 @@ downstream usefulness
 ```
 
 The last three dimensions should be assessed by an independent evaluator rather than by treating either algorithm as ground truth.
+
+
+## Real validation — 2026-09-23
+
+Both algorithms were validated against the same subject revision and task:
+
+~~~text
+BestNathan/nession@97b9d2b49c5137064e910fc180aabc01cfb1021f
+
+Help me optimize the websocket connection implementation
+~~~
+
+### Algorithm A
+
+Run:
+
+~~~text
+35882424922
+~~~
+
+Observed metrics:
+
+~~~text
+Phase-1 files        17
+reads               135
+
+model stops           1
+space exhausted      15
+budget exhausted      1
+
+valuable files        8
+evidence regions     32
+
+model calls         164
+input tokens   1,830,611
+output tokens      20,532
+elapsed           40.840s
+~~~
+
+The evidence-first rubric materially reduced the FINAL retained evidence set,
+but it did not yet reduce navigation cost. Large files still tended to explore
+until coverage exhaustion.
+
+This supports a useful separation:
+
+~~~text
+Evidence filtering quality
+  !=
+Search efficiency
+~~~
+
+Algorithm A currently improves the former more than the latter.
+
+### Algorithm B
+
+Run:
+
+~~~text
+35881894374
+~~~
+
+Observed metrics:
+
+~~~text
+Phase-1 files           17
+probe observations     417
+
+frontier converged      12
+round budget exhausted   5
+
+valuable files          11
+evidence regions       194
+
+model calls            184
+input tokens     1,019,712
+output tokens        33,605
+elapsed             43.360s
+~~~
+
+Adaptive Zoom successfully exercised the intended coarse-to-fine loop: most
+files terminated through probability-frontier convergence rather than complete
+file traversal.
+
+However, v0 currently overproduces probe observations and final evidence. The
+next B iteration should separate:
+
+~~~text
+search probes
+  = temporary observations used for routing refinement
+
+final evidence
+  = a much smaller distilled subset returned downstream
+~~~
+
+### Early comparison
+
+These runs are stochastic System One observations, not a controlled accuracy
+test, but they expose complementary behavior:
+
+~~~text
+A:
+  coverage-style search
+  aggressive evidence filtering
+  small final result
+  navigation cost still high
+
+B:
+  probability-guided multi-resolution search
+  avoids exhaustive line coverage
+  many more small probes
+  final evidence still too broad
+~~~
+
+The two algorithms should therefore remain separate experiments for now.
