@@ -19,6 +19,11 @@ jobs:
       CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
       ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
     steps:
+      - name: Require successor registration after R9 isolation incident
+        run: |
+          echo "::error::R9/R2 is suspended after run 35810458835. Validate the isolated runtime and register fresh pilots/profile/plan before collection or promotion."
+          exit 1
+
       - name: Set runner temp paths
         id: paths
         run: |
@@ -153,3 +158,4 @@ jobs:
           path: ${{ steps.paths.outputs.handoff }}
           retention-days: 30
           if-no-files-found: error
+

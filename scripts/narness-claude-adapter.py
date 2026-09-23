@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Translate Claude Code stream-json into the unchanged benchmark trace contract.
 
-The active execution path invokes an installed Claude Code binary directly from
-the isolated subject checkout. Only the Anthropic credential and base URL are
-passed to that child process; Narness paths and other harness environment values
-are scrubbed before launch.
+The entire Claude process, including every tool subprocess, runs in a bubblewrap
+mount/PID namespace. Only the current subject checkout and runtime files are
+mounted. HOME, Claude state and temporary files are private to each invocation.
+Network access is limited to a credential-bearing, fixed-provider Unix gateway.
 """
 from __future__ import annotations
 import argparse
@@ -18,6 +18,13 @@ import signal
 import shutil
 import sys
 import time
+import contextlib
+import http.client
+from http.server import BaseHTTPRequestHandler
+import socketserver
+import tempfile
+import threading
+from urllib.parse import urlsplit
 
 sys.dont_write_bytecode = True
 
@@ -43,6 +50,136 @@ def digest(path):
 
 def capture(args):
     return subprocess.check_output(args, text=True).strip()
+
+
+def sandbox_command(subject, command, environment, gateway_socket=None):
+    """Build a deny-by-default filesystem view; never fall back to direct execution.
+
+    Keep this policy in the adapter so its existing frozen file hash covers it.
+    The caller must supply the standalone treatment checkout, never the controller.
+    """
+    bwrap = shutil.which('bwrap')
+    if bwrap is None:
+        raise RuntimeError('bubblewrap is required; direct-host fallback is forbidden')
+    subject = Path(subject).resolve(strict=True)
+    if not (subject / '.git').is_dir() or (subject / '.git').is_symlink():
+        raise RuntimeError('Sandbox requires a standalone Git checkout')
+    if (subject / '.git/objects/info/alternates').exists():
+        raise RuntimeError('Shared Git object databases are forbidden')
+    argv = [bwrap, '--unshare-all', '--unshare-user', '--die-with-parent',
+            '--new-session', '--cap-drop', 'ALL', '--disable-userns']
+    # Do not mount /, /home, /tmp, /run, /opt or the controller checkout.
+    for path in ('/usr', '/bin', '/sbin', '/lib', '/lib64'):
+        if Path(path).is_symlink():
+            argv += ['--symlink', os.readlink(path), path]
+        elif Path(path).exists():
+            argv += ['--ro-bind', path, path]
+    node = shutil.which('node')
+    if node is None:
+        raise RuntimeError('Node runtime is required')
+    node_root = Path(node).resolve().parent.parent
+    # setup-node installs both node and globally installed Claude beneath this
+    # exact version directory. Reject arbitrary runtime mounts (e.g. HOME).
+    if node_root != Path('/usr'):
+        if not str(node_root).startswith('/opt/hostedtoolcache/node/'):
+            raise RuntimeError('Use the GitHub setup-node runtime under /opt/hostedtoolcache/node')
+        argv += ['--ro-bind', str(node_root), str(node_root)]
+    argv += ['--proc', '/proc', '--dev', '/dev', '--tmpfs', '/tmp',
+             '--tmpfs', '/home', '--dir', '/home/agent',
+             '--dir', '/home/agent/.claude', '--dir', '/home/agent/.cache',
+             '--bind', str(subject), '/workspace', '--chdir', '/workspace']
+    clean = {'HOME': '/home/agent', 'CLAUDE_CONFIG_DIR': '/home/agent/.claude',
+             'XDG_CONFIG_HOME': '/home/agent/.config', 'XDG_CACHE_HOME': '/home/agent/.cache',
+             'TMPDIR': '/tmp', 'TMP': '/tmp', 'TEMP': '/tmp',
+             'PATH': str(node_root / 'bin') + ':/usr/bin:/bin',
+             'LANG': 'C.UTF-8', 'SHELL': '/bin/bash', 'USER': 'agent',
+             'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1'}
+    if gateway_socket is not None:
+        argv += ['--ro-bind', str(gateway_socket), '/run/provider.sock']
+        clean['ANTHROPIC_BASE_URL'] = 'http://127.0.0.1:18080'
+        clean['ANTHROPIC_API_KEY'] = 'sandbox-placeholder'
+        command = ['/bin/bash', '-c',
+                   'socat TCP-LISTEN:18080,bind=127.0.0.1,reuseaddr,fork '
+                   'UNIX-CONNECT:/run/provider.sock & '
+                   'for i in {1..50}; do '
+                   'if (: >/dev/tcp/127.0.0.1/18080) 2>/dev/null; then exec "$@"; fi; '
+                   'sleep 0.1; done; exit 70', 'provider-bridge', *command]
+    return argv + ['--', *command], clean
+
+
+def sandbox_launch(subject, command, environment, gateway_socket=None, **kwargs):
+    """Real provider credentials never enter the sandbox or process argv."""
+    argv, clean = sandbox_command(subject, command, environment, gateway_socket)
+    return subprocess.Popen(argv, env=clean, close_fds=True, **kwargs)
+
+
+@contextlib.contextmanager
+def model_gateway(base_url, credential, model):
+    """Expose only messages/count_tokens for one fixed HTTPS origin and model.
+
+    Do not forward client routing/auth headers or follow upstream redirects.
+    The socket is unique per invocation; no host TCP listener is exposed.
+    """
+    upstream = urlsplit(base_url)
+    if (upstream.scheme != 'https' or not upstream.hostname or upstream.username
+            or upstream.password or upstream.query or upstream.fragment):
+        raise RuntimeError('Provider gateway requires a credential-free HTTPS base URL')
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_):
+            pass
+
+        def do_POST(self):
+            if self.path not in ('/v1/messages', '/v1/messages?beta=true',
+                                  '/v1/messages/count_tokens', '/v1/messages/count_tokens?beta=true'):
+                self.send_error(403)
+                return
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                if self.headers.get('Transfer-Encoding') or not 0 < size <= 32 * 1024 * 1024:
+                    self.send_error(413)
+                    return
+                body = self.rfile.read(size)
+                payload = json.loads(body)
+                if not isinstance(payload, dict) or payload.get('model') != model:
+                    self.send_error(403)
+                    return
+                headers = {'Content-Type': 'application/json', 'x-api-key': credential,
+                           'Authorization': 'Bearer ' + credential,
+                           'anthropic-version': self.headers.get('anthropic-version', '2023-06-01')}
+                if self.headers.get('anthropic-beta'):
+                    headers['anthropic-beta'] = self.headers['anthropic-beta']
+                conn = http.client.HTTPSConnection(upstream.hostname, upstream.port or 443, timeout=180)
+                try:
+                    conn.request('POST', upstream.path.rstrip('/') + self.path, body, headers)
+                    res = conn.getresponse()
+                    self.send_response(res.status)
+                    self.send_header('Content-Type', res.getheader('Content-Type', 'application/json'))
+                    self.send_header('Connection', 'close')
+                    self.end_headers()
+                    while chunk := res.read1(8192):
+                        self.wfile.write(chunk)
+                        self.wfile.flush()
+                finally:
+                    conn.close()
+            except Exception:
+                # Never log credentials, request bodies or provider error details.
+                self.close_connection = True
+
+    class Server(socketserver.ThreadingUnixStreamServer):
+        daemon_threads = True
+
+    with tempfile.TemporaryDirectory(prefix='narness-provider-') as temp:
+        sock = Path(temp) / 'provider.sock'
+        with Server(str(sock), Handler) as server:
+            os.chmod(sock, 0o600)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                yield sock
+            finally:
+                server.shutdown()
+                thread.join(timeout=5)
 
 
 def runtime_identity(expected_model, *, require_credentials=True):
@@ -79,7 +216,8 @@ def runtime_identity(expected_model, *, require_credentials=True):
         'claude_bin': resolved,
         'base_url': base_url,
         'credential_env': credential_env,
-        'runtime_mode': 'direct-host',
+        'runtime_mode': 'bubblewrap-provider-gateway-v1',
+        'bubblewrap_version': capture(['bwrap', '--version']),
     }
 
 
@@ -215,17 +353,17 @@ def main():
            'model': args.model, 'reasoning_effort': args.effort, 'max_turns': args.max_turns,
            'adapter_file_sha256': digest(__file__), 'command_mapper_sha256': digest(ROOT / 'scripts/ai-native-codex-adapter.py'),
            'adapter_repository_sha': common.adapter_repo_head(),
-           'network': 'provider-direct', 'subagents_enabled': False, 'web_search': 'disabled',
-           'permission_profile': 'claude-direct-narness-r6',
-           'filesystem_read_scope': 'isolated standalone subject checkout',
-           'shell_environment_allowlist': ['PATH', 'HOME', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_*', 'SHELL', 'USER', 'ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY'],
+           'network': 'private-net-fixed-provider-unix-gateway', 'subagents_enabled': False, 'web_search': 'disabled',
+           'permission_profile': 'claude-bubblewrap-provider-gateway-v1',
+           'filesystem_read_scope': 'current subject plus read-only runtime; private HOME and tmp',
+           'shell_environment_allowlist': ['PATH', 'HOME', 'CLAUDE_CONFIG_DIR', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'SHELL', 'USER', 'ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY', 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'],
            'harness_environment_scrubbed': True, 'raw_trace_file': 'claude.raw.jsonl', **identity}
     common.append_jsonl(trace, cfg)
     translator = Translator(trace, origin)
     proc = None
     rc = 1
     try:
-        with raw.open('w') as output, stderr.open('w') as err:
+        with contextlib.ExitStack() as resources, raw.open('w') as output, stderr.open('w') as err:
             if args.replay_jsonl:
                 stream = args.replay_jsonl.open()
             else:
@@ -238,7 +376,9 @@ def main():
                 for key in ('ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'):
                     if key != identity['credential_env']:
                         child_env.pop(key, None)
-                proc = subprocess.Popen(command, cwd=Path.cwd(), env=child_env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=err, text=True)
+                gateway = resources.enter_context(model_gateway(
+                    identity['base_url'], child_env[identity['credential_env']], args.model))
+                proc = sandbox_launch(Path.cwd(), command, child_env, gateway_socket=gateway, cwd=Path.cwd(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=err, text=True)
                 proc.stdin.write(prompt)
                 proc.stdin.close()
                 stream = proc.stdout

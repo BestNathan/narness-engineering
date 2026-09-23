@@ -1,0 +1,7 @@
+# Allow only the trusted namespace launcher to create its sandbox.
+# The launcher drops capabilities and disables nested user namespaces before exec.
+abi <abi/4.0>,
+include <tunables/global>
+profile narness_bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+}
