@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import posixpath
 from pathlib import Path
 import subprocess
 from typing import Any
@@ -48,10 +49,42 @@ def load_trace(path: Path) -> list[dict[str, Any]]:
     return events
 
 
+def normalize_path(path: str, worktree: str | None = None) -> str:
+    """Normalize lexically, including after the disposable checkout is removed."""
+    normalized = posixpath.normpath(path)
+    if posixpath.isabs(normalized) and worktree:
+        root = posixpath.normpath(worktree)
+        if normalized == root:
+            return "."
+        if normalized.startswith(root.rstrip("/") + "/"):
+            return posixpath.relpath(normalized, root)
+    # Outside absolute paths and leading '..' stay outside the gold namespace.
+    return normalized
+
+
+def normalize_trace_paths(trace: list[dict[str, Any]], worktree: str | None) -> None:
+    for event in trace:
+        if isinstance(event.get("path"), str):
+            event["path"] = normalize_path(event["path"], worktree)
+        if isinstance(event.get("paths"), list):
+            event["paths"] = [
+                normalize_path(p, worktree) if isinstance(p, str) else p
+                for p in event["paths"]
+            ]
+        if isinstance(event.get("results"), list):
+            for index, result in enumerate(event["results"]):
+                if isinstance(result, str):
+                    event["results"][index] = normalize_path(result, worktree)
+                elif isinstance(result, dict) and isinstance(result.get("path"), str):
+                    result["path"] = normalize_path(result["path"], worktree)
+
+
 def matches(path: str, patterns: list[str]) -> bool:
-    normalized = path.lstrip("./")
+    normalized = normalize_path(path)
     for pattern in patterns:
-        p = pattern.lstrip("./")
+        p = normalize_path(pattern)
+        if pattern.endswith("/"):
+            p += "/"
         if p.endswith("/"):
             if normalized.startswith(p):
                 return True
@@ -98,6 +131,7 @@ def main() -> int:
     trace = load_trace(trace_path)
     all_gold = load_json(args.gold.resolve())
     run_record = load_json(run_dir / "run.json")
+    normalize_trace_paths(trace, run_record.get("worktree"))
     task_id = run_record["task_id"]
 
     task_gold = all_gold["tasks"][task_id]
