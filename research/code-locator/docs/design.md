@@ -67,7 +67,7 @@ Harness
   - split content
   - preserve provenance
   - apply thresholds
-  - batch requests
+  - fan out each semantic stage as one request
   - merge final ranges
   - record evidence
 
@@ -75,7 +75,21 @@ System One
   - estimate whether each exposed candidate is relevant to the goal
 ```
 
-This keeps deterministic operations outside the model and makes each model call independently inspectable.
+This keeps deterministic operations outside the model and makes each semantic stage independently inspectable. Repository size increases the number of questions and request payload size, but not the number of System One round trips.
+
+## One request per semantic stage
+
+The request topology is deliberately fixed:
+
+```text
+directory frontier -> request 1
+file frontier      -> request 2
+line frontier      -> request 3
+```
+
+Every candidate still receives its own Noul question, but all questions for the same stage are submitted together. The previous prototype split candidates into batches of 48 and also invoked the line scorer once per selected file. On the first Nession websocket pilot that turned three semantic stages into 598 model calls (382 directories exposed, 1,040 files exposed, 92 files selected, and 25,006 lines exposed). That behavior measured transport batching rather than the intended System One architecture, so it is now treated as a harness bug rather than an experiment parameter.
+
+Transient HTTP retries remain independent of this invariant: a stage is one logical model call even if the transport must retry the same request.
 
 ## Why independent probabilities matter
 
@@ -184,7 +198,7 @@ trace.jsonl
 summary.md
 ```
 
-The manifest records harness revision, subject repository and revision, workflow run identity, query, thresholds, batch size, and model.
+The manifest records harness revision, subject repository and revision, workflow run identity, query, thresholds, and model.
 
 The JSONL trace records candidate disclosure, model requests, score responses, threshold decisions, latency, token usage, and final results. Authorization data is never recorded.
 
@@ -198,7 +212,7 @@ First, deterministic fixture validation runs only when the Code Locator implemen
 
 Second, a manual TypeSafe job runs the real System One model against a checked-out subject repository such as `BestNathan/nession`.
 
-The subject repository, ref, query, thresholds, batch size, and model are workflow inputs so repeated runs can vary one parameter while preserving the rest in the manifest.
+The subject repository, ref, query, thresholds, and model are workflow inputs so repeated runs can vary one parameter while preserving the rest in the manifest. Request batching is intentionally not an experiment parameter because the semantic invariant is one request per stage.
 
 Artifacts are retained for 90 days. Each run should be treated as raw Code Locator research evidence, not as proof that the hypotheses are already true.
 
