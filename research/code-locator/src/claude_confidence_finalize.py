@@ -13,6 +13,26 @@ from localization_result import (
 )
 
 
+def normalize_confidence_assessment(assessment):
+    """Repair one observed schema-only nesting error without changing judgments."""
+    if not isinstance(assessment, dict):
+        return assessment
+    if isinstance(assessment.get("files"), list):
+        return assessment
+
+    overall = assessment.get("overall")
+    if (
+        isinstance(overall, dict)
+        and isinstance(overall.get("files"), list)
+    ):
+        repaired = dict(assessment)
+        repaired_overall = dict(overall)
+        repaired["files"] = repaired_overall.pop("files")
+        repaired["overall"] = repaired_overall
+        return repaired
+    return assessment
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--draft", required=True)
@@ -43,7 +63,9 @@ def main(argv=None):
             "confidence session must not use repository tools"
         )
 
-    assessment = json.loads(strip_json_fence(final_text))
+    assessment = normalize_confidence_assessment(
+        json.loads(strip_json_fence(final_text))
+    )
     if not isinstance(assessment, dict):
         raise ValueError(
             "confidence assessment must be a JSON object; "
