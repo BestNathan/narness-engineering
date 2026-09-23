@@ -203,7 +203,7 @@ class DemoTest(unittest.TestCase):
             self.assertEqual(1,first['start_line'])
             self.assertEqual(5,first['end_line'])
 
-    def test_outline_frontier_is_one_candidate_per_file(self):
+    def test_outline_frontier_groups_symbols_by_scope(self):
         with tempfile.TemporaryDirectory() as temp:
             root=pathlib.Path(temp)/'repo'
             source=root/'src'
@@ -240,21 +240,26 @@ class DemoTest(unittest.TestCase):
                 },
             ]
 
-            candidates,symbols_by_path=MODULE.outlines(root,files)
+            candidates,symbols_by_outline=MODULE.outlines(root,files)
 
             self.assertEqual(2,len(candidates))
-            self.assertEqual(
-                {'src/one.ts','src/two.ts'},
-                set(symbols_by_path),
+            one=next(
+                item for item in candidates
+                if item['payload']['path']=='src/one.ts'
             )
-            one=candidates[0]['payload']
-            self.assertEqual('src/one.ts',one['path'])
-            self.assertGreaterEqual(one['symbol_count'],3)
-            self.assertNotIn('content',one)
+            payload=one['payload']
+            self.assertEqual('class',payload['scope_kind'])
+            self.assertEqual('One',payload['scope_name'])
+            self.assertGreaterEqual(payload['member_count'],3)
+            self.assertNotIn('content',payload)
             self.assertTrue(any(
                 item['name']=='connect'
-                for item in one['symbols']
+                for item in payload['members']
             ))
+            self.assertGreaterEqual(
+                len(symbols_by_outline[one['id']]),
+                3,
+            )
 
     def test_outline_selection_gates_symbol_expansion(self):
         class GateScorer:
