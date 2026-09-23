@@ -62,12 +62,19 @@ lines selected        = 1,308
 snippets              = 370
 
 model calls           = 601
+  directory            = 8
+  file                 = 22
+  line                 = 571
+
 input tokens          = 5,808,879
+  directory            = 67,063
+  file                 = 165,449
+  line                 = 5,576,367
 output tokens         = 502,109
 elapsed               = 125.7 s
 ```
 
-The result quality was promising, but the search policy was too permissive.
+The result quality was promising, but the search policy was too permissive. Line expansion alone accounted for 571 of 601 model calls and about 96% of input tokens.
 
 The main problem is not System One latency itself. The harness exposes too much state before applying a sufficiently strong budget.
 
