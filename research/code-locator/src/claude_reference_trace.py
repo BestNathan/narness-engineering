@@ -8,6 +8,8 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from localization_result import normalize_claude_result
+
 
 def text_content(value):
     if isinstance(value, str):
@@ -150,34 +152,7 @@ def parse_stream(raw_path, subject_root):
     return steps, terminal or {}, final_text
 
 
-def validate_reference(reference, subject_root):
-    if not isinstance(reference.get("relevant_files"), list):
-        raise RuntimeError("Claude reference omitted relevant_files")
-
-    seen = set()
-    for item in reference["relevant_files"]:
-        path = item.get("path")
-        if (
-            not isinstance(path, str)
-            or path.startswith("/")
-            or path.startswith("../")
-        ):
-            raise RuntimeError(f"invalid reference path: {path!r}")
-        if path in seen:
-            raise RuntimeError(f"duplicate reference path: {path}")
-        seen.add(path)
-        if item.get("relevance") not in {"primary", "supporting", "context"}:
-            raise RuntimeError(f"invalid relevance for {path}")
-        if (
-            item["relevance"] in {"primary", "supporting"}
-            and not item.get("evidence")
-        ):
-            raise RuntimeError(f"missing evidence for {path}")
-        if not (subject_root / path).is_file():
-            raise RuntimeError(f"reference file does not exist: {path}")
-
-
-def markdown_summary(steps, reference, terminal):
+def markdown_summary(steps, localization_result, terminal):
     counts = Counter(step["tool"] for step in steps)
     lines = [
         "# Claude Code localization execution path",
@@ -191,7 +166,7 @@ def markdown_summary(steps, reference, terminal):
         f"- Greps: {counts.get('Grep', 0)}",
         f"- Globs: {counts.get('Glob', 0)}",
         f"- Bash calls: {counts.get('Bash', 0)}",
-        f"- Relevant files in final answer: {len(reference.get('relevant_files', []))}",
+        f"- Relevant files in final answer: {len(localization_result.get('files', []))}",
         f"- Turns: {terminal.get('num_turns')}",
         f"- Duration ms: {terminal.get('duration_ms')}",
         "",
@@ -224,8 +199,12 @@ def main(argv=None):
         args.raw_jsonl,
         subject_root,
     )
-    reference = json.loads(strip_json_fence(final_text))
-    validate_reference(reference, subject_root)
+    raw_result = json.loads(strip_json_fence(final_text))
+    localization_result = normalize_claude_result(
+        raw_result,
+        subject_root,
+        args.model,
+    )
 
     trace = {
         "schema_version": 1,
@@ -251,7 +230,11 @@ def main(argv=None):
     }
 
     Path(args.output_reference).write_text(
-        json.dumps(reference, indent=2, ensure_ascii=False) + "\n",
+        json.dumps(
+            localization_result,
+            indent=2,
+            ensure_ascii=False,
+        ) + "\n",
         encoding="utf-8",
     )
     Path(args.output_trace).write_text(
@@ -263,7 +246,7 @@ def main(argv=None):
         encoding="utf-8",
     )
     Path(args.output_summary).write_text(
-        markdown_summary(steps, reference, terminal),
+        markdown_summary(steps, localization_result, terminal),
         encoding="utf-8",
     )
     return 0
