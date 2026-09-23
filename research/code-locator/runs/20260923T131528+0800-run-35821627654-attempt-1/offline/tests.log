@@ -1,0 +1,10 @@
+test_progressive_localization (test_system_one_code_locator.DemoTest.test_progressive_localization) ... ok
+test_request_uses_noul (test_system_one_code_locator.DemoTest.test_request_uses_noul) ... ok
+test_run_uses_exactly_one_model_call_per_stage (test_system_one_code_locator.DemoTest.test_run_uses_exactly_one_model_call_per_stage) ... ok
+test_system_one_scores_large_stage_in_one_request (test_system_one_code_locator.DemoTest.test_system_one_scores_large_stage_in_one_request) ... ok
+test_transient_520_is_retried (test_system_one_code_locator.DemoTest.test_transient_520_is_retried) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.011s
+
+OK
