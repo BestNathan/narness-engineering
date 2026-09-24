@@ -17,7 +17,7 @@ env:
 
 jobs:
   paired-system-one:
-    name: Run Range and Adaptive Zoom
+    name: Controlled shared-Phase1 A/B
     runs-on: ubuntu-24.04
     environment: typesafe
     timeout-minutes: 120
@@ -46,200 +46,337 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Run independent range runtime
+      - name: Run shared Phase 1 then both Phase 2 algorithms
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
           TYPESAFE_API_URL: ${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
         run: |
           set -euo pipefail
           test -n "$TYPESAFE_API_KEY"
-          mkdir -p artifacts/range
-          python3 harness/src/system_one_range_runtime.py \
-            subject "$QUERY" \
-            --directory-threshold 0.50 \
-            --file-threshold 0.65 \
-            --window-lines 140 \
-            --parallel-threshold 0.65 \
-            --evidence-threshold 0.65 \
-            --max-jumps 2 \
-            --max-file-epochs 32 \
-            --subject-repository "$SUBJECT_REPOSITORY" \
-            --subject-revision "$SUBJECT_SHA" \
-            --model "$TYPESAFE_MODEL" \
-            --trace-file artifacts/range/trace.jsonl \
-            --output-json artifacts/range/result.json \
-            --output-localization-json artifacts/range/localization-result.json
+          mkdir -p artifacts/range artifacts/adaptive artifacts/comparison
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import time
+          from pathlib import Path
 
-      - name: Run adaptive semantic zoom
-        env:
-          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
-          TYPESAFE_API_URL: ${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts/adaptive
-          python3 harness/src/system_one_adaptive_zoom.py \
-            subject "$QUERY" \
-            --directory-threshold 0.50 \
-            --file-threshold 0.65 \
-            --evidence-threshold 0.65 \
-            --coarse-regions 16 \
-            --probe-lines 32 \
-            --beam-width 3 \
-            --beam-mass 0.80 \
-            --exploration-slots 1 \
-            --target-region-lines 40 \
-            --exploration-floor 0.05 \
-            --max-rounds 8 \
-            --stable-rounds 2 \
-            --subject-repository "$SUBJECT_REPOSITORY" \
-            --subject-revision "$SUBJECT_SHA" \
-            --model "$TYPESAFE_MODEL" \
-            --trace-file artifacts/adaptive/trace.jsonl \
-            --output-json artifacts/adaptive/result.json \
-            --output-localization-json artifacts/adaptive/localization-result.json
+          sys.path.insert(0, str(Path("harness/src").resolve()))
+
+          from localization_result import (
+              build_system_one_adaptive_zoom_result,
+              build_system_one_range_result,
+          )
+          from system_one_code_locator import Trace, empty_usage, merge_usage
+          from system_one_range_runtime import (
+              SystemOneFileDecider,
+              canonical_file_results,
+              run_file_runtime,
+              run_phase1,
+          )
+          from system_one_adaptive_zoom import (
+              AdaptiveZoomDecider,
+              canonical_zoom_results,
+              run_zoom_file,
+          )
+
+          root = Path("subject")
+          query = os.environ["QUERY"]
+          model = os.environ["TYPESAFE_MODEL"]
+          endpoint = os.environ["TYPESAFE_API_URL"]
+          key = os.environ["TYPESAFE_API_KEY"]
+          subject = {
+              "repository": os.environ["SUBJECT_REPOSITORY"],
+              "revision": os.environ["SUBJECT_SHA"],
+          }
+
+          phase_trace = Trace("artifacts/comparison/phase1-trace.jsonl")
+          phase_decider = SystemOneFileDecider(key, phase_trace, endpoint, model)
+          phase_started = time.perf_counter()
+          selected_dirs, selected_files, phase_metrics = run_phase1(
+              root, query, phase_decider, phase_trace, 0.50, 0.65
+          )
+          phase_elapsed_ms = (time.perf_counter() - phase_started) * 1000
+
+          base_usage = {
+              k: int(phase_metrics.get(k, 0) or 0)
+              for k in ("model_calls", "input_tokens", "output_tokens")
+          }
+
+          # Range runtime over the exact shared candidate list.
+          range_trace = Trace("artifacts/range/trace.jsonl")
+          range_decider = SystemOneFileDecider(key, range_trace, endpoint, model)
+          range_usage = dict(base_usage)
+          range_states = []
+          range_started = time.perf_counter()
+          for candidate in selected_files:
+              state, usage = run_file_runtime(
+                  root, query, candidate, range_decider, range_trace,
+                  window_lines=140,
+                  parallel_threshold=0.65,
+                  max_jumps=2,
+                  max_file_epochs=32,
+              )
+              merge_usage(range_usage, usage)
+              if state is not None:
+                  range_states.append(state)
+          range_phase2_ms = (time.perf_counter() - range_started) * 1000
+          range_files = canonical_file_results(range_states, 0.65)
+          range_metrics = {
+              **phase_metrics,
+              **range_usage,
+              "file_runtimes": len(range_states),
+              "file_model_stops": sum(s["termination"] == "model_stop" for s in range_states),
+              "file_space_exhausted": sum(s["termination"] == "action_space_exhausted" for s in range_states),
+              "file_budget_exhausted": sum(s["termination"] == "budget_exhausted" for s in range_states),
+              "reads_executed": sum(s["read_count"] for s in range_states),
+              "valuable_files": len(range_files),
+              "evidence_regions": sum(len(x["evidence"]) for x in range_files),
+              "parallel_threshold": 0.65,
+              "evidence_threshold": 0.65,
+              "window_lines": 140,
+              "max_jumps": 2,
+              "max_file_epochs": 32,
+              "phase1_elapsed_ms": round(phase_elapsed_ms, 3),
+              "phase2_elapsed_ms": round(range_phase2_ms, 3),
+              "elapsed_ms": round(phase_elapsed_ms + range_phase2_ms, 3),
+          }
+          range_result = {
+              "query": query,
+              "root": str(root.resolve()),
+              "model": model,
+              "architecture": "phase1_plus_independent_file_range_runtimes_v0",
+              "thresholds": {
+                  "directory": 0.50,
+                  "file": 0.65,
+                  "parallel_action": 0.65,
+                  "result_evidence": 0.65,
+              },
+              "directories": selected_dirs,
+              "files": selected_files,
+              "file_states": range_states,
+              "result_files": range_files,
+              "metrics": range_metrics,
+              "subject": subject,
+          }
+          range_result["localization_result"] = build_system_one_range_result(
+              range_result, model
+          )
+
+          # Adaptive zoom over the SAME exact candidate list.
+          zoom_trace = Trace("artifacts/adaptive/trace.jsonl")
+          zoom_decider = AdaptiveZoomDecider(key, zoom_trace, endpoint, model)
+          zoom_usage = dict(base_usage)
+          zoom_states = []
+          zoom_started = time.perf_counter()
+          for candidate in selected_files:
+              state, usage = run_zoom_file(
+                  root, query, candidate, zoom_decider, zoom_trace,
+                  coarse_regions=16,
+                  probe_lines=32,
+                  beam_width=3,
+                  beam_mass=0.80,
+                  exploration_slots=1,
+                  target_region_lines=40,
+                  exploration_floor=0.05,
+                  max_rounds=8,
+                  stable_rounds=2,
+              )
+              merge_usage(zoom_usage, usage)
+              if state is not None:
+                  zoom_states.append(state)
+          zoom_phase2_ms = (time.perf_counter() - zoom_started) * 1000
+          zoom_files = canonical_zoom_results(zoom_states, 0.65)
+          zoom_observations = sum(len(s["observations"]) for s in zoom_states)
+          zoom_metrics = {
+              **phase_metrics,
+              **zoom_usage,
+              "file_runtimes": len(zoom_states),
+              "observations": zoom_observations,
+              "reads_executed": zoom_observations,
+              "valuable_files": len(zoom_files),
+              "evidence_regions": sum(len(x["evidence"]) for x in zoom_files),
+              "probability_frontier_converged": sum(
+                  s["termination"] == "probability_frontier_converged"
+                  for s in zoom_states
+              ),
+              "round_budget_exhausted": sum(
+                  s["termination"] == "round_budget_exhausted"
+                  for s in zoom_states
+              ),
+              "phase1_elapsed_ms": round(phase_elapsed_ms, 3),
+              "phase2_elapsed_ms": round(zoom_phase2_ms, 3),
+              "elapsed_ms": round(phase_elapsed_ms + zoom_phase2_ms, 3),
+          }
+          zoom_result = {
+              "query": query,
+              "root": str(root.resolve()),
+              "model": model,
+              "architecture": "adaptive_semantic_zoom_search_v0",
+              "parameters": {
+                  "coarse_regions": 16,
+                  "probe_lines": 32,
+                  "beam_width": 3,
+                  "beam_mass": 0.80,
+                  "exploration_slots": 1,
+                  "target_region_lines": 40,
+                  "exploration_floor": 0.05,
+                  "max_rounds": 8,
+                  "stable_rounds": 2,
+              },
+              "directories": selected_dirs,
+              "files": selected_files,
+              "file_states": zoom_states,
+              "result_files": zoom_files,
+              "metrics": zoom_metrics,
+              "subject": subject,
+          }
+          zoom_result["localization_result"] = build_system_one_adaptive_zoom_result(
+              zoom_result, model
+          )
+
+          for name, result in (("range", range_result), ("adaptive", zoom_result)):
+              out = Path("artifacts") / name
+              (out / "result.json").write_text(
+                  json.dumps(result, indent=2, ensure_ascii=False) + "\n"
+              )
+              (out / "localization-result.json").write_text(
+                  json.dumps(result["localization_result"], indent=2, ensure_ascii=False) + "\n"
+              )
+
+          shared = {
+              "query": query,
+              "subject": subject,
+              "model": model,
+              "phase1_metrics": phase_metrics,
+              "phase1_elapsed_ms": round(phase_elapsed_ms, 3),
+              "selected_files": [
+                  (x.get("payload") or {}).get("path") or x.get("path")
+                  for x in selected_files
+              ],
+          }
+          Path("artifacts/comparison/shared-phase1.json").write_text(
+              json.dumps(shared, indent=2, ensure_ascii=False) + "\n"
+          )
+          print(json.dumps({
+              "shared_phase1": shared,
+              "range": range_metrics,
+              "adaptive": zoom_metrics,
+          }, ensure_ascii=False))
+          PY
 
       - name: Compare canonical localization results
         run: |
           set -euo pipefail
-          mkdir -p artifacts/comparison
           python3 harness/src/compare_localization_results.py \
             --left artifacts/range/localization-result.json \
             --right artifacts/adaptive/localization-result.json \
             --output-json artifacts/comparison/localization-comparison.json \
             --output-markdown artifacts/comparison/localization-comparison.md
 
-      - name: Build paired algorithm report
+      - name: Build controlled report
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json
-          import os
           from pathlib import Path
 
           root = Path("artifacts")
           rr = json.loads((root / "range/result.json").read_text())
           az = json.loads((root / "adaptive/result.json").read_text())
-          cmp = json.loads((root / "comparison/localization-comparison.json").read_text())
-
-          def selected_paths(result):
-              out = []
-              for item in result.get("files", []):
-                  payload = item.get("payload") or {}
-                  path = payload.get("path") or item.get("path")
-                  if path:
-                      out.append(path)
-              return out
+          shared = json.loads((root / "comparison/shared-phase1.json").read_text())
 
           def merge_ranges(rows):
               rows = sorted((int(a), int(b)) for a, b in rows)
-              merged = []
-              for start, end in rows:
-                  if not merged or start > merged[-1][1] + 1:
-                      merged.append([start, end])
+              out = []
+              for a, b in rows:
+                  if not out or a > out[-1][1] + 1:
+                      out.append([a, b])
                   else:
-                      merged[-1][1] = max(merged[-1][1], end)
-              return merged
+                      out[-1][1] = max(out[-1][1], b)
+              return out
 
           def span(rows):
-              return sum(b - a + 1 for a, b in merge_ranges(rows))
+              return sum(b-a+1 for a,b in merge_ranges(rows))
 
-          range_files = {}
-          for state in rr.get("file_states", []):
-              cov = state.get("coverage", [])
-              total = int(state.get("line_count", 0) or 0)
-              observed = span(cov)
-              range_files[state["path"]] = {
-                  "operations": int(state.get("read_count", 0) or 0),
-                  "observed_lines": observed,
-                  "coverage": observed / total if total else 0.0,
-                  "termination": state.get("termination"),
+          rf = {}
+          for s in rr["file_states"]:
+              observed = span(s.get("coverage", []))
+              total = int(s.get("line_count", 0) or 0)
+              rf[s["path"]] = {
+                  "ops": s["read_count"],
+                  "coverage": observed/total if total else 0,
+                  "termination": s["termination"],
               }
 
-          zoom_files = {}
-          for state in az.get("file_states", []):
-              obs = [[x["start_line"], x["end_line"]] for x in state.get("observations", [])]
-              total = int(state.get("line_count", 0) or 0)
-              observed = span(obs)
-              zoom_files[state["path"]] = {
-                  "operations": len(state.get("observations", [])),
-                  "observed_lines": observed,
-                  "coverage": observed / total if total else 0.0,
-                  "termination": state.get("termination"),
-                  "rounds": int(state.get("round", 0) or 0),
+          zf = {}
+          for s in az["file_states"]:
+              rows = [[o["start_line"],o["end_line"]] for o in s["observations"]]
+              observed = span(rows)
+              total = int(s.get("line_count", 0) or 0)
+              zf[s["path"]] = {
+                  "ops": len(s["observations"]),
+                  "coverage": observed/total if total else 0,
+                  "termination": s["termination"],
+                  "rounds": s["round"],
               }
 
-          rp = selected_paths(rr)
-          zp = selected_paths(az)
           report = {
-              "subject": {
-                  "repository": os.environ["SUBJECT_REPOSITORY"],
-                  "revision": os.environ["SUBJECT_SHA"],
-              },
-              "task": os.environ["QUERY"],
-              "harness_revision": os.environ["HARNESS_SHA"],
-              "range": rr.get("metrics", {}),
-              "adaptive": az.get("metrics", {}),
-              "phase1": {
-                  "range_files": rp,
-                  "adaptive_files": zp,
-                  "same_file_set": set(rp) == set(zp),
-                  "range_only": sorted(set(rp) - set(zp)),
-                  "adaptive_only": sorted(set(zp) - set(rp)),
-              },
+              "shared_phase1": shared,
+              "range": rr["metrics"],
+              "adaptive": az["metrics"],
               "per_file": {
-                  path: {
-                      "range": range_files.get(path),
-                      "adaptive": zoom_files.get(path),
-                  }
-                  for path in sorted(set(range_files) | set(zoom_files))
+                  p: {"range": rf.get(p), "adaptive": zf.get(p)}
+                  for p in shared["selected_files"]
               },
-              "localization_comparison": cmp,
           }
-          (root / "comparison/paired-report.json").write_text(
+          (root / "comparison/controlled-report.json").write_text(
               json.dumps(report, indent=2, ensure_ascii=False) + "\n"
           )
 
-          rm = report["range"]
-          am = report["adaptive"]
+          rm, am = report["range"], report["adaptive"]
           lines = [
-              "# Range Runtime vs Adaptive Semantic Zoom",
+              "# Controlled Range vs Adaptive Zoom",
               "",
-              f"- Subject: {report['subject']['repository']}@{report['subject']['revision']}",
-              f"- Harness: {report['harness_revision']}",
-              f"- Phase-1 file sets identical: **{report['phase1']['same_file_set']}**",
+              "Both algorithms consume the same single Phase-1 candidate set.",
               "",
-              "| Metric | Range runtime | Adaptive zoom |",
+              f"- Shared candidates: {len(shared['selected_files'])}",
+              f"- Shared Phase-1 calls: {shared['phase1_metrics'].get('model_calls')}",
+              f"- Shared Phase-1 elapsed ms: {shared['phase1_elapsed_ms']}",
+              "",
+              "| Metric | Range | Adaptive zoom |",
               "| --- | ---: | ---: |",
-              f"| Elapsed ms | {rm.get('elapsed_ms')} | {am.get('elapsed_ms')} |",
-              f"| Model calls | {rm.get('model_calls')} | {am.get('model_calls')} |",
-              f"| Input tokens | {rm.get('input_tokens')} | {am.get('input_tokens')} |",
-              f"| Output tokens | {rm.get('output_tokens')} | {am.get('output_tokens')} |",
-              f"| Reads / observations | {rm.get('reads_executed')} | {am.get('observations')} |",
-              f"| Valuable files | {rm.get('valuable_files')} | {am.get('valuable_files')} |",
-              f"| Evidence regions | {rm.get('evidence_regions')} | {am.get('evidence_regions')} |",
+              f"| Counterfactual total elapsed ms | {rm['elapsed_ms']} | {am['elapsed_ms']} |",
+              f"| Phase-2 elapsed ms | {rm['phase2_elapsed_ms']} | {am['phase2_elapsed_ms']} |",
+              f"| Model calls incl. shared Phase 1 | {rm['model_calls']} | {am['model_calls']} |",
+              f"| Input tokens incl. shared Phase 1 | {rm['input_tokens']} | {am['input_tokens']} |",
+              f"| Output tokens incl. shared Phase 1 | {rm['output_tokens']} | {am['output_tokens']} |",
+              f"| Reads / probes | {rm['reads_executed']} | {am['observations']} |",
+              f"| Valuable files | {rm['valuable_files']} | {am['valuable_files']} |",
+              f"| Evidence regions | {rm['evidence_regions']} | {am['evidence_regions']} |",
               "",
               "## Per-file navigation",
               "",
               "| File | Range reads | Range coverage | Range stop | Zoom probes | Zoom coverage | Zoom stop |",
               "| --- | ---: | ---: | --- | ---: | ---: | --- |",
           ]
-          for path in sorted(set(range_files) | set(zoom_files)):
-              a = range_files.get(path) or {}
-              b = zoom_files.get(path) or {}
+          for p in shared["selected_files"]:
+              a = rf.get(p) or {}
+              b = zf.get(p) or {}
               lines.append(
-                  f"| {path} | {a.get('operations', '-')} | {a.get('coverage', 0)*100:.1f}% | "
-                  f"{a.get('termination', '-')} | {b.get('operations', '-')} | "
-                  f"{b.get('coverage', 0)*100:.1f}% | {b.get('termination', '-')} |"
+                  f"| {p} | {a.get('ops','-')} | {a.get('coverage',0)*100:.1f}% | "
+                  f"{a.get('termination','-')} | {b.get('ops','-')} | "
+                  f"{b.get('coverage',0)*100:.1f}% | {b.get('termination','-')} |"
               )
-          lines += ["", "## Canonical localization overlap", "", (root / "comparison/localization-comparison.md").read_text()]
-          (root / "comparison/paired-report.md").write_text("\n".join(lines) + "\n")
+          lines += ["", "## Canonical overlap", "", (root / "comparison/localization-comparison.md").read_text()]
+          (root / "comparison/controlled-report.md").write_text("\n".join(lines) + "\n")
           PY
-          cat artifacts/comparison/paired-report.md >> "$GITHUB_STEP_SUMMARY"
+          cat artifacts/comparison/controlled-report.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload paired experiment
+      - name: Upload controlled experiment
         uses: actions/upload-artifact@v4
         with:
-          name: range-vs-adaptive-zoom-${{ github.run_id }}
+          name: controlled-range-vs-adaptive-${{ github.run_id }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 90
@@ -281,14 +418,12 @@ jobs:
           python-version: "3.13"
 
       - name: Install pinned Claude Code
-        run: |
-          set -euo pipefail
-          npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
+        run: npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
 
-      - name: Download paired experiment
+      - name: Download controlled experiment
         uses: actions/download-artifact@v4
         with:
-          name: range-vs-adaptive-zoom-${{ github.run_id }}
+          name: controlled-range-vs-adaptive-${{ github.run_id }}
           path: artifacts
 
       - name: Prepare anonymous candidates
@@ -306,25 +441,18 @@ jobs:
             --output-candidate artifacts/quality/adaptive/candidate.json \
             --output-prompt artifacts/quality/adaptive/prompt.txt
 
-      - name: Evaluate range runtime anonymously
+      - name: Evaluate range anonymously
         working-directory: subject
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
-          test -n "$ANTHROPIC_API_KEY"
           claude -p \
-            --output-format stream-json \
-            --verbose \
-            --model "$CLAUDE_MODEL" \
-            --effort high \
-            --max-turns 80 \
-            --permission-mode dontAsk \
-            --no-session-persistence \
-            --setting-sources '' \
-            --strict-mcp-config \
-            --mcp-config '{"mcpServers":{}}' \
-            --disable-slash-commands \
+            --output-format stream-json --verbose \
+            --model "$CLAUDE_MODEL" --effort high --max-turns 80 \
+            --permission-mode dontAsk --no-session-persistence \
+            --setting-sources '' --strict-mcp-config \
+            --mcp-config '{"mcpServers":{}}' --disable-slash-commands \
             --tools 'Bash,Read,Glob,Grep' \
             --allowedTools 'Bash(*)' 'Read' 'Glob' 'Grep' \
             --disallowedTools 'Edit' 'Write' 'Agent' 'Task' 'WebFetch' 'WebSearch' 'EndConversation' 'mcp__*' \
@@ -332,24 +460,18 @@ jobs:
             < ../artifacts/quality/range/prompt.txt \
             > ../artifacts/quality/range/evaluator.raw.jsonl
 
-      - name: Evaluate adaptive zoom anonymously
+      - name: Evaluate adaptive anonymously
         working-directory: subject
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           claude -p \
-            --output-format stream-json \
-            --verbose \
-            --model "$CLAUDE_MODEL" \
-            --effort high \
-            --max-turns 80 \
-            --permission-mode dontAsk \
-            --no-session-persistence \
-            --setting-sources '' \
-            --strict-mcp-config \
-            --mcp-config '{"mcpServers":{}}' \
-            --disable-slash-commands \
+            --output-format stream-json --verbose \
+            --model "$CLAUDE_MODEL" --effort high --max-turns 80 \
+            --permission-mode dontAsk --no-session-persistence \
+            --setting-sources '' --strict-mcp-config \
+            --mcp-config '{"mcpServers":{}}' --disable-slash-commands \
             --tools 'Bash,Read,Glob,Grep' \
             --allowedTools 'Bash(*)' 'Read' 'Glob' 'Grep' \
             --disallowedTools 'Edit' 'Write' 'Agent' 'Task' 'WebFetch' 'WebSearch' 'EndConversation' 'mcp__*' \
@@ -363,15 +485,13 @@ jobs:
           python3 harness/src/localization_quality_evaluation.py finalize \
             --candidate artifacts/quality/range/candidate.json \
             --raw-jsonl artifacts/quality/range/evaluator.raw.jsonl \
-            --subject-root subject \
-            --model "$CLAUDE_MODEL" \
+            --subject-root subject --model "$CLAUDE_MODEL" \
             --output-json artifacts/quality/range/scorecard.json \
             --output-markdown artifacts/quality/range/report.md
           python3 harness/src/localization_quality_evaluation.py finalize \
             --candidate artifacts/quality/adaptive/candidate.json \
             --raw-jsonl artifacts/quality/adaptive/evaluator.raw.jsonl \
-            --subject-root subject \
-            --model "$CLAUDE_MODEL" \
+            --subject-root subject --model "$CLAUDE_MODEL" \
             --output-json artifacts/quality/adaptive/scorecard.json \
             --output-markdown artifacts/quality/adaptive/report.md
           python3 harness/src/localization_quality_evaluation.py report \
@@ -387,7 +507,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: range-vs-adaptive-zoom-quality-${{ github.run_id }}
+          name: controlled-range-vs-adaptive-quality-${{ github.run_id }}
           path: artifacts/quality/
           if-no-files-found: error
           retention-days: 90
