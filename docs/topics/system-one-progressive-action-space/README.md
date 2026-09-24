@@ -676,7 +676,7 @@ The active Code Locator / System One code-exploration codebase is now:
 
 Narness should **not** mirror ongoing implementation or experiment logs back into this repository. Only stable, reusable harness conclusions should graduate back into Narness topics or canonical architecture.
 
-The local [`research/code-locator/`](../../../research/code-locator/README.md) directory is therefore an archived snapshot of the early Narness prototype, retained for provenance.
+The local [`research/code-locator/`](../../../research/code-locator/README.md) directory is now only a migration pointer. The old implementation, fixtures, tests, experiment documents, and run artifacts were removed from Narness; provenance remains available through Git history and the closed research PRs.
 
 ## 20. What remains active in this topic
 
@@ -692,7 +692,7 @@ The broader Progressive Action Spaces topic remains active. Code Locator is now 
 ## Reference implementations
 
 - [System One Kubernetes Command Generator](../../../examples/system-one-k8s/README.md)
-- [Archived Narness Code Locator snapshot](../../../research/code-locator/README.md)
+- [Code Locator migration pointer](../../../research/code-locator/README.md)
 - [Active System One code-exploration repository](https://github.com/BestNathan/system-one-code-explore)
 
 ## Related Narness topics
