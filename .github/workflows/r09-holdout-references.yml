@@ -1,0 +1,153 @@
+name: R09 holdout full-read references
+
+on:
+  push:
+    branches:
+      - experiment/r09-holdout-references-20260924
+    paths:
+      - ".github/workflows/r09-holdout-references.yml"
+
+permissions:
+  contents: read
+
+env:
+  SUBJECT_REPOSITORY: BestNathan/nession
+  SUBJECT_SHA: 7ac9b6e0c2bb43c52f83e7dd706c0c0dc0d7a1df
+  HARNESS_REPOSITORY: BestNathan/system-one-code-explore
+  HARNESS_SHA: a62fc3d86b47bb697244347acdc927da14d28ffb
+
+jobs:
+  reference:
+    name: Reference / ${{ matrix.case.id }}
+    runs-on: ubuntu-24.04
+    environment: ds
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        case:
+          - id: fs_read_safety
+            path: crates/nession-agent/src/fs/ops.rs
+            query: >-
+              Help me harden file.read: locate the code that enforces
+              sandbox-safe path resolution, full-read versus chunked size
+              limits, offset/limit semantics, MIME/binary handling, and
+              has_more behavior.
+          - id: tmux_lifecycle_safety
+            path: crates/nession-agent/src/tmux/manager.rs
+            query: >-
+              Help me make tmux session lifecycle cleanup safer: locate session
+              create/list/kill behavior, socket isolation, inherited
+              environment filtering/cleanup, command timeouts, and error
+              handling.
+          - id: terminal_attach_lifecycle
+            path: web/src/platform/terminal-runtime/controller/TerminalController.ts
+            query: >-
+              Help me make terminal attach and reconnect lifecycle robust:
+              locate attach/reparent logic, transport rewiring and callback
+              cleanup, input-router lifecycle, resize handling, detach/dispose
+              behavior, and reconnect state propagation.
+    env:
+      CASE_ID: ${{ matrix.case.id }}
+      FILE_PATH: ${{ matrix.case.path }}
+      QUERY: ${{ matrix.case.query }}
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.HARNESS_REPOSITORY }}
+          ref: ${{ env.HARNESS_SHA }}
+          path: harness
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout frozen subject
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SUBJECT_REPOSITORY }}
+          ref: ${{ env.SUBJECT_SHA }}
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+
+      - name: Install pinned Claude Code
+        run: npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
+
+      - name: Prepare reference prompt
+        run: |
+          set -euo pipefail
+          mkdir -p "artifacts/$CASE_ID"
+          python3 harness/src/full_read_relevance_baseline.py prepare             --source "subject/$FILE_PATH"             --query "$QUERY"             --window-lines 64             --stride-lines 32             --output-prompt "artifacts/$CASE_ID/prompt.txt"             --output-manifest "artifacts/$CASE_ID/prompt-manifest.json"
+
+      - name: Generate and validate full-read field
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN || secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ vars.CLAUDE_MODEL || 'deepseek-flash' }}
+          CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT: "1"
+        run: |
+          set -euo pipefail
+          test -n "$ANTHROPIC_BASE_URL"
+          test -n "$ANTHROPIC_MODEL"
+          echo "Reference model: $ANTHROPIC_MODEL"
+
+          rm -f "artifacts/$CASE_ID/reference.json"
+          for attempt in 1 2 3; do
+            echo "Reference attempt $attempt"
+            claude -p               --output-format text               --max-turns 4               --permission-mode dontAsk               --no-session-persistence               --setting-sources ''               --strict-mcp-config               --mcp-config '{"mcpServers":{}}'               --disable-slash-commands               --tools ''               --settings '{"disableAllHooks":true}'               < "artifacts/$CASE_ID/prompt.txt"               > "artifacts/$CASE_ID/output-attempt-$attempt.txt" || true
+
+            if python3 harness/src/full_read_relevance_baseline.py normalize               --source "subject/$FILE_PATH"               --query "$QUERY"               --window-lines 64               --stride-lines 32               --raw-output "artifacts/$CASE_ID/output-attempt-$attempt.txt"               --output "artifacts/$CASE_ID/reference.json"; then
+              cp "artifacts/$CASE_ID/output-attempt-$attempt.txt"                 "artifacts/$CASE_ID/output.txt"
+              echo "$attempt" > "artifacts/$CASE_ID/accepted-attempt.txt"
+              break
+            fi
+            rm -f "artifacts/$CASE_ID/reference.json"
+          done
+          test -s "artifacts/$CASE_ID/reference.json"
+
+      - name: Record provenance
+        env:
+          CC_MODEL: ${{ vars.CLAUDE_MODEL || 'deepseek-flash' }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path("artifacts") / os.environ["CASE_ID"]
+          ref = json.loads((root / "reference.json").read_text())
+          data = {
+              "case_id": os.environ["CASE_ID"],
+              "task": os.environ["QUERY"],
+              "path": os.environ["FILE_PATH"],
+              "subject_repository": os.environ["SUBJECT_REPOSITORY"],
+              "subject_sha": os.environ["SUBJECT_SHA"],
+              "harness_repository": os.environ["HARNESS_REPOSITORY"],
+              "harness_sha": os.environ["HARNESS_SHA"],
+              "runtime": "claude-code",
+              "environment": "ds",
+              "model": os.environ["CC_MODEL"],
+              "line_count": ref["line_count"],
+              "ranges": len(ref["ranges"]),
+              "reference_executor_run": "${{ github.run_id }}",
+          }
+          (root / "provenance.json").write_text(
+              json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+          )
+          PY
+
+      - name: Upload reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: r09-holdout-reference-${{ matrix.case.id }}
+          path: artifacts/${{ matrix.case.id }}/
+          if-no-files-found: error
+          retention-days: 90
