@@ -12,7 +12,7 @@ permissions:
 env:
   QUERY: Help me optimize the websocket connection implementation
   SUBJECT_REPOSITORY: BestNathan/nession
-  SUBJECT_SHA: 7ac9b6e0c2bb43c52f83e7dd706b2b1a1df
+  SUBJECT_SHA: 7ac9b6e0c2bb43c52f83e7dd706c0c0dc0d7a1df
   FILE_PATH: crates/nession-agent/src/server/websocket.rs
   HARNESS_REPOSITORY: BestNathan/system-one-code-explore
   HARNESS_SHA: f93b57d81e9e3f530ec1a26f23bb2472aa90d1b
@@ -150,7 +150,7 @@ jobs:
       - name: Upload baseline
         uses: actions/upload-artifact@v4
         with:
-          name: full-read-claude-baseline-$GITHUB_RUN_ID
+          name: full-read-claude-baseline
           path: artifacts/baseline
           if-no-files-found: error
           retention-days: 90
