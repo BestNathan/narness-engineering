@@ -1,6 +1,6 @@
 # System One Progressive Action Spaces
 
-> Status: Active research topic.
+> Status: Active research topic. The Code Locator subproject has converged in Narness and active implementation/research has moved to `BestNathan/system-one-code-explore`.
 
 ## Purpose
 
@@ -625,75 +625,75 @@ The result should distinguish between tasks that are naturally frontier-driven a
 - Can the same runtime interface serve Kubernetes, coding, and browser environments?
 - How much state should be sent to System One at each branch?
 
-## 18. Code localization experiment
+## 18. Code localization research: converged findings
 
-The second reference experiment applies the same progressive-disclosure idea to source-code localization.
+Code localization started in Narness as a concrete test of progressive action spaces. That implementation line is no longer active here.
 
-```text
-repository
-  -> directory candidates
-  -> relevant directories
-  -> file candidates
-  -> relevant files
-  -> source-line candidates
-  -> grounded code snippets
-```
+Narness keeps the architectural conclusions because they generalize beyond code search:
 
-Unlike Kubernetes action selection, this stage is not a single-winner decision. Multiple directories, files, and source ranges can all be relevant, so the prototype uses independent Noul judgments rather than Choice.
+1. **The world does not need to be finite; the local frontier does.** Repository size can remain effectively unbounded as long as each decision sees a bounded, grounded set of actions.
+2. **Source content should enter state as an observation.** A range is read because a grounded `ReadRange` action was selected; the harness should not pre-expand the whole file into semantic candidates before the model chooses where to look.
+3. **File discovery and in-file navigation are different control problems.** Broad file localization can narrow the repository, while each selected file can be explored by an independent file-local runtime.
+4. **File-local state machines are a better context boundary than one shared raw-observation state.** They reduce cross-file context pressure and make budgets, stopping, and provenance attributable per file.
+5. **Action generation can remain content-agnostic.** Geometry-only actions such as head/middle/tail probes, expansion before/after observed ranges, jumps, and stop actions let the harness own navigation mechanics without smuggling semantic judgments into the controller.
+6. **Decision primitives should match semantics.** `Choice` is appropriate for mutually exclusive control decisions such as `StopFile` versus `ContinueFile`; `Noul` is appropriate for independent relevance or utility judgments where several candidates may all be valuable.
+7. **A relevance threshold is not a stopping rule.** Thresholds can control read concurrency or breadth, while stopping should be an explicit control decision or a deterministic action-space exhaustion condition.
+8. **Durable state and model-visible state should be separate.** `RuntimeState` may retain complete observations and provenance, while a bounded `DecisionView` projects only the state needed for the next judgment.
+9. **Execution traces and localization results are different artifacts.** The trace explains how the runtime explored; the canonical result describes the final files/ranges and their provenance independently of the exploration algorithm.
+10. **System Two is a comparison source, not automatic ground truth.** Cross-model traces are useful for studying coverage, cost, and exploration behavior, but model outputs should not silently become the oracle.
 
-The harness owns traversal, filesystem IO, batching, thresholds, provenance, and range merging. System One only estimates candidate relevance.
+These conclusions supersede the original fixed pipeline described by the archived Narness prototype:
 
-This broadens the working runtime abstraction:
+~~~text
+repository -> directories -> files -> lines -> snippets
+~~~
 
-```text
-StateSpaceGenerator
-  -> CandidateSet
-  -> DecisionPrimitive
-  -> TransitionPolicy
-  -> EvidenceRecorder
-```
+The more durable abstraction is:
 
-The decision primitive can therefore vary by state:
+~~~text
+State
+  -> grounded ActionSpace
+  -> judgment
+  -> typed effect
+  -> Observation
+  -> State transition
+~~~
 
-- `Choice` for selecting one grounded action from a local frontier;
-- `Noul` for independently retaining multiple relevant candidates;
-- deterministic short-circuiting where model judgment is unnecessary.
+## 19. Research lineage and migration
 
-See [Hierarchical Code Localization with System One](../../../research/code-locator/docs/design.md) for the hypotheses, threshold/recall analysis, evidence contract, and experiment plan.
+The Code Locator work went through several iterations inside Narness:
 
-## 19. Research evidence workflows
+- [PR #16](https://github.com/BestNathan/narness-engineering/pull/16) merged the initial hierarchical localization prototype.
+- [PR #17](https://github.com/BestNathan/narness-engineering/pull/17) accumulated the major follow-up work: two-phase reading, per-file runtimes, explicit stop control, bounded decision views, canonical localization results, and alternative exploration algorithms.
+- [PRs #21-#25](https://github.com/BestNathan/narness-engineering/pulls?q=is%3Apr+21+22+23+24+25) explored later single-file baselines and probability-frontier variants.
 
-The experiments use separate workflows because they exercise different decision primitives, inputs, costs, and failure modes.
+Those follow-up branches are historical research records, not the active implementation line.
 
-- [System One Kubernetes experiment](../../../.github/workflows/system-one-k8s-experiment.yml) owns only the Kubernetes state-machine demo.
-- [System One Code Locator experiment](../../../.github/workflows/system-one-code-locator.yml) owns only hierarchical code localization.
+The active Code Locator / System One code-exploration codebase is now:
 
-The Code Locator workflow has two layers:
+- [BestNathan/system-one-code-explore](https://github.com/BestNathan/system-one-code-explore)
+- active research records live under that repository's `docs/research/`
 
-1. deterministic fixture validation on Code Locator changes, requiring no external model service;
-2. manually dispatched real-System-One localization against a configurable subject repository.
+Narness should **not** mirror ongoing implementation or experiment logs back into this repository. Only stable, reusable harness conclusions should graduate back into Narness topics or canonical architecture.
 
-Its artifact contains only Code Locator evidence: run metadata, execution log, `trace.jsonl`, `result.json`, and `summary.md`. This keeps repository-localization research independent from Kubernetes results and makes failures, costs, and parameter sweeps attributable to one experiment.
+The local [`research/code-locator/`](../../../research/code-locator/README.md) directory is therefore an archived snapshot of the early Narness prototype, retained for provenance.
 
-## 20. Relationship to Narness
+## 20. What remains active in this topic
 
-Narness currently defines itself as AI Workspace Engineering and explicitly does not aim to become a general Agent Runtime.
+The broader Progressive Action Spaces topic remains active. Code Locator is now one completed case study informing these questions:
 
-This topic therefore remains research rather than a canonical Narness runtime commitment.
-
-It is still relevant because it explores a neighboring harness-engineering question:
-
-> How should an execution environment expose context, capabilities, constraints, and deterministic actions so that a model only needs to make the smallest useful judgment?
-
-If the conclusions stabilize, some of them may graduate into Narness concepts around progressive disclosure, capability representation, deterministic execution, policy, evidence, and agent observability without requiring Narness itself to own a runtime.
+- how a harness constructs bounded grounded frontiers from large dynamic environments;
+- how `RuntimeState` should be projected into a bounded `DecisionView`;
+- how action selection, effects, observations, and state reduction should be separated;
+- how Choice, Noul, deterministic transitions, and System Two escalation should compose;
+- how traces and evidence contracts make local model judgments inspectable;
+- how these ideas transfer across Kubernetes, code navigation, browsers, infrastructure, and other agent environments.
 
 ## Reference implementations
 
 - [System One Kubernetes Command Generator](../../../examples/system-one-k8s/README.md)
-- [System One Code Locator](../../../research/code-locator/README.md)
-- [Code localization research note](../../../research/code-locator/docs/design.md)
-- [System One Kubernetes experiment workflow](../../../.github/workflows/system-one-k8s-experiment.yml)
-- [System One Code Locator experiment workflow](../../../.github/workflows/system-one-code-locator.yml)
+- [Archived Narness Code Locator snapshot](../../../research/code-locator/README.md)
+- [Active System One code-exploration repository](https://github.com/BestNathan/system-one-code-explore)
 
 ## Related Narness topics
 
