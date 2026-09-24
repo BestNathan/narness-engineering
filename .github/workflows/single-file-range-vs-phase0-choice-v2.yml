@@ -14,7 +14,7 @@ env:
   SUBJECT_SHA: 7ac9b6e0c2bb43c52f83e7dd706c0c0dc0d7a1df
   FILE_PATH: crates/nession-agent/src/server/websocket.rs
   HARNESS_REPOSITORY: BestNathan/system-one-code-explore
-  HARNESS_SHA: 0aa52ee0376c18b8452d2becf584a6f919f8b018
+  HARNESS_SHA: 79223f693add092a1de6b8d8bc5d00a1b9774c41
   TYPESAFE_MODEL: jev-latest
   TYPESAFE_API_URL: https://api.typesafe.ai/v1/systemone
 
@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: BestNathan/system-one-code-explore
-          ref: 0aa52ee0376c18b8452d2becf584a6f919f8b018
+          ref: 79223f693add092a1de6b8d8bc5d00a1b9774c41
           path: harness
           fetch-depth: 1
           persist-credentials: false
@@ -304,7 +304,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: BestNathan/system-one-code-explore
-          ref: 0aa52ee0376c18b8452d2becf584a6f919f8b018
+          ref: 79223f693add092a1de6b8d8bc5d00a1b9774c41
           path: harness
           fetch-depth: 1
           persist-credentials: false
