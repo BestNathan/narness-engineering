@@ -73,7 +73,7 @@ jobs:
               run_file_runtime,
           )
           from system_one_relevance_frontier import (
-              ChoiceRelevanceFrontierDecider,
+              ClosureChoiceRelevanceFrontierDecider,
               canonical_results as canonical_frontier_results,
               run_frontier_file_phase0_choice_closure_v3,
           )
@@ -177,7 +177,7 @@ jobs:
           range_canonical = build_system_one_range_result(range_engine, model)
 
           frontier_trace = Trace("artifacts/frontier/trace.jsonl")
-          frontier_decider = ChoiceRelevanceFrontierDecider(
+          frontier_decider = ClosureChoiceRelevanceFrontierDecider(
               key, frontier_trace, endpoint, model
           )
           started = time.perf_counter()
