@@ -72,15 +72,13 @@ jobs:
       - name: Generate full-read Claude field
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
           CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT: "1"
         run: |
           set -euo pipefail
           test -n "$ANTHROPIC_API_KEY"
-          test -n "$CLAUDE_MODEL"
           claude -p \
             --output-format text \
-            --model "$CLAUDE_MODEL" \
+            --model sonnet \
             --effort high \
             --max-turns 4 \
             --permission-mode dontAsk \
