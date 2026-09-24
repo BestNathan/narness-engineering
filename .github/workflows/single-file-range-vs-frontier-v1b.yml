@@ -3,7 +3,7 @@ name: Single-file Range vs Relevance Frontier v1c
 on:
   push:
     branches:
-      - experiment/single-file-frontier-v1c-20260924
+      - experiment/single-file-frontier-v1b-20260924
 
 permissions:
   contents: read
