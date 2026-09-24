@@ -224,7 +224,7 @@ bash plugins/narness/scripts/narness-rust-test-integration.sh examples/rust-work
 
 The example contains a root workspace contract, a task Skill with progressive disclosure, unit and integration evidence, an environment declaration, and a stable CI required gate.
 
-The repository also contains research prototypes that are intentionally outside the canonical Narness runtime scope. The [System One Kubernetes command generator](examples/system-one-k8s/README.md) remains an in-repository reference implementation. The [Code Locator directory](research/code-locator/README.md) is an archived Narness snapshot; active System One code-exploration implementation and research now live in [BestNathan/system-one-code-explore](https://github.com/BestNathan/system-one-code-explore).
+The repository also contains research prototypes that are intentionally outside the canonical Narness runtime scope. The [System One Kubernetes command generator](examples/system-one-k8s/README.md) remains an in-repository reference implementation. The [Code Locator directory](research/code-locator/README.md) is now only a migration pointer; its implementation and experiment payload have been removed from Narness, and active System One code-exploration work lives in [BestNathan/system-one-code-explore](https://github.com/BestNathan/system-one-code-explore).
 
 ## Adopt Narness
 
@@ -259,7 +259,7 @@ Start with [docs/adoption.md](docs/adoption.md):
 - [Change-to-Evidence Planning topic](docs/topics/change-to-evidence-planning/README.md)
 - [System One Progressive Action Spaces topic](docs/topics/system-one-progressive-action-space/README.md)
 - [System One Kubernetes command generator](examples/system-one-k8s/README.md)
-- [Archived System One code locator snapshot](research/code-locator/README.md)
+- [Code Locator migration pointer](research/code-locator/README.md)
 - [Active System One code-exploration repository](https://github.com/BestNathan/system-one-code-explore)
 - [AI Workspace architecture](docs/architecture.md)
 - [Adoption guide](docs/adoption.md)
