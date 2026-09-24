@@ -1,0 +1,393 @@
+name: System One Range vs Adaptive Zoom
+
+on:
+  push:
+    branches:
+      - experiment/system-one-range-vs-adaptive-zoom-20260924
+
+permissions:
+  contents: read
+
+env:
+  QUERY: Help me optimize the websocket connection implementation
+  SUBJECT_REPOSITORY: BestNathan/nession
+  SUBJECT_SHA: 7ac9b6e0c2bb43c52f83e7dd706c0c0dc0d7a1df
+  HARNESS_REPOSITORY: BestNathan/system-one-code-explore
+  HARNESS_SHA: 42da60815e7f1a7c05cce41d8c85d26488ed39e7
+
+jobs:
+  paired-system-one:
+    name: Run Range and Adaptive Zoom
+    runs-on: ubuntu-24.04
+    environment: typesafe
+    timeout-minutes: 120
+    env:
+      TYPESAFE_MODEL: \${{ vars.TYPESAFE_MODEL || 'jev-latest' }}
+    steps:
+      - name: Checkout frozen explorer harness
+        uses: actions/checkout@v4
+        with:
+          repository: \${{ env.HARNESS_REPOSITORY }}
+          ref: \${{ env.HARNESS_SHA }}
+          path: harness
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout frozen subject
+        uses: actions/checkout@v4
+        with:
+          repository: \${{ env.SUBJECT_REPOSITORY }}
+          ref: \${{ env.SUBJECT_SHA }}
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run independent range runtime
+        env:
+          TYPESAFE_API_KEY: \${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
+          TYPESAFE_API_URL: \${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
+        run: |
+          set -euo pipefail
+          test -n "$TYPESAFE_API_KEY"
+          mkdir -p artifacts/range
+          python3 harness/src/system_one_range_runtime.py \
+            subject "$QUERY" \
+            --directory-threshold 0.50 \
+            --file-threshold 0.65 \
+            --window-lines 140 \
+            --parallel-threshold 0.65 \
+            --evidence-threshold 0.65 \
+            --max-jumps 2 \
+            --max-file-epochs 32 \
+            --subject-repository "$SUBJECT_REPOSITORY" \
+            --subject-revision "$SUBJECT_SHA" \
+            --model "$TYPESAFE_MODEL" \
+            --trace-file artifacts/range/trace.jsonl \
+            --output-json artifacts/range/result.json \
+            --output-localization-json artifacts/range/localization-result.json
+
+      - name: Run adaptive semantic zoom
+        env:
+          TYPESAFE_API_KEY: \${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
+          TYPESAFE_API_URL: \${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/adaptive
+          python3 harness/src/system_one_adaptive_zoom.py \
+            subject "$QUERY" \
+            --directory-threshold 0.50 \
+            --file-threshold 0.65 \
+            --evidence-threshold 0.65 \
+            --coarse-regions 16 \
+            --probe-lines 32 \
+            --beam-width 3 \
+            --beam-mass 0.80 \
+            --exploration-slots 1 \
+            --target-region-lines 40 \
+            --exploration-floor 0.05 \
+            --max-rounds 8 \
+            --stable-rounds 2 \
+            --subject-repository "$SUBJECT_REPOSITORY" \
+            --subject-revision "$SUBJECT_SHA" \
+            --model "$TYPESAFE_MODEL" \
+            --trace-file artifacts/adaptive/trace.jsonl \
+            --output-json artifacts/adaptive/result.json \
+            --output-localization-json artifacts/adaptive/localization-result.json
+
+      - name: Compare canonical localization results
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/comparison
+          python3 harness/src/compare_localization_results.py \
+            --left artifacts/range/localization-result.json \
+            --right artifacts/adaptive/localization-result.json \
+            --output-json artifacts/comparison/localization-comparison.json \
+            --output-markdown artifacts/comparison/localization-comparison.md
+
+      - name: Build paired algorithm report
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("artifacts")
+          rr = json.loads((root / "range/result.json").read_text())
+          az = json.loads((root / "adaptive/result.json").read_text())
+          cmp = json.loads((root / "comparison/localization-comparison.json").read_text())
+
+          def selected_paths(result):
+              out = []
+              for item in result.get("files", []):
+                  payload = item.get("payload") or {}
+                  path = payload.get("path") or item.get("path")
+                  if path:
+                      out.append(path)
+              return out
+
+          def merge_ranges(rows):
+              rows = sorted((int(a), int(b)) for a, b in rows)
+              merged = []
+              for start, end in rows:
+                  if not merged or start > merged[-1][1] + 1:
+                      merged.append([start, end])
+                  else:
+                      merged[-1][1] = max(merged[-1][1], end)
+              return merged
+
+          def span(rows):
+              return sum(b - a + 1 for a, b in merge_ranges(rows))
+
+          range_files = {}
+          for state in rr.get("file_states", []):
+              cov = state.get("coverage", [])
+              total = int(state.get("line_count", 0) or 0)
+              observed = span(cov)
+              range_files[state["path"]] = {
+                  "operations": int(state.get("read_count", 0) or 0),
+                  "observed_lines": observed,
+                  "coverage": observed / total if total else 0.0,
+                  "termination": state.get("termination"),
+              }
+
+          zoom_files = {}
+          for state in az.get("file_states", []):
+              obs = [[x["start_line"], x["end_line"]] for x in state.get("observations", [])]
+              total = int(state.get("line_count", 0) or 0)
+              observed = span(obs)
+              zoom_files[state["path"]] = {
+                  "operations": len(state.get("observations", [])),
+                  "observed_lines": observed,
+                  "coverage": observed / total if total else 0.0,
+                  "termination": state.get("termination"),
+                  "rounds": int(state.get("round", 0) or 0),
+              }
+
+          rp = selected_paths(rr)
+          zp = selected_paths(az)
+          report = {
+              "subject": {
+                  "repository": os.environ["SUBJECT_REPOSITORY"],
+                  "revision": os.environ["SUBJECT_SHA"],
+              },
+              "task": os.environ["QUERY"],
+              "harness_revision": os.environ["HARNESS_SHA"],
+              "range": rr.get("metrics", {}),
+              "adaptive": az.get("metrics", {}),
+              "phase1": {
+                  "range_files": rp,
+                  "adaptive_files": zp,
+                  "same_file_set": set(rp) == set(zp),
+                  "range_only": sorted(set(rp) - set(zp)),
+                  "adaptive_only": sorted(set(zp) - set(rp)),
+              },
+              "per_file": {
+                  path: {
+                      "range": range_files.get(path),
+                      "adaptive": zoom_files.get(path),
+                  }
+                  for path in sorted(set(range_files) | set(zoom_files))
+              },
+              "localization_comparison": cmp,
+          }
+          (root / "comparison/paired-report.json").write_text(
+              json.dumps(report, indent=2, ensure_ascii=False) + "\n"
+          )
+
+          rm = report["range"]
+          am = report["adaptive"]
+          lines = [
+              "# Range Runtime vs Adaptive Semantic Zoom",
+              "",
+              f"- Subject: {report['subject']['repository']}@{report['subject']['revision']}",
+              f"- Harness: {report['harness_revision']}",
+              f"- Phase-1 file sets identical: **{report['phase1']['same_file_set']}**",
+              "",
+              "| Metric | Range runtime | Adaptive zoom |",
+              "| --- | ---: | ---: |",
+              f"| Elapsed ms | {rm.get('elapsed_ms')} | {am.get('elapsed_ms')} |",
+              f"| Model calls | {rm.get('model_calls')} | {am.get('model_calls')} |",
+              f"| Input tokens | {rm.get('input_tokens')} | {am.get('input_tokens')} |",
+              f"| Output tokens | {rm.get('output_tokens')} | {am.get('output_tokens')} |",
+              f"| Reads / observations | {rm.get('reads_executed')} | {am.get('observations')} |",
+              f"| Valuable files | {rm.get('valuable_files')} | {am.get('valuable_files')} |",
+              f"| Evidence regions | {rm.get('evidence_regions')} | {am.get('evidence_regions')} |",
+              "",
+              "## Per-file navigation",
+              "",
+              "| File | Range reads | Range coverage | Range stop | Zoom probes | Zoom coverage | Zoom stop |",
+              "| --- | ---: | ---: | --- | ---: | ---: | --- |",
+          ]
+          for path in sorted(set(range_files) | set(zoom_files)):
+              a = range_files.get(path) or {}
+              b = zoom_files.get(path) or {}
+              lines.append(
+                  f"| {path} | {a.get('operations', '-')} | {a.get('coverage', 0)*100:.1f}% | "
+                  f"{a.get('termination', '-')} | {b.get('operations', '-')} | "
+                  f"{b.get('coverage', 0)*100:.1f}% | {b.get('termination', '-')} |"
+              )
+          lines += ["", "## Canonical localization overlap", "", (root / "comparison/localization-comparison.md").read_text()]
+          (root / "comparison/paired-report.md").write_text("\n".join(lines) + "\n")
+          PY
+          cat artifacts/comparison/paired-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload paired experiment
+        uses: actions/upload-artifact@v4
+        with:
+          name: range-vs-adaptive-zoom-\${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 90
+
+  blind-quality:
+    name: Blind quality review
+    needs: paired-system-one
+    runs-on: ubuntu-24.04
+    environment: ds
+    timeout-minutes: 120
+    env:
+      CLAUDE_MODEL: \${{ vars.CLAUDE_MODEL }}
+      ANTHROPIC_BASE_URL: \${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
+    steps:
+      - name: Checkout frozen explorer harness
+        uses: actions/checkout@v4
+        with:
+          repository: \${{ env.HARNESS_REPOSITORY }}
+          ref: \${{ env.HARNESS_SHA }}
+          path: harness
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout frozen subject
+        uses: actions/checkout@v4
+        with:
+          repository: \${{ env.SUBJECT_REPOSITORY }}
+          ref: \${{ env.SUBJECT_SHA }}
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install pinned Claude Code
+        run: |
+          set -euo pipefail
+          npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
+
+      - name: Download paired experiment
+        uses: actions/download-artifact@v4
+        with:
+          name: range-vs-adaptive-zoom-\${{ github.run_id }}
+          path: artifacts
+
+      - name: Prepare anonymous candidates
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/quality/range artifacts/quality/adaptive
+          python3 harness/src/localization_quality_evaluation.py prepare \
+            --input artifacts/range/localization-result.json \
+            --candidate-id candidate-a \
+            --output-candidate artifacts/quality/range/candidate.json \
+            --output-prompt artifacts/quality/range/prompt.txt
+          python3 harness/src/localization_quality_evaluation.py prepare \
+            --input artifacts/adaptive/localization-result.json \
+            --candidate-id candidate-b \
+            --output-candidate artifacts/quality/adaptive/candidate.json \
+            --output-prompt artifacts/quality/adaptive/prompt.txt
+
+      - name: Evaluate range runtime anonymously
+        working-directory: subject
+        env:
+          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$ANTHROPIC_API_KEY"
+          claude -p \
+            --output-format stream-json \
+            --verbose \
+            --model "$CLAUDE_MODEL" \
+            --effort high \
+            --max-turns 80 \
+            --permission-mode dontAsk \
+            --no-session-persistence \
+            --setting-sources '' \
+            --strict-mcp-config \
+            --mcp-config '{"mcpServers":{}}' \
+            --disable-slash-commands \
+            --tools 'Bash,Read,Glob,Grep' \
+            --allowedTools 'Bash(*)' 'Read' 'Glob' 'Grep' \
+            --disallowedTools 'Edit' 'Write' 'Agent' 'Task' 'WebFetch' 'WebSearch' 'EndConversation' 'mcp__*' \
+            --settings '{"disableAllHooks":true}' \
+            < ../artifacts/quality/range/prompt.txt \
+            > ../artifacts/quality/range/evaluator.raw.jsonl
+
+      - name: Evaluate adaptive zoom anonymously
+        working-directory: subject
+        env:
+          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          claude -p \
+            --output-format stream-json \
+            --verbose \
+            --model "$CLAUDE_MODEL" \
+            --effort high \
+            --max-turns 80 \
+            --permission-mode dontAsk \
+            --no-session-persistence \
+            --setting-sources '' \
+            --strict-mcp-config \
+            --mcp-config '{"mcpServers":{}}' \
+            --disable-slash-commands \
+            --tools 'Bash,Read,Glob,Grep' \
+            --allowedTools 'Bash(*)' 'Read' 'Glob' 'Grep' \
+            --disallowedTools 'Edit' 'Write' 'Agent' 'Task' 'WebFetch' 'WebSearch' 'EndConversation' 'mcp__*' \
+            --settings '{"disableAllHooks":true}' \
+            < ../artifacts/quality/adaptive/prompt.txt \
+            > ../artifacts/quality/adaptive/evaluator.raw.jsonl
+
+      - name: Finalize blind scorecards
+        run: |
+          set -euo pipefail
+          python3 harness/src/localization_quality_evaluation.py finalize \
+            --candidate artifacts/quality/range/candidate.json \
+            --raw-jsonl artifacts/quality/range/evaluator.raw.jsonl \
+            --subject-root subject \
+            --model "$CLAUDE_MODEL" \
+            --output-json artifacts/quality/range/scorecard.json \
+            --output-markdown artifacts/quality/range/report.md
+          python3 harness/src/localization_quality_evaluation.py finalize \
+            --candidate artifacts/quality/adaptive/candidate.json \
+            --raw-jsonl artifacts/quality/adaptive/evaluator.raw.jsonl \
+            --subject-root subject \
+            --model "$CLAUDE_MODEL" \
+            --output-json artifacts/quality/adaptive/scorecard.json \
+            --output-markdown artifacts/quality/adaptive/report.md
+          python3 harness/src/localization_quality_evaluation.py report \
+            --candidate-a artifacts/quality/range/scorecard.json \
+            --candidate-b artifacts/quality/adaptive/scorecard.json \
+            --candidate-a-label "Range runtime" \
+            --candidate-b-label "Adaptive zoom" \
+            --output-json artifacts/quality/evaluation-report.json \
+            --output-markdown artifacts/quality/evaluation-report.md
+          cat artifacts/quality/evaluation-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload blind quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: range-vs-adaptive-zoom-quality-\${{ github.run_id }}
+          path: artifacts/quality/
+          if-no-files-found: error
+          retention-days: 90
