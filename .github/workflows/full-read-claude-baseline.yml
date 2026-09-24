@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: BestNathan/system-one-code-explore
-          ref: f93b57d81e9e3f530ec1a26f23bb2472aa90d1b
+          ref: experiment/full-read-baseline-20260924
           path: harness
           fetch-depth: 1
           persist-credentials: false
