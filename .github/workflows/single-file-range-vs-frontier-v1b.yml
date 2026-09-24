@@ -1,9 +1,9 @@
-name: Single-file Range vs Relevance Frontier v1b
+name: Single-file Range vs Relevance Frontier v1c
 
 on:
   push:
     branches:
-      - experiment/single-file-frontier-v1b-20260924
+      - experiment/single-file-frontier-v1c-20260924
 
 permissions:
   contents: read
@@ -12,7 +12,7 @@ env:
   QUERY: Help me optimize the websocket connection implementation
   SUBJECT_REPOSITORY: BestNathan/nession
   SUBJECT_SHA: 7ac9b6e0c2bb43c52f83e7dd706c0c0dc0d7a1df
-  FILE_PATH: crates/nession-server/src/server/handler.rs
+  FILE_PATH: crates/nession-agent/src/server/websocket.rs
   HARNESS_REPOSITORY: BestNathan/system-one-code-explore
   HARNESS_SHA: cfc3d696df6c9ecc833372cf616805d2b931d0af
   TYPESAFE_MODEL: jev-latest
@@ -20,7 +20,7 @@ env:
 
 jobs:
   experiment:
-    name: Single-file Range vs Frontier v1b
+    name: Single-file Range vs Frontier v1c
     runs-on: ubuntu-24.04
     environment: typesafe
     timeout-minutes: 120
@@ -102,17 +102,17 @@ jobs:
           frontier_params = {
               "max_rounds": 10,
               "max_actions_per_round": 2,
-              "probe_lines": 128,
-              "target_region_lines": 64,
-              "final_window_lines": 24,
-              "refine_threshold": 0.78,
-              "candidate_threshold": 0.60,
-              "gradient_threshold": 0.14,
+              "probe_lines": 112,
+              "target_region_lines": 48,
+              "final_window_lines": 32,
+              "refine_threshold": 0.72,
+              "candidate_threshold": 0.55,
+              "gradient_threshold": 0.15,
               "volatility_threshold": 0.10,
               "stable_delta": 0.06,
               "stable_rounds": 2,
-              "max_frontier_leaves": 18,
-              "final_max_candidates": 16,
+              "max_frontier_leaves": 24,
+              "final_max_candidates": 24,
           }
 
           def coverage(state):
@@ -261,9 +261,9 @@ jobs:
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
           r = json.load(open("artifacts/report.json"))
-          print("## Single-file Range vs Frontier v1b")
+          print("## Single-file Range vs Frontier v1c")
           print("")
-          print("| Metric | Range | Frontier v1b |")
+          print("| Metric | Range | Frontier v1c |")
           print("| --- | ---: | ---: |")
           print("| elapsed ms | %s | %s |" % (r["range"]["metrics"]["elapsed_ms"], r["frontier"]["metrics"]["elapsed_ms"]))
           print("| model calls | %s | %s |" % (r["range"]["metrics"]["model_calls"], r["frontier"]["metrics"]["model_calls"]))
@@ -282,7 +282,7 @@ jobs:
       - name: Upload experiment
         uses: actions/upload-artifact@v4
         with:
-          name: single-file-range-vs-frontier-v1b-${{ github.run_id }}
+          name: single-file-range-vs-frontier-v1c-${{ github.run_id }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 90
@@ -326,7 +326,7 @@ jobs:
       - name: Download experiment
         uses: actions/download-artifact@v4
         with:
-          name: single-file-range-vs-frontier-v1b-${{ github.run_id }}
+          name: single-file-range-vs-frontier-v1c-${{ github.run_id }}
           path: artifacts
 
       - name: Prepare anonymous candidates
@@ -403,7 +403,7 @@ jobs:
             --candidate-a artifacts/quality/range/scorecard.json \
             --candidate-b artifacts/quality/frontier/scorecard.json \
             --candidate-a-label "Range runtime" \
-            --candidate-b-label "Relevance frontier v1b" \
+            --candidate-b-label "Relevance frontier v1c" \
             --output-json artifacts/quality/evaluation-report.json \
             --output-markdown artifacts/quality/evaluation-report.md
           cat artifacts/quality/evaluation-report.md >> "$GITHUB_STEP_SUMMARY"
@@ -412,7 +412,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: single-file-range-vs-frontier-v1b-quality-${{ github.run_id }}
+          name: single-file-range-vs-frontier-v1c-quality-${{ github.run_id }}
           path: artifacts/quality/
           if-no-files-found: error
           retention-days: 90
