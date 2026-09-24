@@ -1,8 +1,0 @@
-test_progressive_localization (test_system_one_code_locator.DemoTest.test_progressive_localization) ... ok
-test_request_uses_noul (test_system_one_code_locator.DemoTest.test_request_uses_noul) ... ok
-test_transient_520_is_retried (test_system_one_code_locator.DemoTest.test_transient_520_is_retried) ... ok
-
-----------------------------------------------------------------------
-Ran 3 tests in 0.010s
-
-OK
