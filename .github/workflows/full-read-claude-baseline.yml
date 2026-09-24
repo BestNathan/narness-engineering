@@ -78,7 +78,7 @@ jobs:
           test -n "$ANTHROPIC_API_KEY"
           claude -p \
             --output-format text \
-            --model sonnet \
+            --model claude-sonnet-4-6 \
             --effort high \
             --max-turns 4 \
             --permission-mode dontAsk \
