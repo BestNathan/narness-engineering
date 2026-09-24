@@ -22,13 +22,13 @@ jobs:
     environment: typesafe
     timeout-minutes: 120
     env:
-      TYPESAFE_MODEL: \${{ vars.TYPESAFE_MODEL || 'jev-latest' }}
+      TYPESAFE_MODEL: ${{ vars.TYPESAFE_MODEL || 'jev-latest' }}
     steps:
       - name: Checkout frozen explorer harness
         uses: actions/checkout@v4
         with:
-          repository: \${{ env.HARNESS_REPOSITORY }}
-          ref: \${{ env.HARNESS_SHA }}
+          repository: ${{ env.HARNESS_REPOSITORY }}
+          ref: ${{ env.HARNESS_SHA }}
           path: harness
           fetch-depth: 1
           persist-credentials: false
@@ -36,8 +36,8 @@ jobs:
       - name: Checkout frozen subject
         uses: actions/checkout@v4
         with:
-          repository: \${{ env.SUBJECT_REPOSITORY }}
-          ref: \${{ env.SUBJECT_SHA }}
+          repository: ${{ env.SUBJECT_REPOSITORY }}
+          ref: ${{ env.SUBJECT_SHA }}
           path: subject
           fetch-depth: 1
           persist-credentials: false
@@ -48,8 +48,8 @@ jobs:
 
       - name: Run independent range runtime
         env:
-          TYPESAFE_API_KEY: \${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
-          TYPESAFE_API_URL: \${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
+          TYPESAFE_API_URL: ${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
         run: |
           set -euo pipefail
           test -n "$TYPESAFE_API_KEY"
@@ -72,8 +72,8 @@ jobs:
 
       - name: Run adaptive semantic zoom
         env:
-          TYPESAFE_API_KEY: \${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
-          TYPESAFE_API_URL: \${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY || vars.TYPESAFE_API_KEY }}
+          TYPESAFE_API_URL: ${{ vars.TYPESAFE_API_URL || 'https://api.typesafe.ai/v1/systemone' }}
         run: |
           set -euo pipefail
           mkdir -p artifacts/adaptive
@@ -239,7 +239,7 @@ jobs:
       - name: Upload paired experiment
         uses: actions/upload-artifact@v4
         with:
-          name: range-vs-adaptive-zoom-\${{ github.run_id }}
+          name: range-vs-adaptive-zoom-${{ github.run_id }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 90
@@ -251,14 +251,14 @@ jobs:
     environment: ds
     timeout-minutes: 120
     env:
-      CLAUDE_MODEL: \${{ vars.CLAUDE_MODEL }}
-      ANTHROPIC_BASE_URL: \${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
+      CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+      ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
     steps:
       - name: Checkout frozen explorer harness
         uses: actions/checkout@v4
         with:
-          repository: \${{ env.HARNESS_REPOSITORY }}
-          ref: \${{ env.HARNESS_SHA }}
+          repository: ${{ env.HARNESS_REPOSITORY }}
+          ref: ${{ env.HARNESS_SHA }}
           path: harness
           fetch-depth: 1
           persist-credentials: false
@@ -266,8 +266,8 @@ jobs:
       - name: Checkout frozen subject
         uses: actions/checkout@v4
         with:
-          repository: \${{ env.SUBJECT_REPOSITORY }}
-          ref: \${{ env.SUBJECT_SHA }}
+          repository: ${{ env.SUBJECT_REPOSITORY }}
+          ref: ${{ env.SUBJECT_SHA }}
           path: subject
           fetch-depth: 1
           persist-credentials: false
@@ -288,7 +288,7 @@ jobs:
       - name: Download paired experiment
         uses: actions/download-artifact@v4
         with:
-          name: range-vs-adaptive-zoom-\${{ github.run_id }}
+          name: range-vs-adaptive-zoom-${{ github.run_id }}
           path: artifacts
 
       - name: Prepare anonymous candidates
@@ -309,7 +309,7 @@ jobs:
       - name: Evaluate range runtime anonymously
         working-directory: subject
         env:
-          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           test -n "$ANTHROPIC_API_KEY"
@@ -335,7 +335,7 @@ jobs:
       - name: Evaluate adaptive zoom anonymously
         working-directory: subject
         env:
-          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           claude -p \
@@ -387,7 +387,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: range-vs-adaptive-zoom-quality-\${{ github.run_id }}
+          name: range-vs-adaptive-zoom-quality-${{ github.run_id }}
           path: artifacts/quality/
           if-no-files-found: error
           retention-days: 90
