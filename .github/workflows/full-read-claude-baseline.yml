@@ -1,0 +1,156 @@
+name: Full-read Claude relevance baseline
+
+on:
+  push:
+    branches:
+      - experiment/full-read-baseline-20260924
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  QUERY: Help me optimize the websocket connection implementation
+  SUBJECT_REPOSITORY: BestNathan/nession
+  SUBJECT_SHA: 7ac9b6e0c2bb43c52f83e7dd706b2b1a1df
+  FILE_PATH: crates/nession-agent/src/server/websocket.rs
+  HARNESS_REPOSITORY: BestNathan/system-one-code-explore
+  HARNESS_SHA: f93b57d81e9e3f530ec1a26f23bb2472aa90d1b
+  V1C_RUN_ID: "35952482145"
+  V1C_ARTIFACT: single-file-range-vs-frontier-v1c-35952482145
+
+jobs:
+  baseline:
+    name: Build full-read Claude reference field
+    runs-on: ubuntu-24.04
+    environment: ds
+    timeout-minutes: 120
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          repository: BestNathan/system-one-code-explore
+          ref: f93b57d81e9e3f530ec1a26f23bb2472aa90d1b
+          path: harness
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout frozen subject
+        uses: actions/checkout@v4
+        with:
+          repository: BestNathan/nession
+          ref: 7ac9b6e0c2bb43c52f83e7dd706c0c0dc0d7a1df
+          path: subject
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+
+      - name: Install pinned Claude Code
+        run: npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
+
+      - name: Prepare reference prompt
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/baseline
+          python3 harness/src/full_read_relevance_baseline.py prepare \
+            --source "subject/$FILE_PATH" \
+            --query "$QUERY" \
+            --window-lines 64 \
+            --stride-lines 32 \
+            --output-prompt artifacts/baseline/prompt.txt \
+            --output-manifest artifacts/baseline/manifest.json
+
+      - name: Generate full-read Claude field
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+        run: |
+          set -euo pipefail
+          test -n "$ANTHROPIC_API_KEY"
+          test -n "$CLAUDE_MODEL"
+          claude -p \
+            --output-format text \
+            --model "$CLAUDE_MODEL" \
+            --effort high \
+            --max-turns 4 \
+            --permission-mode dontAsk \
+            --no-session-persistence \
+            --setting-sources '' \
+            --strict-mcp-config \
+            --mcp-config '{"mcpServers":{}}' \
+            --disable-slash-commands \
+            --tools '' \
+            --settings '{"disableAllHooks":true}' \
+            < artifacts/baseline/prompt.txt \
+            > artifacts/baseline/claude-output.txt
+
+      - name: Normalize reference field
+        run: |
+          set -euo pipefail
+          python3 harness/src/full_read_relevance_baseline.py normalize \
+            --source "subject/$FILE_PATH" \
+            --query "$QUERY" \
+            --window-lines 64 \
+            --stride-lines 32 \
+            --raw-output artifacts/baseline/claude-output.txt \
+            --output artifacts/baseline/reference.json
+
+      - name: Download v1c candidate
+        uses: actions/download-artifact@v5
+        with:
+          name: single-file-range-vs-frontier-v1c-35952482145
+          path: artifacts/v1c
+          run-id: 35952482145
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Project v1c results onto reference field
+        run: |
+          set -euo pipefail
+          python3 harness/src/compare_to_full_read_baseline.py \
+            --reference artifacts/baseline/reference.json \
+            --candidate artifacts/v1c/frontier/localization-result.json \
+            --output-json artifacts/baseline/v1c-frontier-reference-metrics.json
+          python3 harness/src/compare_to_full_read_baseline.py \
+            --reference artifacts/baseline/reference.json \
+            --candidate artifacts/v1c/range/localization-result.json \
+            --output-json artifacts/baseline/v1c-range-reference-metrics.json
+
+      - name: Summarize
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          for label, path in [
+              ("Range v1c", "artifacts/baseline/v1c-range-reference-metrics.json"),
+              ("Frontier v1c", "artifacts/baseline/v1c-frontier-reference-metrics.json"),
+          ]:
+              r = json.load(open(path))
+              m = r["metrics"]
+              print(f"## {label} vs full-read reference")
+              print("")
+              print("| Metric | Value |")
+              print("| --- | ---: |")
+              print(f"| weighted relevance recall | {m['weighted_relevance_recall']:.3f} |")
+              print(f"| high-relevance window recall | {m['high_relevance_window_recall']:.3f} |")
+              print(f"| core-window recall | {m['core_window_recall']:.3f} |")
+              print(f"| relevance-weighted precision | {m['relevance_weighted_precision']:.3f} |")
+              print(f"| source coverage | {r['candidate']['source_coverage']:.3f} |")
+              print("")
+          PY
+
+      - name: Upload baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-read-claude-baseline-$GITHUB_RUN_ID
+          path: artifacts/baseline
+          if-no-files-found: error
+          retention-days: 90
