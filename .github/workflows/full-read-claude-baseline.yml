@@ -1,4 +1,4 @@
-name: Full-read Claude relevance baseline
+name: Full-read CC relevance baseline (ds)
 
 on:
   push:
@@ -15,13 +15,12 @@ env:
   SUBJECT_SHA: 7ac9b6e0c2bb43c52f83e7dd706c0c0dc0d7a1df
   FILE_PATH: crates/nession-agent/src/server/websocket.rs
   HARNESS_REPOSITORY: BestNathan/system-one-code-explore
-  HARNESS_SHA: f93b57d81e9e3f530ec1a26f23bb2472aa90d1b
   V1C_RUN_ID: "35952482145"
   V1C_ARTIFACT: single-file-range-vs-frontier-v1c-35952482145
 
 jobs:
   baseline:
-    name: Build full-read Claude reference field
+    name: Build full-read CC reference field with ds model
     runs-on: ubuntu-24.04
     environment: ds
     timeout-minutes: 120
@@ -69,17 +68,19 @@ jobs:
             --output-prompt artifacts/baseline/prompt.txt \
             --output-manifest artifacts/baseline/manifest.json
 
-      - name: Generate full-read Claude field
+      - name: Generate full-read CC field through ds
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT: "1"
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN || secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ vars.CLAUDE_MODEL || 'deepseek-flash' }}
         run: |
           set -euo pipefail
-          test -n "$ANTHROPIC_API_KEY"
+          test -n "$ANTHROPIC_BASE_URL"
+          test -n "$ANTHROPIC_MODEL"
+          echo "Claude Code evaluator model: $ANTHROPIC_MODEL"
           claude -p \
             --output-format text \
-            --model claude-sonnet-4-6 \
-            --effort high \
             --max-turns 4 \
             --permission-mode dontAsk \
             --no-session-persistence \
@@ -90,7 +91,23 @@ jobs:
             --tools '' \
             --settings '{"disableAllHooks":true}' \
             < artifacts/baseline/prompt.txt \
-            > artifacts/baseline/claude-output.txt
+            > artifacts/baseline/cc-output.txt
+
+      - name: Record evaluator provenance
+        env:
+          CC_MODEL: ${{ vars.CLAUDE_MODEL || 'deepseek-flash' }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path("artifacts/baseline/evaluator.json").write_text(
+              json.dumps({
+                  "runtime": "claude-code",
+                  "environment": "ds",
+                  "model": os.environ["CC_MODEL"],
+              }, indent=2) + "\n"
+          )
+          PY
 
       - name: Normalize reference field
         run: |
@@ -100,7 +117,7 @@ jobs:
             --query "$QUERY" \
             --window-lines 64 \
             --stride-lines 32 \
-            --raw-output artifacts/baseline/claude-output.txt \
+            --raw-output artifacts/baseline/cc-output.txt \
             --output artifacts/baseline/reference.json
 
       - name: Download v1c candidate
@@ -128,13 +145,20 @@ jobs:
           set -euo pipefail
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
+          evaluator = json.load(open("artifacts/baseline/evaluator.json"))
+          print("## Full-read CC reference")
+          print("")
+          print("Runtime: `%s`, environment: `%s`, model: `%s`" % (
+              evaluator["runtime"], evaluator["environment"], evaluator["model"]
+          ))
+          print("")
           for label, path in [
               ("Range v1c", "artifacts/baseline/v1c-range-reference-metrics.json"),
               ("Frontier v1c", "artifacts/baseline/v1c-frontier-reference-metrics.json"),
           ]:
               r = json.load(open(path))
               m = r["metrics"]
-              print(f"## {label} vs full-read reference")
+              print(f"### {label}")
               print("")
               print("| Metric | Value |")
               print("| --- | ---: |")
@@ -149,7 +173,7 @@ jobs:
       - name: Upload baseline
         uses: actions/upload-artifact@v4
         with:
-          name: full-read-claude-baseline
+          name: full-read-cc-ds-baseline-${{ github.run_id }}
           path: artifacts/baseline
           if-no-files-found: error
           retention-days: 90
