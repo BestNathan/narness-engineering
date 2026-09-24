@@ -68,30 +68,51 @@ jobs:
             --output-prompt artifacts/baseline/prompt.txt \
             --output-manifest artifacts/baseline/manifest.json
 
-      - name: Generate full-read CC field through ds
+      - name: Generate and validate full-read CC field through ds
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN || secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || secrets.ANTHROPIC_BASE_URL }}
           ANTHROPIC_MODEL: ${{ vars.CLAUDE_MODEL || 'deepseek-flash' }}
+          CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT: "1"
         run: |
           set -euo pipefail
           test -n "$ANTHROPIC_BASE_URL"
           test -n "$ANTHROPIC_MODEL"
           echo "Claude Code evaluator model: $ANTHROPIC_MODEL"
-          claude -p \
-            --output-format text \
-            --max-turns 4 \
-            --permission-mode dontAsk \
-            --no-session-persistence \
-            --setting-sources '' \
-            --strict-mcp-config \
-            --mcp-config '{"mcpServers":{}}' \
-            --disable-slash-commands \
-            --tools '' \
-            --settings '{"disableAllHooks":true}' \
-            < artifacts/baseline/prompt.txt \
-            > artifacts/baseline/cc-output.txt
+
+          rm -f artifacts/baseline/reference.json
+          for attempt in 1 2 3; do
+            echo "Full-read reference attempt $attempt"
+            claude -p \
+              --output-format text \
+              --max-turns 4 \
+              --permission-mode dontAsk \
+              --no-session-persistence \
+              --setting-sources '' \
+              --strict-mcp-config \
+              --mcp-config '{"mcpServers":{}}' \
+              --disable-slash-commands \
+              --tools '' \
+              --settings '{"disableAllHooks":true}' \
+              < artifacts/baseline/prompt.txt \
+              > "artifacts/baseline/cc-output-attempt-${attempt}.txt" || true
+
+            if python3 harness/src/full_read_relevance_baseline.py normalize \
+              --source "subject/$FILE_PATH" \
+              --query "$QUERY" \
+              --window-lines 64 \
+              --stride-lines 32 \
+              --raw-output "artifacts/baseline/cc-output-attempt-${attempt}.txt" \
+              --output artifacts/baseline/reference.json; then
+              cp "artifacts/baseline/cc-output-attempt-${attempt}.txt" \
+                artifacts/baseline/cc-output.txt
+              echo "$attempt" > artifacts/baseline/accepted-attempt.txt
+              break
+            fi
+            rm -f artifacts/baseline/reference.json
+          done
+          test -s artifacts/baseline/reference.json
 
       - name: Record evaluator provenance
         env:
@@ -108,17 +129,6 @@ jobs:
               }, indent=2) + "\n"
           )
           PY
-
-      - name: Normalize reference field
-        run: |
-          set -euo pipefail
-          python3 harness/src/full_read_relevance_baseline.py normalize \
-            --source "subject/$FILE_PATH" \
-            --query "$QUERY" \
-            --window-lines 64 \
-            --stride-lines 32 \
-            --raw-output artifacts/baseline/cc-output.txt \
-            --output artifacts/baseline/reference.json
 
       - name: Download v1c candidate
         uses: actions/download-artifact@v5
