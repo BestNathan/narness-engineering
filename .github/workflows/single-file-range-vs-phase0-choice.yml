@@ -144,9 +144,15 @@ jobs:
           def action_counts(state):
               counts = {}
               for snapshot in state.get("action_history", []):
+                  policy_action = snapshot.get("policy", {}).get("action")
+                  if isinstance(policy_action, dict):
+                      kind = policy_action.get("kind")
+                      if kind:
+                          counts[kind] = counts.get(kind, 0) + 1
                   for action in snapshot.get("actions", []):
                       kind = action.get("kind")
-                      counts[kind] = counts.get(kind, 0) + 1
+                      if kind:
+                          counts[kind] = counts.get(kind, 0) + 1
               return counts
 
           range_trace = Trace("artifacts/range/trace.jsonl")
