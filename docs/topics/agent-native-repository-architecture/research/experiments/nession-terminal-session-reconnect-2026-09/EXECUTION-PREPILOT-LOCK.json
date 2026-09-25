@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "execution_prepilot_revision": 9,
+  "execution_prepilot_revision": 10,
   "status": "frozen-before-real-pilots",
-  "branch": "research/ai-native-execution-prepilot-r9",
-  "repository_sha": "1633e9433b897903077f8c4813dc8d5a9821f9fb",
+  "branch": "research/ai-native-execution-prepilot-r10",
+  "repository_sha": "1b436827649b360fae231c9362d51b7f9051ac11",
   "benchmark_revision": 3,
   "benchmark_definition_sha": "bb56a330c90755d9c149bff64aaeb3a841d8015c",
   "analysis_revision": 2,
@@ -29,20 +29,21 @@
     }
   ],
   "integrity": {
-    "github_ci": "pending-PR-checks",
+    "github_ci": "pending-registration-PR-checks",
+    "isolation_workflow_run": 35833916665,
     "real_pilots": "not-executed"
   },
   "supersedes": {
-    "execution_prepilot_revision": 8,
-    "repository_sha": "bb402f208c73ada458ddc36da73f3e59dca2a7d7",
-    "reason": "R8/R1 formal collection exposed absolute checkout path misclassification. R9 records the checkout root and uses Benchmark Revision 3 scoring. Fresh pilots must generate R2 freeze metadata; R1 evidence cannot authorize the new collection."
+    "execution_prepilot_revision": 9,
+    "repository_sha": "1633e9433b897903077f8c4813dc8d5a9821f9fb",
+    "reason": "R9/R2 formal run 35810458835 exposed host evaluation files and cross-task Claude memory. R10 isolates filesystem, process and network access with per-run state and a fixed-provider gateway. Old R1/R2 artifacts are diagnostic only and cannot be resumed into R3."
   },
-  "promotion_rule": "Only fresh real direct Claude Code T05/A, T08/B and T20/C evidence from repository_sha 1633e9433b897903077f8c4813dc8d5a9821f9fb may freeze claude-code-r9-r2. Require isolated subject checkout, registered agent policy, exact installed CLI/model/base URL, exact tool hashes, and R2 profile/schedule/formal-plan identity. Synthetic replay and prior R1 evidence cannot be promoted.",
+  "promotion_rule": "Only fresh real Claude Code T05/A, T08/B and T20/C evidence from repository_sha 1b436827649b360fae231c9362d51b7f9051ac11 may freeze claude-code-r10-r3. Require namespace isolation, private per-run state, fixed-provider gateway, exact client/model/base URL, runtime policy and tooling hashes. Synthetic tests and prior cohorts cannot be promoted.",
   "required_agent_config": {
     "agent": "claude-code",
-    "network": "provider-direct",
-    "permission_profile": "claude-direct-narness-r6",
-    "filesystem_read_scope": "isolated standalone subject checkout",
+    "network": "private-net-fixed-provider-unix-gateway",
+    "permission_profile": "claude-bubblewrap-provider-gateway-v1",
+    "filesystem_read_scope": "current subject plus read-only runtime; private HOME and tmp",
     "subagents_enabled": false,
     "web_search": "disabled",
     "harness_environment_scrubbed": true,
@@ -52,16 +53,20 @@
     "shell_environment_allowlist": [
       "PATH",
       "HOME",
+      "CLAUDE_CONFIG_DIR",
+      "XDG_CONFIG_HOME",
+      "XDG_CACHE_HOME",
       "TMPDIR",
       "TMP",
       "TEMP",
       "LANG",
-      "LC_*",
       "SHELL",
       "USER",
       "ANTHROPIC_BASE_URL",
-      "ANTHROPIC_API_KEY"
-    ]
+      "ANTHROPIC_API_KEY",
+      "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"
+    ],
+    "runtime_mode": "bubblewrap-provider-gateway-v1"
   },
   "required_environment": {
     "checkout_isolation": "single-ref-standalone-git-no-remote"

@@ -19,9 +19,9 @@ EXPERIMENT = (
     / "nession-terminal-session-reconnect-2026-09"
 )
 EXPECTED_FILES = (
-    "execution-profile-r2.json",
-    "formal-schedule-r2.json",
-    "formal-plan-r2.lock.json",
+    "execution-profile-r3.json",
+    "formal-schedule-r3.json",
+    "formal-plan-r3.lock.json",
 )
 EXPECTED_RUNS = ("T05-A-01", "T08-B-01", "T20-C-01")
 
@@ -86,14 +86,14 @@ def main() -> int:
             print(f"  - {error}")
         return 1
 
-    profile = load(files["execution-profile-r2.json"])
-    schedule = load(files["formal-schedule-r2.json"])
-    plan = load(files["formal-plan-r2.lock.json"])
+    profile = load(files["execution-profile-r3.json"])
+    schedule = load(files["formal-schedule-r3.json"])
+    plan = load(files["formal-plan-r3.lock.json"])
 
-    if profile.get("profile_id") != "claude-code-r9-r2":
-        errors.append("expected the fresh R9/R2 execution profile")
-    if plan.get("plan_id") != "formal-plan-r2":
-        errors.append("expected formal-plan-r2")
+    if profile.get("profile_id") != "claude-code-r10-r3":
+        errors.append("expected the fresh R10/R3 execution profile")
+    if plan.get("plan_id") != "formal-plan-r3":
+        errors.append("expected formal-plan-r3")
     expected_repo_sha = lock["repository_sha"]
     if profile.get("status") != "frozen":
         errors.append("execution profile is not frozen")
@@ -211,11 +211,11 @@ def main() -> int:
     if plan.get("execution_profile_id") != profile_id:
         errors.append("formal plan/profile ID mismatch")
     if plan.get("execution_profile_sha256") != sha256_file(
-        files["execution-profile-r2.json"]
+        files["execution-profile-r3.json"]
     ):
         errors.append("formal plan execution-profile hash mismatch")
     if plan.get("schedule_sha256") != sha256_file(
-        files["formal-schedule-r2.json"]
+        files["formal-schedule-r3.json"]
     ):
         errors.append("formal plan schedule hash mismatch")
     if plan.get("benchmark_revision") != benchmark.get("benchmark_revision"):
@@ -283,3 +283,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

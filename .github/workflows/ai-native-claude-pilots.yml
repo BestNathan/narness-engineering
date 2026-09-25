@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ai-native-claude-pilots-r9
+  group: ai-native-claude-pilots-r10
   cancel-in-progress: false
 
 jobs:
@@ -19,11 +19,6 @@ jobs:
       CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
       ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
     steps:
-      - name: Require successor registration after R9 isolation incident
-        run: |
-          echo "::error::R9/R2 is suspended after run 35810458835. Validate the isolated runtime and register fresh pilots/profile/plan before collection or promotion."
-          exit 1
-
       - name: Set runner temp paths
         id: paths
         run: |
@@ -50,7 +45,7 @@ jobs:
           import json, os
           from pathlib import Path
           lock=json.loads(Path('docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09/EXECUTION-PREPILOT-LOCK.json').read_text())
-          assert lock['execution_prepilot_revision'] == 9, 'Claude direct R9 is not registered yet'
+          assert lock['execution_prepilot_revision'] == 10, 'Claude isolated R10 is not registered yet'
           assert lock['required_agent_config']['agent'] == 'claude-code'
           assert os.environ['CLAUDE_MODEL'], 'Set repository variable CLAUDE_MODEL to an explicit model ID'
           assert os.environ['CLAUDE_MODEL'] not in ('sonnet', 'opus', 'haiku', 'default'), 'Moving model aliases are not allowed'
@@ -90,11 +85,22 @@ jobs:
         with:
           python-version: '3.13.2'
 
+      - name: Install isolated execution boundary
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap socat
+          sudo apparmor_parser -r execution/research/claude-runtime/bwrap.apparmor
+
       - name: Install pinned Claude Code client
         run: |
           set -euo pipefail
           npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
           claude --version
+
+      - name: Verify isolation before any model request
+        working-directory: execution
+        run: python3 scripts/narness-selftest-claude-isolation.py
 
       - name: Run three fresh non-reportable Claude pilots
         working-directory: execution
@@ -137,14 +143,14 @@ jobs:
           set -euo pipefail
           mkdir -p "$HANDOFF"
           EXP=execution/docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09
-          for name in execution-profile-r2.json formal-schedule-r2.json formal-plan-r2.lock.json; do
+          for name in execution-profile-r3.json formal-schedule-r3.json formal-plan-r3.lock.json; do
             if [[ -f "$EXP/runner/$name" ]]; then cp "$EXP/runner/$name" "$HANDOFF/"; fi
           done
           if [[ -d "$PILOT_OUTPUT" ]]; then cp -R "$PILOT_OUTPUT" "$HANDOFF/pilot-runs"; fi
           echo "repository_sha=$(git -C execution rev-parse HEAD)" > "$HANDOFF/workflow-metadata.txt"
           echo "workflow_run_id=$GITHUB_RUN_ID" >> "$HANDOFF/workflow-metadata.txt"
 
-      - name: Validate handoff with registered R9 controller
+      - name: Validate handoff with registered R10 controller
         if: success()
         run: |
           python3 scripts/validate-ai-native-pilot-handoff.py \
@@ -154,8 +160,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ai-native-claude-r9-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ai-native-claude-r10-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ steps.paths.outputs.handoff }}
           retention-days: 30
           if-no-files-found: error
+
 

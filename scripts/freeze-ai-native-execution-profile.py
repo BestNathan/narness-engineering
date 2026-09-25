@@ -156,6 +156,8 @@ def main() -> int:
         "codex_version",
         "claude_version",
         "bubblewrap_version",
+        "socat_version",
+        "sandbox_policy_sha256",
         "claude_bin",
         "base_url",
         "credential_env",
@@ -292,4 +294,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

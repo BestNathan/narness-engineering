@@ -11,7 +11,7 @@ on:
       end_sequence:
         description: Last pre-registered schedule sequence to execute
         required: true
-        default: '216'
+        default: '24'
         type: string
       recover_incomplete:
         description: Quarantine and restart an existing incomplete run directory
@@ -44,11 +44,6 @@ jobs:
       CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
       ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || 'https://api.anthropic.com' }}
     steps:
-      - name: Require successor registration after R9 isolation incident
-        run: |
-          echo "::error::R9/R2 is suspended after run 35810458835. Validate the isolated runtime and register fresh pilots/profile/plan before collection or promotion."
-          exit 1
-
       - name: Set formal run root
         id: paths
         run: |
@@ -63,7 +58,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require the committed R9 formal gate
+      - name: Require the committed R10 formal gate
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -73,22 +68,22 @@ jobs:
           from pathlib import Path
           exp=Path('docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09')
           lock=json.loads((exp/'EXECUTION-PREPILOT-LOCK.json').read_text())
-          required=['execution-profile-r2.json', 'formal-schedule-r2.json', 'formal-plan-r2.lock.json']
+          required=['execution-profile-r3.json', 'formal-schedule-r3.json', 'formal-plan-r3.lock.json']
           missing=[name for name in required if not (exp/'runner'/name).is_file()]
-          assert not missing, 'Run fresh R9 pilots and merge their promotion PR first: '+', '.join(missing)
-          profile=json.loads((exp/'runner/execution-profile-r2.json').read_text())
-          schedule=json.loads((exp/'runner/formal-schedule-r2.json').read_text())
-          plan=json.loads((exp/'runner/formal-plan-r2.lock.json').read_text())
-          assert lock['execution_prepilot_revision'] == 9
+          assert not missing, 'Run fresh R10 pilots and merge their promotion PR first: '+', '.join(missing)
+          profile=json.loads((exp/'runner/execution-profile-r3.json').read_text())
+          schedule=json.loads((exp/'runner/formal-schedule-r3.json').read_text())
+          plan=json.loads((exp/'runner/formal-plan-r3.lock.json').read_text())
+          assert lock['execution_prepilot_revision'] == 10
           assert lock['required_agent_config']['agent'] == 'claude-code'
           assert profile['status'] == 'frozen'
           assert profile['agent']['agent'] == 'claude-code'
-          assert profile['profile_id'] == 'claude-code-r9-r2'
+          assert profile['profile_id'] == 'claude-code-r10-r3'
           assert schedule['status'] == 'pre-registered'
           assert schedule['run_count'] == 216
           assert plan['status'] == 'frozen'
           assert plan['run_count'] == 216
-          assert plan['plan_id'] == 'formal-plan-r2'
+          assert plan['plan_id'] == 'formal-plan-r3'
           assert plan['benchmark_revision'] == 3
           assert plan['benchmark_definition_sha'] == lock['benchmark_definition_sha']
           assert plan['execution_profile_id'] == profile['profile_id']
@@ -124,11 +119,21 @@ jobs:
           name: ${{ inputs.previous_artifact_name }}
           path: ${{ steps.paths.outputs.runs_root }}
 
+      - name: Install isolated execution boundary
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap socat
+          sudo apparmor_parser -r research/claude-runtime/bwrap.apparmor
+
       - name: Install the pinned Claude Code client
         run: |
           set -euo pipefail
           npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
           claude --version
+
+      - name: Verify isolation before any model request
+        run: python3 scripts/narness-selftest-claude-isolation.py
 
       - name: Run formal readiness and the registered schedule
         env:
@@ -142,9 +147,9 @@ jobs:
           EXP="$GITHUB_WORKSPACE/docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
           args=(
             --source-repo "$GITHUB_WORKSPACE/nession"
-            --schedule "$EXP/runner/formal-schedule-r2.json"
-            --execution-profile "$EXP/runner/execution-profile-r2.json"
-            --formal-plan-lock "$EXP/runner/formal-plan-r2.lock.json"
+            --schedule "$EXP/runner/formal-schedule-r3.json"
+            --execution-profile "$EXP/runner/execution-profile-r3.json"
+            --formal-plan-lock "$EXP/runner/formal-plan-r3.lock.json"
             --runs-root "$RUNS_ROOT"
             --start-sequence "${{ inputs.start_sequence }}"
             --end-sequence "${{ inputs.end_sequence }}"
@@ -163,11 +168,11 @@ jobs:
           EXP="$GITHUB_WORKSPACE/docs/topics/agent-native-repository-architecture/research/experiments/nession-terminal-session-reconnect-2026-09"
           args=(
             --runs-root "$RUNS_ROOT"
-            --schedule "$EXP/runner/formal-schedule-r2.json"
-            --execution-profile "$EXP/runner/execution-profile-r2.json"
+            --schedule "$EXP/runner/formal-schedule-r3.json"
+            --execution-profile "$EXP/runner/execution-profile-r3.json"
             --benchmark-lock "$EXP/BENCHMARK-LOCK.json"
             --analysis-lock "$EXP/ANALYSIS-LOCK.json"
-            --formal-plan-lock "$EXP/runner/formal-plan-r2.lock.json"
+            --formal-plan-lock "$EXP/runner/formal-plan-r3.lock.json"
             --output "$RUNS_ROOT/collection-manifest.json"
           )
           if [[ "${{ inputs.start_sequence }}" != '1' || "${{ inputs.end_sequence }}" != '216' ]]; then
@@ -183,4 +188,5 @@ jobs:
           path: ${{ steps.paths.outputs.runs_root }}
           retention-days: 90
           if-no-files-found: warn
+
 

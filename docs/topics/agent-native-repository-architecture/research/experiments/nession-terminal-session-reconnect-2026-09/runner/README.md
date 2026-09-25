@@ -130,3 +130,4 @@ Evidence tasks can add `mutation_checks` to their manifest:
 The runner materializes and applies the mutation **after** the agent has finished and clean verification has passed. A mutation with `expected: "failure"` is considered killed when its command returns non-zero. The patch is then reverted before final diff capture.
 
 This makes evidence-task success stronger than merely adding a passing test.
+

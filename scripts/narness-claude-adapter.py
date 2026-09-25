@@ -218,6 +218,8 @@ def runtime_identity(expected_model, *, require_credentials=True):
         'credential_env': credential_env,
         'runtime_mode': 'bubblewrap-provider-gateway-v1',
         'bubblewrap_version': capture(['bwrap', '--version']),
+        'socat_version': capture(['socat', '-V']).splitlines()[0],
+        'sandbox_policy_sha256': digest(ROOT / 'research/claude-runtime/bwrap.apparmor'),
     }
 
 
@@ -401,3 +403,4 @@ def main():
 
 if __name__ == '__main__':
     raise SystemExit(main())
+
