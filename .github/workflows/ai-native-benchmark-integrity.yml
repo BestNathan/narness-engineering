@@ -360,6 +360,12 @@ jobs:
                   assert sorted(positions)==[1,2,3]
           PY
 
+      - name: Install runner execution-isolation dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+          sudo apparmor_parser -r research/claude-runtime/bwrap.apparmor
+
       - name: Run isolated runner/scorer selftest
         run: python scripts/selftest-ai-native-runner.py
 
@@ -394,7 +400,10 @@ jobs:
               'persist-credentials: false',
               'node-version: \'22.14.0\'',
               'python-version: \'3.13.2\'',
-              'npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278',
+              '@anthropic-ai/claude-code@2.1.278',
+              '@anthropic-ai/sandbox-runtime@0.0.77',
+              'bubblewrap socat ripgrep libseccomp-dev debianutils',
+              'execution/research/claude-runtime/bwrap.apparmor',
               'ANTHROPIC_BASE_URL',
               'scripts/narness-run-claude-pilots.sh',
               'scripts/validate-ai-native-pilot-handoff.py',
@@ -412,6 +421,10 @@ jobs:
               'vars.CLAUDE_MODEL',
               'node-version: \'22.14.0\'',
               'python-version: \'3.13.2\'',
+              '@anthropic-ai/claude-code@2.1.278',
+              '@anthropic-ai/sandbox-runtime@0.0.77',
+              'bubblewrap socat ripgrep libseccomp-dev debianutils',
+              'research/claude-runtime/bwrap.apparmor',
               'scripts/run-ai-native-formal.py',
               'scripts/verify-ai-native-collection.py',
               'timeout-minutes: 360',

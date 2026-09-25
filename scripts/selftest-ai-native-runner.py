@@ -52,6 +52,7 @@ def main() -> int:
         (source / "tests").mkdir()
         (source / "tests" / ".keep").write_text("", encoding="utf-8")
         (source / "README.md").write_text("baseline\n", encoding="utf-8")
+        (source / ".gitignore").write_text("node_modules/\n", encoding="utf-8")
         sh(["git", "add", "."], source)
         sh(["git", "commit", "-m", "baseline"], source)
         baseline = sh(["git", "rev-parse", "HEAD"], source).stdout.strip()
@@ -80,10 +81,12 @@ def main() -> int:
                 "test -f tests/__hidden_smoke.txt",
                 "grep -q oracle tests/__hidden_smoke.txt",
                 "grep -q agent-created changed.txt",
+                "test ! -e node_modules/agent-poison.txt",
             ],
             "verification_commands": [
                 "test ! -f tests/__hidden_smoke.txt",
                 "grep -q agent-created changed.txt",
+                "test ! -e node_modules/agent-poison.txt",
             ],
         }
         (spec / "task.json").write_text(json.dumps(task, indent=2) + "\n", encoding="utf-8")
@@ -122,6 +125,8 @@ def main() -> int:
 import json, os
 Path('changed.txt').write_text('agent-created\\n', encoding='utf-8')
 Path('new_test.txt').write_text('new-file\\n', encoding='utf-8')
+Path('node_modules').mkdir(exist_ok=True)
+Path('node_modules/agent-poison.txt').write_text('must-not-propagate\\n', encoding='utf-8')
 trace = Path(os.environ['NARNESS_TRACE_FILE'])
 events = [
     {'type': 'read', 'ts_ms': 10, 'path': str(Path.cwd() / 'README.md')},
@@ -170,6 +175,7 @@ trace.write_text(''.join(json.dumps(x) + '\\n' for x in events), encoding='utf-8
         assert "changed.txt" in diff, diff
         assert "new_test.txt" in diff, diff
         assert "__hidden_smoke" not in diff, diff
+        assert "agent-poison" not in diff, diff
 
         scorer = subprocess.run(
             [

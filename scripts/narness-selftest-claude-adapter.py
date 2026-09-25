@@ -68,9 +68,30 @@ with tempfile.TemporaryDirectory() as td:
     for task,treatment in [('T05','A'),('T08','B'),('T20','C')]:
         p=profile_test.make_pilot(Path(td),task=task,treatment=treatment,harness_sha='synthetic',scorer_sha='synthetic')
         cfg=json.loads((p/'trace.jsonl').read_text())
-        cfg.update(agent='claude-code',claude_version='synthetic-cc',claude_bin='/usr/local/bin/claude',
-                   base_url='https://api.example.invalid',credential_env='ANTHROPIC_API_KEY',
-                   runtime_mode='direct-host',command_mapper_sha256='synthetic')
+        cfg.update(
+            agent='claude-code',
+            claude_version='synthetic-cc',
+            claude_bin='/usr/local/bin/claude',
+            base_url='https://api.example.invalid',
+            credential_env='ANTHROPIC_API_KEY',
+            runtime_mode='bubblewrap-claude-bash-sandbox-provider-gateway-v2',
+            bubblewrap_version='bubblewrap synthetic',
+            sandbox_runtime_version='0.0.synthetic',
+            provider_policy='fixed-https-origin-route-model-local-tool-schema-no-server-tools-v2',
+            permission_profile='claude-bubblewrap-bash-sandbox-provider-gateway-v2',
+            filesystem_read_scope='current subject plus read-only runtime; read-only .git/dependencies; private HOME/tmp',
+            bash_network='strict-deny-all-including-loopback-and-unix-sockets',
+            git_metadata='read-only',
+            shell_environment_allowlist=[
+                'PATH', 'HOME', 'CLAUDE_CONFIG_DIR', 'XDG_CONFIG_HOME',
+                'XDG_CACHE_HOME', 'TMPDIR', 'TMP', 'TEMP', 'LANG',
+                'SHELL', 'USER', 'ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY',
+                'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
+                'CLAUDE_CODE_SUBPROCESS_ENV_SCRUB',
+            ],
+            harness_environment_scrubbed=True,
+            command_mapper_sha256='synthetic',
+        )
         (p/'trace.jsonl').write_text(json.dumps(cfg)+'\n')
         (p/'codex.raw.jsonl').rename(p/'claude.raw.jsonl')
         pilots.append(p)

@@ -90,11 +90,17 @@ jobs:
         with:
           python-version: '3.13.2'
 
-      - name: Install pinned Claude Code client
+      - name: Install pinned Claude execution isolation runtime
         run: |
           set -euo pipefail
-          npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap socat ripgrep libseccomp-dev debianutils
+          sudo apparmor_parser -r execution/research/claude-runtime/bwrap.apparmor
+          npm install --global --no-fund --no-audit \
+            @anthropic-ai/claude-code@2.1.278 \
+            @anthropic-ai/sandbox-runtime@0.0.77
           claude --version
+          srt --help >/dev/null
 
       - name: Run three fresh non-reportable Claude pilots
         working-directory: execution

@@ -124,11 +124,17 @@ jobs:
           name: ${{ inputs.previous_artifact_name }}
           path: ${{ steps.paths.outputs.runs_root }}
 
-      - name: Install the pinned Claude Code client
+      - name: Install the pinned Claude execution isolation runtime
         run: |
           set -euo pipefail
-          npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.278
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap socat ripgrep libseccomp-dev debianutils
+          sudo apparmor_parser -r research/claude-runtime/bwrap.apparmor
+          npm install --global --no-fund --no-audit \
+            @anthropic-ai/claude-code@2.1.278 \
+            @anthropic-ai/sandbox-runtime@0.0.77
           claude --version
+          srt --help >/dev/null
 
       - name: Run formal readiness and the registered schedule
         env:

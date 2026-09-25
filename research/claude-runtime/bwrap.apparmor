@@ -1,5 +1,7 @@
-# Allow only the trusted namespace launcher to create its sandbox.
-# The launcher drops capabilities and disables nested user namespaces before exec.
+# Allow only the reviewed bubblewrap runtime to create user namespaces.
+# The outer launcher drops capabilities and removes host mounts/PIDs/network.
+# Nested user namespaces remain available only inside that already-isolated
+# namespace so Claude Code can place Bash/tool subprocesses in a second sandbox.
 abi <abi/4.0>,
 include <tunables/global>
 profile narness_bwrap /usr/bin/bwrap flags=(unconfined) {
