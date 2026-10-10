@@ -496,7 +496,18 @@ jobs:
           PY
 
       - name: Clone frozen subject repository
-        run: git clone https://github.com/BestNathan/nession.git /tmp/nession
+        run: |
+          git clone https://github.com/BestNathan/nession.git /tmp/nession
+          # The research B/C and oracle commits are immutable, but no longer
+          # reachable from the default main history alone. Retrieve the exact
+          # objects instead of weakening benchmark identity checks.
+          for sha in \
+            8fb6e8707f2dc967a900e227bb899b0c75336d2e \
+            3e544761d5b89dc09a631533659dca4862f9e559 \
+            70d8074e7c50f3865771fabd714e811ae440e09d; do
+            git -C /tmp/nession fetch --no-tags origin "$sha"
+            git -C /tmp/nession cat-file -e "$sha^{commit}"
+          done
 
       - name: Validate benchmark manifests, fixtures, mutations, and oracle
         run: |
