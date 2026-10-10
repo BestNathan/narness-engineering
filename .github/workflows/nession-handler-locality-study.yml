@@ -1,0 +1,43 @@
+name: Nession Handler Locality Study
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/measure-nession-handler-locality.py'
+      - '.github/workflows/nession-handler-locality-study.yml'
+      - 'docs/topics/agent-native-repository-architecture/research/experiments/nession-server-handler-locality-2026-10/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Fetch actual pinned Nession source trees
+        run: |
+          git clone --quiet --no-checkout https://github.com/BestNathan/nession.git /tmp/nession-1258-source
+          git -C /tmp/nession-1258-source fetch --quiet origin staging
+          git -C /tmp/nession-1258-source cat-file -e 6b7dcff69275b1e69ad6f8484240a41436db4cc5^{commit}
+          git -C /tmp/nession-1258-source cat-file -e 696892d0cb003a507dde5f9b7087014db8f92e18^{commit}
+      - name: Run paired source-locality retrieval study
+        run: |
+          python scripts/measure-nession-handler-locality.py \
+            --source-repo /tmp/nession-1258-source \
+            --output-dir /tmp/nession-1258-observations
+          cat /tmp/nession-1258-observations/report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive immutable observations
+        uses: actions/upload-artifact@v4
+        with:
+          name: nession-1258-source-locality-observations
+          path: /tmp/nession-1258-observations/
+          if-no-files-found: error
+          retention-days: 90
