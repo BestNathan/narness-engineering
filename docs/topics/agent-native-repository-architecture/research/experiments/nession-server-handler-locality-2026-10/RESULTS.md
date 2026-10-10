@@ -46,6 +46,6 @@ H2 / concurrent edits: **a single independent Git merge demonstrated**, but no g
 H3 / model efficiency and H4 / change correctness: **not tested**.  
 H5 / runtime-owned edge cases: **important counterexample; splitting versioned handlers does not eliminate shared relay logic**.
 
-Keep the architecture experiment **conditional**. To claim AI-native productivity gains, run matched AI-agent tasks at frozen baselines under one model/harness/environment with token and tool-call telemetry, repair loops and independent acceptance. See the surrounding [research methodology](../..//ai-native-codebase-and-productivity-experiment.md) and the pre-pilot [README](README.md).
+Keep the architecture experiment **conditional**. To claim AI-native productivity gains, run matched AI-agent tasks at frozen baselines under one model/harness/environment with token and tool-call telemetry, repair loops and independent acceptance. See the surrounding [research methodology](../../ai-native-codebase-and-productivity-experiment.md) and the pre-pilot [README](README.md).
 
 This measured study fulfills the *recording of before/after source-locality observations* but **does not prove AI engineering productivity improvements**.
