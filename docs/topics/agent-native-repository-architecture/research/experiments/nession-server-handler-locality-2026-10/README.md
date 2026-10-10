@@ -1,12 +1,12 @@
 # Nession Server Handler Semantic Locality — pre-pilot (#1258)
 
-**Status:** structural pre-pilot measured; AI coding-productivity experiment **not yet executed**.  
+**Status:** measured deterministic before/after source retrieval study completed — see [RESULTS.md](RESULTS.md). Controlled AI coding-productivity experiment **not yet executed**.  
 **Recorded:** 2026-10-10  
 **Nession baseline:** `staging@6b7dcff69275b1e69ad6f8484240a41436db4cc5`  
-**Treatment snapshot:** `feat/1258-server-handler-locality@3f91a570147905d49a5090fccd2e460729b3ff18` (unmerged [PR #1615](https://github.com/BestNathan/nession/pull/1615); Quality Gate [#38049143896](https://github.com/BestNathan/nession/actions/runs/38049143896) PASS).  
+**Treatment snapshot:** `staging@696892d0cb003a507dde5f9b7087014db8f92e18` ([PR #1615](https://github.com/BestNathan/nession/pull/1615) merged; [SC-03 source-aligned Case](https://github.com/BestNathan/nession/actions/runs/38051081406) accepted).  
 **Source requirement:** [Nession #1258](https://github.com/BestNathan/nession/issues/1258).
 
-This is an append-only preparation note, not evidence that coding agents have become faster or more accurate. At this stage only repository file structure and a constrained deterministic navigation property have been measured. Acceptance depends on source verification and controlled trials.
+This document preserves the pre-pilot design and hypotheses. The [reproducible source-retrieval experiment](RESULTS.md) has since executed successfully at two frozen SHAs and published raw observed bytes and checksums in [Narness run #38051474658](https://github.com/BestNathan/narness-engineering/actions/runs/38051474658). This is not evidence that coding agents have become faster or more accurate.
 
 ## Verified source-shape measurements
 
@@ -62,7 +62,7 @@ Run each against **frozen** baseline and treatment SHAs with the same task wordi
 
 ## Pre-pilot limits and admission criteria
 
-- Treatment PR has not yet satisfied all compilation/Gate/E2E/Acceptance criteria. **Do not use this snapshot as a validated successful treatment** until tests are green and source SHA is frozen.
+- The treatment is frozen and staging SC-03 passed; the source-byte study in [RESULTS.md](RESULTS.md) is complete. This is **not** a causal study of AI model coding performance.
 - The baseline and treatment differ in source organization and potentially in unrelated branch history unless runs are deliberately normalized. Record exact trees and verify the baseline/treatment behavioral delta.
 - Static byte ratios must not be reported as measured token savings or coding speedup.
 - All mutations in T2–T4 must be isolated, disposable and reverted. The data-collection harness may use Nession's #1474 source-aligned Scenarios/Run Records when available, without making research observations a blocking repository Gate.
